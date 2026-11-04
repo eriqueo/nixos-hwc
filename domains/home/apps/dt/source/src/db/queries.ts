@@ -3,29 +3,34 @@ import type { Session, Category, CategorySummary, DaySummary } from '../lib/type
 import { nowISO, splitAcrossDays } from '../lib/time.js';
 import { writeEvent, removeEvent } from '../lib/calendar.js';
 
+const SESSION_COLUMNS = ['id', 'start_at', 'end_at', 'category', 'notes', 'pomodoros_notified'] as const;
+const CATEGORY_COLUMNS = 'id, slug, label, color';
+
 // ── Sessions ──────────────────────────────────────────────
 
-export function getActiveSession(): Session | null {
+export function getActiveSession(): Session | null;
+export function getActiveSession<K extends keyof Session>(columns: readonly K[]): Pick<Session, K> | null;
+export function getActiveSession(columns: readonly (keyof Session)[] = SESSION_COLUMNS): Partial<Session> | null {
   const db = getDb();
-  return db.prepare('SELECT * FROM sessions WHERE end_at IS NULL LIMIT 1').get() as Session | null;
+  return (db.prepare(`SELECT ${columns.join(', ')} FROM sessions WHERE end_at IS NULL LIMIT 1`).get() as Partial<Session> | undefined) ?? null;
 }
 
 export function startSession(category?: string | null): Session {
   const db = getDb();
-  const active = getActiveSession();
+  const active = getActiveSession(['start_at']);
   if (active) {
     throw new Error(`Already clocked in since ${active.start_at}`);
   }
   const now = nowISO();
   const result = db.prepare(
-    'INSERT INTO sessions (start_at, category) VALUES (?, ?) RETURNING *'
+    `INSERT INTO sessions (start_at, category) VALUES (?, ?) RETURNING ${SESSION_COLUMNS.join(', ')}`
   ).get(now, category ?? null) as Session;
   return result;
 }
 
 export function endSession(notes?: string | null, category?: string | null): Session {
   const db = getDb();
-  const active = getActiveSession();
+  const active = getActiveSession(['id']);
   if (!active) {
     throw new Error('Not clocked in');
   }
@@ -44,7 +49,7 @@ export function endSession(notes?: string | null, category?: string | null): Ses
 
   params.push(active.id);
   const result = db.prepare(
-    `UPDATE sessions SET ${updates.join(', ')} WHERE id = ? RETURNING *`
+    `UPDATE sessions SET ${updates.join(', ')} WHERE id = ? RETURNING ${SESSION_COLUMNS.join(', ')}`
   ).get(...params) as Session;
   writeEvent(result);
   return result;
@@ -53,24 +58,24 @@ export function endSession(notes?: string | null, category?: string | null): Ses
 export function getSessionsByRange(from: string, to: string): Session[] {
   const db = getDb();
   return db.prepare(`
-    SELECT * FROM sessions
+    SELECT ${SESSION_COLUMNS.join(', ')} FROM sessions
     WHERE start_at >= ? AND (start_at <= ? OR end_at IS NULL)
     ORDER BY start_at ASC
   `).all(from, to) as Session[];
 }
 
-export function getSessionsForInvoice(from: string, to: string): Session[] {
+export function getSessionsForInvoice(from: string, to: string, includeNotes = true): Array<Pick<Session, 'start_at' | 'end_at' | 'category'> & { notes?: string | null }> {
   const db = getDb();
   return db.prepare(`
-    SELECT * FROM sessions
+    SELECT start_at, end_at, category${includeNotes ? ', notes' : ''} FROM sessions
     WHERE start_at >= ? AND start_at <= ? AND end_at IS NOT NULL
     ORDER BY start_at ASC
-  `).all(from, to) as Session[];
+  `).all(from, to) as Array<Pick<Session, 'start_at' | 'end_at' | 'category'> & { notes?: string | null }>;
 }
 
 export function getCategorySummary(from: string, to: string): CategorySummary[] {
   const db = getDb();
-  const sessions = getSessionsForInvoice(from, to);
+  const sessions = getSessionsForInvoice(from, to, false);
   const totals = new Map<string, number>();
 
   for (const s of sessions) {
@@ -139,7 +144,7 @@ export function updateSession(id: number, fields: Partial<Pick<Session, 'start_a
   params.push(id);
 
   const result = db.prepare(
-    `UPDATE sessions SET ${sets.join(', ')} WHERE id = ? RETURNING *`
+    `UPDATE sessions SET ${sets.join(', ')} WHERE id = ? RETURNING ${SESSION_COLUMNS.join(', ')}`
   ).get(...params) as Session;
 
   if (!result) throw new Error(`Session ${id} not found`);
@@ -163,12 +168,12 @@ export function setPomodorosNotified(id: number, count: number): void {
 
 export function getCategories(): Category[] {
   const db = getDb();
-  return db.prepare('SELECT * FROM categories ORDER BY slug').all() as Category[];
+  return db.prepare(`SELECT ${CATEGORY_COLUMNS} FROM categories ORDER BY slug`).all() as Category[];
 }
 
 export function addCategory(slug: string, label: string, color: string = '#928374'): Category {
   const db = getDb();
   return db.prepare(
-    'INSERT INTO categories (slug, label, color) VALUES (?, ?, ?) RETURNING *'
+    `INSERT INTO categories (slug, label, color) VALUES (?, ?, ?) RETURNING ${CATEGORY_COLUMNS}`
   ).get(slug, label, color) as Category;
 }

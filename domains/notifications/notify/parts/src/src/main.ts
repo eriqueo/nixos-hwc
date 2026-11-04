@@ -32,6 +32,9 @@ import type { Channel } from "./ports/channel.js";
 import type { Logger } from "./ports/log.js";
 import type { ChannelConfig } from "./schemas/runtime-config.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const loadSecretPatternRegex = /\s+$/u;
+
 const MAX_BODY_BYTES = 32 * 1024;
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -81,7 +84,7 @@ function statusFromDispatch(attempted: number, succeeded: number): number {
 
 /** Read the secret file for a discord channel; trim trailing whitespace. */
 function loadSecret(filepath: string): string {
-  return readFileSync(filepath, "utf8").replace(/\s+$/u, "");
+  return readFileSync(filepath, "utf8").replace(loadSecretPatternRegex, "");
 }
 
 /** Materialize one ChannelConfig into a Channel instance. */
@@ -345,14 +348,17 @@ function main(): void {
     //   ?status=ok|failed
     if (method === "GET" && url.startsWith("/audit/recent")) {
       try {
-        const u = new URL(url, `http://${config.bindAddr}`);
-        const limitStr = u.searchParams.get("limit");
+        const queryStart = url.indexOf("?");
+          const fragmentStart = url.indexOf("#");
+        const queryEnd = fragmentStart < 0 ? url.length : fragmentStart;
+        const params = new URLSearchParams(queryStart < 0 || queryStart > queryEnd ? "" : url.slice(queryStart + 1, queryEnd));
+        const limitStr = params.get("limit");
         const limit = limitStr ? Math.max(1, Math.min(500, parseInt(limitStr, 10) || 50)) : 50;
         const rows = auditLog.recent({
           limit,
-          topic: u.searchParams.get("topic") ?? undefined,
-          source: u.searchParams.get("source") ?? undefined,
-          status: (u.searchParams.get("status") as "ok" | "failed" | null) ?? undefined,
+          topic: params.get("topic") ?? undefined,
+          source: params.get("source") ?? undefined,
+          status: (params.get("status") as "ok" | "failed" | null) ?? undefined,
         });
         writeJson(res, 200, { count: rows.length, rows });
       } catch (err) {

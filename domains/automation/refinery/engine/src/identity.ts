@@ -8,10 +8,15 @@
 /** Normalize a list line OR a raw sentence to its comparison key: drop a
  *  leading "- ", strip html comments, trim, lowercase. Case-insensitive so
  *  trivial capitalization/whitespace drift converges to the same identity. */
+
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const normalizeTextPatternRegex = /^\s*-\s+/;
+const normalizeTextPatternRegex2 = /<!--[\s\S]*?-->/g;
+
 export function normalizeText(s: string): string {
   return s
-    .replace(/^\s*-\s+/, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(normalizeTextPatternRegex, "")
+    .replace((normalizeTextPatternRegex2.lastIndex = 0, normalizeTextPatternRegex2), "")
     .trim()
     .toLowerCase();
 }

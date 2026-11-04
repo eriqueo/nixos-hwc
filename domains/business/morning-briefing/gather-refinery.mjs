@@ -18,6 +18,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const extractItemPatternRegex = /```json\n([\s\S]*?)\n```/;
+
 const DIR = process.env.REFINERY_ITEMS_DIR || "/var/lib/refinery/items";
 const BASE = process.env.REFINERY_URL || "https://refinery.hwc.iheartwoodcraft.com";
 const UNTRIAGED = "untriaged";
@@ -27,7 +30,7 @@ const UNTRIAGED = "untriaged";
 // state). The engine migrates lazily on load, so untouched item files still
 // carry the old names; reading them raw made those items invisible here.
 function extractItem(md) {
-  const m = md.match(/```json\n([\s\S]*?)\n```/);
+  const m = md.match(extractItemPatternRegex);
   if (!m) return null;
   try {
     const it = JSON.parse(m[1]);

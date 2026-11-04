@@ -9,6 +9,9 @@
 import { readFileSync } from "node:fs";
 import type { JtMappings } from "./core/jt-graph.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const readSecretFilePatternRegex = /\s+$/u;
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface ServiceConfig {
@@ -94,7 +97,7 @@ function readSecretFile(name: string): string | undefined {
   const filepath = process.env[name];
   if (!filepath || filepath.length === 0) return undefined;
   try {
-    return readFileSync(filepath, "utf8").replace(/\s+$/u, "");
+    return readFileSync(filepath, "utf8").replace(readSecretFilePatternRegex, "");
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     throw new Error(`secret file at ${name}=${filepath} unreadable: ${reason}`);

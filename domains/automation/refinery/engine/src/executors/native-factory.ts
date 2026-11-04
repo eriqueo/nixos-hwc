@@ -15,6 +15,10 @@ import { Item, Executor, Pipeline } from "../contracts.js";
 import { makeNativeExecutor, NativePorts } from "./native.js";
 import { GAUNTLET_CONFIGS } from "../pipelines/gauntlet-config.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const slugPatternRegex = /[^a-z0-9]+/g;
+const slugPatternRegex2 = /^-|-$/g;
+
 // Fallback native-executor wrapper when a pipeline ships no prompt file. The
 // item (its payload) is appended after this by the executor; the agent must
 // write the report file and end with the pipeline's verdict token.
@@ -28,7 +32,7 @@ export const DEFAULT_NATIVE_WRAPPER = [
 
 /** Slug a string into a branch-safe fragment (≤40 chars). */
 export function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "item";
+  return text.toLowerCase().replace((slugPatternRegex.lastIndex = 0, slugPatternRegex), "-").replace((slugPatternRegex2.lastIndex = 0, slugPatternRegex2), "").slice(0, 40) || "item";
 }
 
 export interface BuildNativeOpts {

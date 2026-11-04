@@ -6,7 +6,7 @@ import { isSnoozeActive } from '../lib/snooze.js';
 
 export function cmdStaleCheck(): void {
   const config = loadConfig();
-  const active = getActiveSession();
+  const active = getActiveSession(['start_at']);
   if (!active) return;
 
   const mins = elapsedMinutes(active.start_at);

@@ -6,6 +6,11 @@
 import { CALCULATOR_FIELDS } from '../../../../estimator/src/api/crm.js';
 import { evaluateCondition } from '../../../../estimator/src/engine/formulaEngine.js';
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const evalConditionPatternRegex = /(?<![=!<>])=(?!=)/g;
+const evalFormulaPatternRegex = /CASE\s+WHEN\s+(\w+)\s+THEN\s+([\d.]+)\s+ELSE\s+([\d.]+)\s+END/i;
+const evalFormulaPatternRegex2 = /^(\w+)\s*\*\s*(.+)$/;
+
 // Resolve an option's image to a full URL: imageBase + "/" + filename
 function resolveImage(imageBase, filename) {
   if (!filename) return null;
@@ -43,7 +48,7 @@ export function buildSteps(data) {
 // precedence belong to the shared parser, not a second string splitter.
 function evalCondition(expr, state) {
   if (!expr || expr.trim().toLowerCase() === 'true') return true;
-  return evaluateCondition(expr.replace(/(?<![=!<>])=(?!=)/g, '=='), state);
+  return evaluateCondition(expr.replace((evalConditionPatternRegex.lastIndex = 0, evalConditionPatternRegex), '=='), state);
 }
 
 // ─── Quantity formula evaluator ──────────────────────────────────────────
@@ -52,14 +57,14 @@ function evalFormula(formula, state, item) {
 
   // CASE WHEN is_double_vanity THEN 6 ELSE 4 END
   const caseMatch = formula.match(
-    /CASE\s+WHEN\s+(\w+)\s+THEN\s+([\d.]+)\s+ELSE\s+([\d.]+)\s+END/i
+    evalFormulaPatternRegex
   );
   if (caseMatch) {
     return state[caseMatch[1]] ? parseFloat(caseMatch[2]) : parseFloat(caseMatch[3]);
   }
 
   // var * number  or  var * production_rate
-  const mulMatch = formula.match(/^(\w+)\s*\*\s*(.+)$/);
+  const mulMatch = formula.match(evalFormulaPatternRegex2);
   if (mulMatch) {
     const leftVal = Number(state[mulMatch[1]]) || 0;
     const rightStr = mulMatch[2].trim();

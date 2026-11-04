@@ -15,8 +15,8 @@
  */
 
 import pg from "pg";
-import type { ReportStore } from "../ports/reports.js";
-import type { Report, ReportPayload } from "../core/report.js";
+import type { ReportStore, ReportView } from "../ports/reports.js";
+import type { ReportPayload } from "../core/report.js";
 import type { Logger } from "../ports/log.js";
 
 export interface PostgresReportStoreOpts {
@@ -26,17 +26,14 @@ export interface PostgresReportStoreOpts {
 
 interface ReportRow {
   report_id: string;
-  lead_id: string;
   payload: unknown;
   template_id: string;
-  viewed_at: string[];
   revoked_at: string | null;
   created_at: string;
 }
 
 const SELECT_BY_ID_SQL = `
-  SELECT report_id, lead_id::text AS lead_id, payload, template_id,
-         COALESCE(viewed_at, '{}')::text[] AS viewed_at,
+  SELECT report_id, CASE WHEN revoked_at IS NULL THEN payload END AS payload, template_id,
          revoked_at::text AS revoked_at,
          created_at::text AS created_at
   FROM hwc.reports
@@ -55,14 +52,11 @@ const REVOKE_SQL = `
   WHERE report_id = $1 AND revoked_at IS NULL
 `;
 
-function rowToReport(row: ReportRow): Report {
+function rowToReport(row: ReportRow): ReportView {
   return {
     id: row.report_id,
-    leadId: row.lead_id,
-    payload: row.payload as ReportPayload,
     templateId: row.template_id,
-    viewedAt: row.viewed_at,
-    ...(row.revoked_at ? { revokedAt: row.revoked_at } : {}),
+    ...(row.revoked_at ? { revokedAt: row.revoked_at } : { payload: row.payload as ReportPayload }),
     createdAt: row.created_at,
   };
 }
@@ -75,7 +69,7 @@ export function makePostgresReportStore(opts: PostgresReportStoreOpts): ReportSt
   });
 
   return {
-    async byId(reportId: string): Promise<Report | undefined> {
+    async byId(reportId: string): Promise<ReportView | undefined> {
       const result = await pool.query<ReportRow>(SELECT_BY_ID_SQL, [reportId]);
       if (result.rows.length === 0) return undefined;
       const row = result.rows[0];

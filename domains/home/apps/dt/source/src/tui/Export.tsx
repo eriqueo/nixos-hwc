@@ -6,6 +6,9 @@ import { dateRange, formatDuration, formatCurrency } from '../lib/time.js';
 import { loadConfig } from '../config/index.js';
 import { generateInvoiceAsync } from '../pdf/invoice.js';
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const ExportViewTestRegex = /^\d{4}-\d{2}-\d{2}$/;
+
 type Step = 'from' | 'to' | 'confirm' | 'done';
 
 export function ExportView(): React.ReactElement {
@@ -19,7 +22,7 @@ export function ExportView(): React.ReactElement {
   const config = loadConfig();
 
   const handleFromSubmit = useCallback((value: string) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    if (!ExportViewTestRegex.test(value)) {
       setResult('Invalid date format. Use YYYY-MM-DD.');
       return;
     }
@@ -28,7 +31,7 @@ export function ExportView(): React.ReactElement {
   }, []);
 
   const handleToSubmit = useCallback((value: string) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    if (!ExportViewTestRegex.test(value)) {
       setResult('Invalid date format. Use YYYY-MM-DD.');
       return;
     }

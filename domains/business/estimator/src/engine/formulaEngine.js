@@ -12,6 +12,12 @@
 
 // ─── Tokenizer ──────────────────────────────────────────────────────────────
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const tokenizeTestRegex = /\s/;
+const tokenizeTestRegex2 = /[0-9.]/;
+const tokenizeTestRegex3 = /[a-zA-Z_]/;
+const tokenizeTestRegex4 = /[a-zA-Z0-9_]/;
+
 const TOKEN = {
   NUMBER: 'NUMBER',
   STRING: 'STRING',
@@ -28,12 +34,12 @@ function tokenize(expr) {
   let i = 0;
   while (i < expr.length) {
     // Skip whitespace
-    if (/\s/.test(expr[i])) { i++; continue; }
+    if (tokenizeTestRegex.test(expr[i])) { i++; continue; }
 
     // Number (including decimals)
-    if (/[0-9.]/.test(expr[i])) {
+    if (tokenizeTestRegex2.test(expr[i])) {
       let num = '';
-      while (i < expr.length && /[0-9.]/.test(expr[i])) num += expr[i++];
+      while (i < expr.length && tokenizeTestRegex2.test(expr[i])) num += expr[i++];
       tokens.push({ type: TOKEN.NUMBER, value: parseFloat(num) });
       continue;
     }
@@ -79,9 +85,9 @@ function tokenize(expr) {
     }
 
     // Identifier or keyword (alphanumeric + underscore)
-    if (/[a-zA-Z_]/.test(expr[i])) {
+    if (tokenizeTestRegex3.test(expr[i])) {
       let id = '';
-      while (i < expr.length && /[a-zA-Z0-9_]/.test(expr[i])) id += expr[i++];
+      while (i < expr.length && tokenizeTestRegex4.test(expr[i])) id += expr[i++];
       tokens.push({ type: TOKEN.IDENT, value: id });
       continue;
     }

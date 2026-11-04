@@ -11,6 +11,14 @@ import { execFile } from "node:child_process";
 import { GitFactsPort } from "../review/ports.js";
 import { Diffstat } from "../review/contract.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const refTestRegex = /^(origin|refs)\//;
+const resolveBasePatternRegex = /^origin\//;
+const diffstatExecRegex = /(\d+) files? changed/;
+const diffstatExecRegex2 = /(\d+) insertions?\(\+\)/;
+const diffstatExecRegex3 = /(\d+) deletions?\(-\)/;
+const isMergeableTestRegex = /^CONFLICT/m;
+
 export interface GitFactsConfig {
   bin?: string; // default $REFINERY_GIT_BIN or "git"
   timeoutMs?: number; // default 60000
@@ -54,7 +62,7 @@ function makeGit(bin: string, timeout: number) {
 
 /** Reference a branch as origin/<branch> unless the caller already qualified it. */
 function ref(branch: string): string {
-  return branch.includes("/") && /^(origin|refs)\//.test(branch) ? branch : `origin/${branch}`;
+  return branch.includes("/") && refTestRegex.test(branch) ? branch : `origin/${branch}`;
 }
 
 export function makeGitFacts(cfg: GitFactsConfig = {}): GitFactsPort {
@@ -71,7 +79,7 @@ export function makeGitFacts(cfg: GitFactsConfig = {}): GitFactsPort {
         throw new Error(`git fetch failed (exit ${fetched.exitCode}): ${fetched.stderr.trim()}`);
       }
       const head = await git(repo, ["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]);
-      const name = head.stdout.trim().replace(/^origin\//, "");
+      const name = head.stdout.trim().replace(resolveBasePatternRegex, "");
       return name ? `origin/${name}` : "origin/main";
     },
 
@@ -85,9 +93,9 @@ export function makeGitFacts(cfg: GitFactsConfig = {}): GitFactsPort {
     async diffstat({ repo, base, branch }): Promise<Diffstat> {
       const r = await git(repo, ["diff", "--shortstat", `${base}..${ref(branch)}`]);
       const out = r.stdout.trim();
-      const files = /(\d+) files? changed/.exec(out)?.[1];
-      const ins = /(\d+) insertions?\(\+\)/.exec(out)?.[1];
-      const del = /(\d+) deletions?\(-\)/.exec(out)?.[1];
+      const files = diffstatExecRegex.exec(out)?.[1];
+      const ins = diffstatExecRegex2.exec(out)?.[1];
+      const del = diffstatExecRegex3.exec(out)?.[1];
       return {
         files: files ? parseInt(files, 10) : 0,
         insertions: ins ? parseInt(ins, 10) : 0,
@@ -107,7 +115,7 @@ export function makeGitFacts(cfg: GitFactsConfig = {}): GitFactsPort {
       // `git merge-tree --write-tree` exits non-zero and prints a conflict
       // section when the merge would conflict; clean → exit 0.
       const r = await git(repo, ["merge-tree", "--write-tree", base, ref(branch)]);
-      return r.exitCode === 0 && !/^CONFLICT/m.test(r.stdout);
+      return r.exitCode === 0 && !isMergeableTestRegex.test(r.stdout);
     },
   };
 }

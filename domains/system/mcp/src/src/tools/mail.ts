@@ -12,6 +12,31 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { log } from "../log.js";
 import { mcpError, catchError } from "../errors.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const loadSearchRegistryPatternRegex = /\r?\n/;
+const classifierMutationTestRegex = /^[0-9a-f]{64}$/;
+const clearAllCustomOpsPatternRegex = /tag:([a-zA-Z0-9_/-]+)/g;
+const clearAllCustomOpsExecRegex = /^tag:([a-zA-Z0-9_-]+) AND NOT tag:trash$/;
+const stripHtmlPatternRegex = /<style[^>]*>[\s\S]*?<\/style>/gi;
+const stripHtmlPatternRegex2 = /<script[^>]*>[\s\S]*?<\/script>/gi;
+const stripHtmlPatternRegex3 = /<br\s*\/?>/gi;
+const stripHtmlPatternRegex4 = /<\/p>/gi;
+const stripHtmlPatternRegex5 = /<\/div>/gi;
+const stripHtmlPatternRegex6 = /<\/li>/gi;
+const stripHtmlPatternRegex7 = /<[^>]+>/g;
+const stripHtmlPatternRegex8 = /&nbsp;/gi;
+const stripHtmlPatternRegex9 = /&amp;/gi;
+const stripHtmlPatternRegex10 = /&lt;/gi;
+const stripHtmlPatternRegex11 = /&gt;/gi;
+const stripHtmlPatternRegex12 = /&quot;/gi;
+const stripHtmlPatternRegex13 = /&#39;/gi;
+const stripHtmlPatternRegex14 = /\n{3,}/g;
+const mailToolsPatternRegex = /^id:/;
+const mailToolsTestRegex = /^[+-](?:inbox|archive|trash|spam)$/;
+const mailToolsTestRegex2 = /^[+-][a-zA-Z0-9_:/.@-]+$/;
+const parseAddressesPatternRegex = /<([^>]+)>/;
+const mailToolsPatternRegex2 = /^<|>$/g;
+
 /* ════════════════════════════════════════════════════════════════ */
 /*  Constants                                                      */
 /* ════════════════════════════════════════════════════════════════ */
@@ -159,7 +184,7 @@ const SAVED_SEARCHES: Record<string, string> = {
 function loadSearchRegistry(file: string): Record<string, string> {
   try {
     if (statSync(file).size > 128 * 1024) throw new Error("search registry exceeds 128 KiB");
-    const lines = readFileSync(file, "utf8").split(/\r?\n/);
+    const lines = readFileSync(file, "utf8").split(loadSearchRegistryPatternRegex);
     if (lines[0] !== "# mail-searches-v1") throw new Error("unsupported search registry version");
     const searches: Record<string, string> = {};
     for (const line of lines) {
@@ -370,7 +395,7 @@ export async function classifierMutation(
             if (receipt?.schemaVersion !== 1 || receipt.code !== "mail-action-accepted"
                 || receipt.local !== "applied" || !["pending", "not-applicable"].includes(receipt.remote)
                 || !Array.isArray(receipt.commandIds) || receipt.commandIds.length > 100
-                || !receipt.commandIds.every((id: unknown) => typeof id === "string" && /^[0-9a-f]{64}$/.test(id))) {
+                || !receipt.commandIds.every((id: unknown) => typeof id === "string" && classifierMutationTestRegex.test(id))) {
               throw new Error("invalid receipt");
             }
             resolve({accepted: receipt as CommandReceipt});
@@ -408,12 +433,12 @@ function clearAllCustomOps(): string[] {
     "keep", "important", "flagged", "starred", "inbox", "archive", "trash", "spam",
     "unread", "sent", "draft", "action", "pending",
     ...Object.entries(SAVED_SEARCHES).filter(([name]) => name.startsWith("history:"))
-      .flatMap(([, query]) => [...query.matchAll(/tag:([a-zA-Z0-9_/-]+)/g)].map((match) => match[1])),
+      .flatMap(([, query]) => [...query.matchAll((clearAllCustomOpsPatternRegex.lastIndex = 0, clearAllCustomOpsPatternRegex))].map((match) => match[1])),
   ]);
   const customFacts = Object.entries(SAVED_SEARCHES)
     .filter(([name]) => name.startsWith("custom-fact:"))
     .flatMap(([, query]) => {
-      const match = /^tag:([a-zA-Z0-9_-]+) AND NOT tag:trash$/.exec(query);
+      const match = clearAllCustomOpsExecRegex.exec(query);
       return match && !historicalOrProtected.has(match[1]) ? [match[1]] : [];
     });
   return [
@@ -447,20 +472,20 @@ function flattenShow(data: unknown): unknown[] {
 
 function stripHtml(html: string): string {
   return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace((stripHtmlPatternRegex.lastIndex = 0, stripHtmlPatternRegex), "")
+    .replace((stripHtmlPatternRegex2.lastIndex = 0, stripHtmlPatternRegex2), "")
+    .replace((stripHtmlPatternRegex3.lastIndex = 0, stripHtmlPatternRegex3), "\n")
+    .replace((stripHtmlPatternRegex4.lastIndex = 0, stripHtmlPatternRegex4), "\n\n")
+    .replace((stripHtmlPatternRegex5.lastIndex = 0, stripHtmlPatternRegex5), "\n")
+    .replace((stripHtmlPatternRegex6.lastIndex = 0, stripHtmlPatternRegex6), "\n")
+    .replace((stripHtmlPatternRegex7.lastIndex = 0, stripHtmlPatternRegex7), "")
+    .replace((stripHtmlPatternRegex8.lastIndex = 0, stripHtmlPatternRegex8), " ")
+    .replace((stripHtmlPatternRegex9.lastIndex = 0, stripHtmlPatternRegex9), "&")
+    .replace((stripHtmlPatternRegex10.lastIndex = 0, stripHtmlPatternRegex10), "<")
+    .replace((stripHtmlPatternRegex11.lastIndex = 0, stripHtmlPatternRegex11), ">")
+    .replace((stripHtmlPatternRegex12.lastIndex = 0, stripHtmlPatternRegex12), '"')
+    .replace((stripHtmlPatternRegex13.lastIndex = 0, stripHtmlPatternRegex13), "'")
+    .replace((stripHtmlPatternRegex14.lastIndex = 0, stripHtmlPatternRegex14), "\n\n")
     .trim();
 }
 
@@ -689,7 +714,7 @@ export function mailTools(): ToolDef[] {
 
         if (action === "commands") {
           const id = args.command_id;
-          if (id !== undefined && (typeof id !== "string" || !/^[0-9a-f]{64}$/.test(id))) {
+          if (id !== undefined && (typeof id !== "string" || !classifierMutationTestRegex.test(id))) {
             return mcpError({type:"VALIDATION_ERROR", message:"command_id must be a returned command ID"});
           }
           try {
@@ -746,7 +771,7 @@ export function mailTools(): ToolDef[] {
               const { query: qArr, ...rest } = t;
               const result: Record<string, unknown> = { ...rest };
               if (Array.isArray(qArr) && typeof qArr[0] === "string") {
-                result.messageId = (qArr[0] as string).replace(/^id:/, "");
+                result.messageId = (qArr[0] as string).replace(mailToolsPatternRegex, "");
               }
               return result;
             });
@@ -813,7 +838,7 @@ export function mailTools(): ToolDef[] {
               return {status: "ok", message: `Accepted ${actionName}. Remote completion is pending.`,
                 data: acceptedMailCommand(outcome.accepted)};
             }
-            if (rawTags?.some(tag => /^[+-](?:inbox|archive|trash|spam)$/.test(tag))) {
+            if (rawTags?.some(tag => mailToolsTestRegex.test(tag))) {
               return mcpError({type: "VALIDATION_ERROR",
                 message: "Folder changes require a recorded mail action",
                 suggestion: "Use tag_action archive, trash, untrash, spam or unspam; use hwc_mail_triage for State corrections"});
@@ -831,7 +856,7 @@ export function mailTools(): ToolDef[] {
               mode = `action:${actionName}`;
             } else if (rawTags && rawTags.length > 0) {
               for (const t of rawTags) {
-                if (!/^[+-][a-zA-Z0-9_:/.@-]+$/.test(t)) {
+                if (!mailToolsTestRegex2.test(t)) {
                   return mcpError({ type: "VALIDATION_ERROR", message: `Invalid tag format: ${t}. Use +tag or -tag.`, suggestion: "Each tag op must start with + or - followed by alphanumeric/underscore characters" });
                 }
               }
@@ -953,7 +978,7 @@ export function mailTools(): ToolDef[] {
               return header
                 .split(",")
                 .map((a) => {
-                  const match = a.match(/<([^>]+)>/) || [null, a.trim()];
+                  const match = a.match(parseAddressesPatternRegex) || [null, a.trim()];
                   return match[1]?.trim() || "";
                 })
                 .filter((a) => a.length > 0);
@@ -1033,7 +1058,7 @@ export function mailTools(): ToolDef[] {
               hdrs.push(`Cc: ${replyCc.join(", ")}`);
             }
             if (originalMessageId) {
-              const cleanId = originalMessageId.replace(/^<|>$/g, "");
+              const cleanId = originalMessageId.replace((mailToolsPatternRegex2.lastIndex = 0, mailToolsPatternRegex2), "");
               hdrs.push(`In-Reply-To: <${cleanId}>`);
               hdrs.push(`References: <${cleanId}>`);
             }

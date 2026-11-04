@@ -7,6 +7,13 @@ import { safeExec } from "../executors/shell.js";
 import { catchError } from "../errors.js";
 import { contract } from "../result.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const storageToolsPatternRegex = /\s+/;
+const storageToolsPatternRegex2 = /\s{2,}/;
+const storageToolsPatternRegex3 = /Archive name: (.+)/;
+const storageToolsPatternRegex4 = /(Original size|Compressed size|Deduplicated size|This archive):\s*(.+)/;
+const storageToolsPatternRegex5 = /Duration:\s*(.+)/;
+
 export function storageTools(): ToolDef[] {
   return [
     {
@@ -70,7 +77,7 @@ export function storageTools(): ToolDef[] {
                   const r = await safeExec("df", ["-h", path], { timeout: 5000 });
                   const lines = r.stdout.split("\n").filter(Boolean).slice(1);
                   if (lines.length > 0) {
-                    const p = lines[0].trim().split(/\s+/);
+                    const p = lines[0].trim().split(storageToolsPatternRegex);
                     return {
                       tier: name,
                       mount: path,
@@ -128,7 +135,7 @@ export function storageTools(): ToolDef[] {
               let nextRun: string | undefined;
               for (const line of timerLines) {
                 if (line.includes("borgbackup")) {
-                  const p = line.trim().split(/\s{2,}/);
+                  const p = line.trim().split(storageToolsPatternRegex2);
                   nextRun = p[0];
                   break;
                 }
@@ -137,7 +144,7 @@ export function storageTools(): ToolDef[] {
               let lastArchive: Record<string, unknown> | undefined;
               const journalLines = journalResult.stdout.split("\n").filter(Boolean);
               for (const line of journalLines.reverse()) {
-                const archiveMatch = line.match(/Archive name: (.+)/);
+                const archiveMatch = line.match(storageToolsPatternRegex3);
                 if (archiveMatch) {
                   lastArchive = { name: archiveMatch[1] };
                   break;
@@ -146,9 +153,9 @@ export function storageTools(): ToolDef[] {
 
               const stats: Record<string, string> = {};
               for (const line of journalLines) {
-                const sizeMatch = line.match(/(Original size|Compressed size|Deduplicated size|This archive):\s*(.+)/);
+                const sizeMatch = line.match(storageToolsPatternRegex4);
                 if (sizeMatch) stats[sizeMatch[1]] = sizeMatch[2].trim();
-                const durationMatch = line.match(/Duration:\s*(.+)/);
+                const durationMatch = line.match(storageToolsPatternRegex5);
                 if (durationMatch) stats["Duration"] = durationMatch[1].trim();
               }
 

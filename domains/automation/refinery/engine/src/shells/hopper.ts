@@ -6,6 +6,14 @@
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const frontmatterExecRegex = /^---\n([\s\S]*?)\n---/;
+const frontmatterExecRegex2 = /^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/;
+const frontmatterPatternRegex = /^["']|["']$/g;
+const readHopperCardsTestRegex = /^\d\d-/;
+const readHopperCardsPatternRegex = /\.md$/;
+const escPatternRegex = /[&<>"']/g;
+
 export interface HopperCard {
   goalId: string;
   file: string;
@@ -15,11 +23,11 @@ export interface HopperCard {
 
 function frontmatter(text: string): Record<string, string> {
   const out: Record<string, string> = {};
-  const m = /^---\n([\s\S]*?)\n---/.exec(text);
+  const m = frontmatterExecRegex.exec(text);
   if (!m) return out;
   for (const line of m[1].split("\n")) {
-    const mm = /^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/.exec(line);
-    if (mm) out[mm[1]] = mm[2].replace(/^["']|["']$/g, "").trim();
+    const mm = frontmatterExecRegex2.exec(line);
+    if (mm) out[mm[1]] = mm[2].replace((frontmatterPatternRegex.lastIndex = 0, frontmatterPatternRegex), "").trim();
   }
   return out;
 }
@@ -32,9 +40,9 @@ export function readHopperCards(vaultDir: string): HopperCard[] {
     const dir = join(base, goalId);
     if (!statSync(dir).isDirectory()) continue;
     for (const f of readdirSync(dir)) {
-      if (!/^\d\d-/.test(f) || !f.endsWith(".md")) continue;
+      if (!readHopperCardsTestRegex.test(f) || !f.endsWith(".md")) continue;
       const fm = frontmatter(readFileSync(join(dir, f), "utf8"));
-      out.push({ goalId, file: f, title: fm.title || f.replace(/\.md$/, ""), status: fm.status || "draft" });
+      out.push({ goalId, file: f, title: fm.title || f.replace(readHopperCardsPatternRegex, ""), status: fm.status || "draft" });
     }
   }
   out.sort((a, b) => (a.goalId + a.file).localeCompare(b.goalId + b.file));
@@ -42,7 +50,7 @@ export function readHopperCards(vaultDir: string): HopperCard[] {
 }
 
 function esc(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
+  return s.replace((escPatternRegex.lastIndex = 0, escPatternRegex), (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string),
   );
 }

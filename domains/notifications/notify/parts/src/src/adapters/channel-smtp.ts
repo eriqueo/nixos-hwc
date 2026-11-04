@@ -16,6 +16,9 @@ import type { Channel } from "../ports/channel.js";
 import type { Notification, DeliveryResult, Priority } from "../core/types.js";
 import { detailBody } from "../core/types.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const makeSmtpChannelPatternRegex = /\s+$/u;
+
 const PRIORITY_LABEL: Record<Priority, string> = {
   1: "P1 CRITICAL",
   2: "P2 HIGH",
@@ -85,7 +88,7 @@ export function renderBody(notif: Notification): string {
 export function makeSmtpChannel(opts: SmtpChannelOpts): Channel {
   // Read the password ONCE at construction. If the secret rotates, the
   // service needs a restart — same contract as Discord webhook URLs.
-  const password = readFileSync(opts.params.passwordFile, "utf8").replace(/\s+$/u, "");
+  const password = readFileSync(opts.params.passwordFile, "utf8").replace(makeSmtpChannelPatternRegex, "");
 
   // Build the transporter ONCE; nodemailer pools the underlying TCP
   // socket per send within `pool: true`. For our low-volume use the

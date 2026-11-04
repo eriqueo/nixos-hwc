@@ -8,6 +8,9 @@ import { execFile } from "node:child_process";
 import { z } from "zod";
 import { GitHubPort } from "../review/ports.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const createPrPatternRegex = /^origin\//;
+
 export interface GitHubCliConfig {
   bin?: string; // default $REFINERY_GH_BIN or "gh"
   timeoutMs?: number; // default 60000
@@ -100,7 +103,7 @@ export function makeGitHubCli(cfg: GitHubCliConfig = {}): GitHubPort {
         "pr",
         "create",
         "--base",
-        base.replace(/^origin\//, ""),
+        base.replace(createPrPatternRegex, ""),
         "--head",
         branch,
         "--title",

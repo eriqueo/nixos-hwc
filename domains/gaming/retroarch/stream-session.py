@@ -21,6 +21,14 @@ import subprocess
 import sys
 import time
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_PREPARE_CONTROLLERS_SEARCH_RE = _compiled_re.compile(r'^Cross\s*=\s*SDL-0/FaceSouth\s*$', _compiled_re.M)
+_CATALOG_FULLMATCH_RE = _compiled_re.compile(r'[a-z0-9]+(-[a-z0-9]+)*')
+_APPEND_SUB_RE = _compiled_re.compile(r'^Type\s*=\s*None\s*$', _compiled_re.M)
+
+
 BASE = Path('@state@')
 RUNTIME = Path('@runtime@')
 PCSX = '@pcsx@'
@@ -93,7 +101,7 @@ def catalog():
     for entry in data['games']:
         game_id = entry['id']
         rom = (root / entry['rom']).resolve()
-        if (not re.fullmatch(r'[a-z0-9]+(-[a-z0-9]+)*', game_id)
+        if (not _CATALOG_FULLMATCH_RE.fullmatch(game_id)
                 or game_id in games or not rom.is_relative_to(root)
                 or entry['system'] not in ['ps2', 'gamecube']):
             raise RuntimeError('GAME_CATALOG_INVALID_ENTRY')
@@ -108,7 +116,7 @@ def prepare_controllers():
     text = ini.read_text()
     marker = '; HWC Moonlight gamepad bindings v1'
     # Emulator saves may discard comments; binding presence is the stable marker.
-    if not re.search(r'^Cross\s*=\s*SDL-0/FaceSouth\s*$', text, re.M):
+    if not _PREPARE_CONTROLLERS_SEARCH_RE.search(text):
         backup = ini.with_suffix('.ini.before-moonlight-gamepads')
         if not backup.exists():
             backup.write_bytes(ini.read_bytes()); backup.chmod(0o600)
@@ -127,7 +135,7 @@ def prepare_controllers():
             def append(match):
                 body = match[2]
                 if player == 2:
-                    body = re.sub(r'^Type\s*=\s*None\s*$', 'Type = DualShock2', body, flags=re.M)
+                    body = _APPEND_SUB_RE.sub('Type = DualShock2', body)
                 lines = [f'{key} = SDL-{player-1}/{value}' for key, value in mappings.items()]
                 return match[1] + body.rstrip() + '\n' + marker + '\n' + '\n'.join(lines) + '\n'
             text, count = re.subn(pattern, append, text, flags=re.S)

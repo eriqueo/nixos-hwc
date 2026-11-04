@@ -25,6 +25,13 @@ import { Item, ItemStore } from "../contracts.js";
 import { contentId, normalizeText as norm } from "../identity.js";
 import { UNTRIAGED } from "../triage.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const scanExecRegex = /^##\s+(.*)$/;
+const scanTestRegex = /^\s*-\s+/;
+const scanPatternRegex = /<!--[\s\S]*?-->/g;
+const isHeaderTestRegex = /^##\s+/;
+const appendToSectionPatternRegex = /\n+$/;
+
 export const BRAIN_PREFIX = "brain-";
 export const BRAIN_SOURCE = "brain idea";
 const SECTIONS = new Set(["backlog", "drafted"]);
@@ -85,15 +92,15 @@ export function readBrainIdeas(vaultDir: string): BrainIdea[] {
     if (!existsSync(file)) return;
     let section = "";
     for (const line of readFileSync(file, "utf8").split("\n")) {
-      const h = /^##\s+(.*)$/.exec(line);
+      const h = scanExecRegex.exec(line);
       if (h) {
         section = h[1].trim().toLowerCase();
         continue;
       }
-      if (SECTIONS.has(section) && /^\s*-\s+/.test(line)) {
+      if (SECTIONS.has(section) && scanTestRegex.test(line)) {
         const text = line
-          .replace(/^\s*-\s+/, "")
-          .replace(/<!--[\s\S]*?-->/g, "")
+          .replace(scanTestRegex, "")
+          .replace((scanPatternRegex.lastIndex = 0, scanPatternRegex), "")
           .trim();
         if (text) out.push({ id: ideaId(text), text, section, goalId });
       }
@@ -162,15 +169,17 @@ export async function syncBrainIdeas(
 
 // ── outbound: write-back into _ideas.md ──────────────────────────────────────
 
-const isHeader = (l: string): boolean => /^##\s+/.test(l);
+const isHeader = (l: string): boolean => isHeaderTestRegex.test(l);
 
 /** Insert a list line at the end of `## section` (creating the section at EOF if
  *  absent). Returns the new file text (always newline-terminated). */
-function appendToSection(text: string, section: string, listLine: string): string {
-  const body = text.replace(/\n+$/, "");
+const APPEND_SECTION_PATTERNS = { backlog: /^##\s+backlog\b/i, promoted: /^##\s+promoted\b/i };
+
+function appendToSection(text: string, section: keyof typeof APPEND_SECTION_PATTERNS, listLine: string): string {
+  const body = text.replace(appendToSectionPatternRegex, "");
   if (!body.trim()) return `## ${section}\n${listLine}\n`;
   const lines = body.split("\n");
-  const sectionRe = new RegExp(`^##\\s+${section}\\b`, "i");
+  const sectionRe = APPEND_SECTION_PATTERNS[section];
   const headerIdx = lines.findIndex((l) => sectionRe.test(l));
   if (headerIdx === -1) return [...lines, "", `## ${section}`, listLine, ""].join("\n");
 
@@ -190,17 +199,17 @@ function appendToSection(text: string, section: string, listLine: string): strin
 /** Remove the first backlog/drafted/new list line matching `target` (never the
  *  `## promoted` section). Returns {text, removed}. */
 function removeLineByText(text: string, target: string): { text: string; removed: boolean } {
-  const lines = text.replace(/\n+$/, "").split("\n");
+  const lines = text.replace(appendToSectionPatternRegex, "").split("\n");
   const key = norm(target);
   let section = "";
   for (let i = 0; i < lines.length; i++) {
-    const h = /^##\s+(.*)$/.exec(lines[i]);
+    const h = scanExecRegex.exec(lines[i]);
     if (h) {
       section = h[1].trim().toLowerCase();
       continue;
     }
     if (section === "promoted") continue;
-    if (/^\s*-\s+/.test(lines[i]) && norm(lines[i]) === key) {
+    if (scanTestRegex.test(lines[i]) && norm(lines[i]) === key) {
       lines.splice(i, 1);
       return { text: `${lines.join("\n")}\n`, removed: true };
     }
@@ -214,12 +223,12 @@ function hasIdea(vaultDir: string, text: string): boolean {
   for (const f of ideaFiles(vaultDir)) {
     let section = "";
     for (const line of readFileSync(f, "utf8").split("\n")) {
-      const h = /^##\s+(.*)$/.exec(line);
+      const h = scanExecRegex.exec(line);
       if (h) {
         section = h[1].trim().toLowerCase();
         continue;
       }
-      if (section !== "promoted" && /^\s*-\s+/.test(line) && norm(line) === key) return true;
+      if (section !== "promoted" && scanTestRegex.test(line) && norm(line) === key) return true;
     }
   }
   return false;

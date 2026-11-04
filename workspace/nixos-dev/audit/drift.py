@@ -33,6 +33,22 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_CHECK_REDUNDANCY_FINDITER_RE = _compiled_re.compile(r'(?:ports?\s*=\s*\[?\s*|:)(\d{2,5})(?:["\s\];])')
+_CHECK_REDUNDANCY_SEARCH_RE = _compiled_re.compile(r'networking\.firewall\.allowed(?:TCP|UDP)Ports.*?(\d{2,5})')
+_CHECK_REDUNDANCY_SEARCH_RE_2 = _compiled_re.compile(r'virtualisation\.oci-containers\.containers\.([a-zA-Z0-9_-]+)')
+_CHECK_REDUNDANCY_SEARCH_RE_3 = _compiled_re.compile(r'environment\.etc\."?([^"{\s]+)"?')
+_CHECK_NAMING_DRIFT_SEARCH_RE = _compiled_re.compile(r'options\.hwc\.[a-zA-Z0-9.]+\.([a-zA-Z]+)\s*=')
+_CHECK_SYS_COUPLING_SEARCH_RE = _compiled_re.compile(r'config\.hwc\.home\.[a-zA-Z]')
+_CHECK_MISPLACED_SCOPE_SEARCH_RE = _compiled_re.compile(r'systemd\.services\.\w+\s*=\s*\{')
+_CHECK_MISPLACED_SCOPE_SEARCH_RE_2 = _compiled_re.compile(r'virtualisation\.oci-containers\.containers\.\w+')
+_CHECK_MISPLACED_SCOPE_SEARCH_RE_3 = _compiled_re.compile(r'(services\.\w+\s*=\s*\{[^}]{100,})')
+_CHECK_MODULE_ANATOMY_SEARCH_RE = _compiled_re.compile(r'^\s*options\.')
+_CHECK_MODULE_ANATOMY_SEARCH_RE_2 = _compiled_re.compile(r'^\s*config\s*=')
+
+
 # ANSI colors
 RED = '\033[0;31m'
 YELLOW = '\033[1;33m'
@@ -171,14 +187,14 @@ class DriftAnalyzer:
 
                 # Check for service implementations
                 for i, line in enumerate(lines, 1):
-                    if re.search(r'systemd\.services\.\w+\s*=\s*\{', line):
+                    if _CHECK_MISPLACED_SCOPE_SEARCH_RE.search(line):
                         self.report.add_issue(
                             "MISPLACED_SCOPE", "HIGH",
                             f"{nix_file.relative_to(self.search_path)}:{i}",
                             "systemd service implementation in profile (profiles are menus, not implementation) (CHARTER §3)"
                         )
 
-                    if re.search(r'virtualisation\.oci-containers\.containers\.\w+', line):
+                    if _CHECK_MISPLACED_SCOPE_SEARCH_RE_2.search(line):
                         self.report.add_issue(
                             "MISPLACED_SCOPE", "HIGH",
                             f"{nix_file.relative_to(self.search_path)}:{i}",
@@ -195,7 +211,7 @@ class DriftAnalyzer:
                     # Heuristic: large config blocks that should be in modules
                     if len(content) > 500:  # Arbitrary threshold
                         # Check for repeated patterns across machines
-                        if re.search(r'(services\.\w+\s*=\s*\{[^}]{100,})', content):
+                        if _CHECK_MISPLACED_SCOPE_SEARCH_RE_3.search(content):
                             self.report.add_issue(
                                 "MISPLACED_SCOPE", "MED",
                                 f"{nix_file.relative_to(self.search_path)}",
@@ -223,25 +239,25 @@ class DriftAnalyzer:
 
             for i, line in enumerate(lines, 1):
                 # Port detection
-                port_matches = re.finditer(r'(?:ports?\s*=\s*\[?\s*|:)(\d{2,5})(?:["\s\];])', line)
+                port_matches = _CHECK_REDUNDANCY_FINDITER_RE.finditer(line)
                 for match in port_matches:
                     port = match.group(1)
                     port_usage[port].append((nix_file, i))
 
                 # Firewall ports
-                fw_match = re.search(r'networking\.firewall\.allowed(?:TCP|UDP)Ports.*?(\d{2,5})', line)
+                fw_match = _CHECK_REDUNDANCY_SEARCH_RE.search(line)
                 if fw_match:
                     port = fw_match.group(1)
                     port_usage[port].append((nix_file, i))
 
                 # Container names
-                container_match = re.search(r'virtualisation\.oci-containers\.containers\.([a-zA-Z0-9_-]+)', line)
+                container_match = _CHECK_REDUNDANCY_SEARCH_RE_2.search(line)
                 if container_match:
                     name = container_match.group(1)
                     container_names[name].append((nix_file, i))
 
                 # environment.etc paths
-                etc_match = re.search(r'environment\.etc\."?([^"{\s]+)"?', line)
+                etc_match = _CHECK_REDUNDANCY_SEARCH_RE_3.search(line)
                 if etc_match:
                     path = etc_match.group(1)
                     etc_paths[path].append((nix_file, i))
@@ -335,7 +351,7 @@ class DriftAnalyzer:
 
                     for i, line in enumerate(lines, 1):
                         # Check for options definitions (impure)
-                        if re.search(r'^\s*options\.', line):
+                        if _CHECK_MODULE_ANATOMY_SEARCH_RE.search(line):
                             self.report.add_issue(
                                 "MODULE_ANATOMY", "HIGH",
                                 f"{part_file.relative_to(self.search_path)}:{i}",
@@ -343,7 +359,7 @@ class DriftAnalyzer:
                             )
 
                         # Check for config assignments (side effects)
-                        if re.search(r'^\s*config\s*=', line):
+                        if _CHECK_MODULE_ANATOMY_SEARCH_RE_2.search(line):
                             self.report.add_issue(
                                 "MODULE_ANATOMY", "HIGH",
                                 f"{part_file.relative_to(self.search_path)}:{i}",
@@ -364,7 +380,7 @@ class DriftAnalyzer:
 
             for i, line in enumerate(lines, 1):
                 # Find option definitions
-                opt_match = re.search(r'options\.hwc\.[a-zA-Z0-9.]+\.([a-zA-Z]+)\s*=', line)
+                opt_match = _CHECK_NAMING_DRIFT_SEARCH_RE.search(line)
                 if opt_match:
                     opt_name = opt_match.group(1)
 
@@ -403,7 +419,7 @@ class DriftAnalyzer:
 
             for i, line in enumerate(lines, 1):
                 # Check for references to hwc.home options (wrong lane)
-                if re.search(r'config\.hwc\.home\.[a-zA-Z]', line):
+                if _CHECK_SYS_COUPLING_SEARCH_RE.search(line):
                     self.report.add_issue(
                         "SYS_COUPLING", "HIGH",
                         f"{sys_file.relative_to(self.search_path)}:{i}",

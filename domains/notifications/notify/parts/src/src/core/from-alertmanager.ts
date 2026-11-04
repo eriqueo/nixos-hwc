@@ -16,6 +16,10 @@ import type {
   AlertmanagerWebhook,
 } from "../schemas/alertmanager.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const slugifyPatternRegex = /[^a-z0-9-]+/g;
+const slugifyPatternRegex2 = /^-+|-+$/g;
+
 /**
  * Map an Alertmanager `severity` label to a Notification priority.
  * Falls back to P3 for unknown values — visible without being a page.
@@ -59,7 +63,7 @@ function renderLabels(labels: Record<string, string>, omit: ReadonlySet<string>)
 
 /** Slug-clean: lowercase, replace non-[a-z0-9-] with `-`, trim dashes. */
 function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+  return s.toLowerCase().replace((slugifyPatternRegex.lastIndex = 0, slugifyPatternRegex), "-").replace((slugifyPatternRegex2.lastIndex = 0, slugifyPatternRegex2), "");
 }
 
 function alertToNotification(

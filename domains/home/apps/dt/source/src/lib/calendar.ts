@@ -3,6 +3,12 @@ import path from 'node:path';
 import { loadConfig } from '../config/index.js';
 import type { Session } from './types.js';
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const escapeIcsPatternRegex = /\\/g;
+const escapeIcsPatternRegex2 = /\n/g;
+const escapeIcsPatternRegex3 = /,/g;
+const escapeIcsPatternRegex4 = /;/g;
+
 function defaultDir(): string {
   const xdg = process.env.XDG_DATA_HOME || path.join(process.env.HOME || '~', '.local/share');
   return path.join(xdg, 'dt', 'calendar');
@@ -15,10 +21,10 @@ export function calendarDir(): string {
 
 function escapeIcs(text: string): string {
   return text
-    .replace(/\\/g, '\\\\')
-    .replace(/\n/g, '\\n')
-    .replace(/,/g, '\\,')
-    .replace(/;/g, '\\;');
+    .replace((escapeIcsPatternRegex.lastIndex = 0, escapeIcsPatternRegex), '\\\\')
+    .replace((escapeIcsPatternRegex2.lastIndex = 0, escapeIcsPatternRegex2), '\\n')
+    .replace((escapeIcsPatternRegex3.lastIndex = 0, escapeIcsPatternRegex3), '\\,')
+    .replace((escapeIcsPatternRegex4.lastIndex = 0, escapeIcsPatternRegex4), '\\;');
 }
 
 function isoToIcsUtc(iso: string): string {
@@ -36,7 +42,9 @@ function eventPath(id: number): string {
   return path.join(calendarDir(), `dt-${id}.ics`);
 }
 
-function sessionToIcs(s: Session): string {
+type CalendarSession = Pick<Session, 'id' | 'start_at' | 'end_at' | 'category' | 'notes'>;
+
+function sessionToIcs(s: CalendarSession): string {
   if (!s.end_at) throw new Error(`session ${s.id} has no end_at`);
   const dtstart = isoToIcsUtc(s.start_at);
   const dtend = isoToIcsUtc(s.end_at);
@@ -64,7 +72,7 @@ function sessionToIcs(s: Session): string {
   ].join('\r\n');
 }
 
-export function writeEvent(s: Session): void {
+export function writeEvent(s: CalendarSession): void {
   if (!s.end_at) return; // open sessions don't get written
   const dir = calendarDir();
   try {

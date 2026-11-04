@@ -11,6 +11,8 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 
 ## Structure
 
+`retroarch/stream-session.py` compiles its fixed controller-output patterns once at module load; controller selection and session lifecycle stay unchanged.
+
 `index.nix` also owns the optional shared Steam/Proton-GE runtime. GPU drivers
 and each user’s Steam credentials/library remain outside this capability.
 `steam.gpuOffload` runs Steam and its games on the NVIDIA dGPU of a PRIME
@@ -140,6 +142,7 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+- 2026-11-02: Hoist RetroArch controller-output patterns without changing session controls.
 - 2026-11-02: Recover library navigation when modal closure leaves focus on the X11 root window; retain focus in owned app/dialog windows.
 - 2026-11-02: Generate distinct Pro Controller profiles for players 1 and 2 without changing Pikachu's handheld settings.
 - 2026-11-02: Detect game-to-library transitions and restore Qt activation even when the X11 focus ID remains valid.

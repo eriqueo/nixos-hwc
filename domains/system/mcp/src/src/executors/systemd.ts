@@ -6,6 +6,9 @@ import { safeExec, execOrThrow } from "./shell.js";
 import type { ServiceStatus } from "../types.js";
 import { mapReads } from "./concurrency.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const listServicesPatternRegex = /\s+/;
+
 /**
  * Get status of a specific systemd service.
  */
@@ -64,7 +67,7 @@ export async function listServices(): Promise<ServiceStatus[]> {
 
   const units = result.stdout
     .split("\n")
-    .map((line) => line.trim().split(/\s+/)[0])
+    .map((line) => line.trim().split(listServicesPatternRegex)[0])
     .filter((u) => u && (u.startsWith("podman-") || u.startsWith("hwc-") ||
       u.startsWith("heartwood-") || u.startsWith("tailscale") ||
       u === "caddy.service" || u === "sshd.service" ||

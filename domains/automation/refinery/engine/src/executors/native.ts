@@ -45,10 +45,16 @@ export function composeNativePrompt(wrapper: string, item: Item): string {
   return `${wrapper}\n\n---\n\n# THE ITEM\n\n${payloadText}`;
 }
 
+const globalVerdictPatterns = new WeakMap<RegExp, RegExp>();
+
 /** Parse the last verdict token matched by the pattern, or null. */
 export function parseNativeVerdict(stdout: string, pattern: RegExp): string | null {
-  const flags = pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g";
-  const re = new RegExp(pattern.source, flags);
+  let re = globalVerdictPatterns.get(pattern);
+  if (!re) {
+    const flags = pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g";
+    re = new RegExp(pattern.source, flags);
+    globalVerdictPatterns.set(pattern, re);
+  }
   let last: string | null = null;
   for (const m of stdout.matchAll(re)) {
     if (m[1] !== undefined) last = m[1];

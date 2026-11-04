@@ -3,6 +3,11 @@
 
 import { createHash } from 'node:crypto';
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const extractPostIdPatternRegex = /\/posts\/(\d+)/;
+const extractPostIdPatternRegex2 = /\/permalink\/(\d+)/;
+const getOpNamePatternRegex = /fb_api_req_friendly_name=([^&]+)/;
+
 // ── Utilities ──
 
 export function dig(obj, ...keys) {
@@ -35,7 +40,7 @@ function parseLines(text) {
 
 export function extractPostId(url) {
   if (!url) return null;
-  const m = url.match(/\/posts\/(\d+)/) || url.match(/\/permalink\/(\d+)/);
+  const m = url.match(extractPostIdPatternRegex) || url.match(extractPostIdPatternRegex2);
   return m ? m[1] : null;
 }
 
@@ -53,7 +58,7 @@ export function makeCommentId(postId, comment) {
 
 export function getOpName(reqBody) {
   if (!reqBody || typeof reqBody !== 'string') return '';
-  const m = reqBody.match(/fb_api_req_friendly_name=([^&]+)/);
+  const m = reqBody.match(getOpNamePatternRegex);
   return m ? decodeURIComponent(m[1]) : '';
 }
 

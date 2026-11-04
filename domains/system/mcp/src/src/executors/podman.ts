@@ -9,6 +9,9 @@
 import { safeExec } from "./shell.js";
 import type { ContainerStats } from "../types.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const getContainerStatsFromSystemdPatternRegex = /\s+/;
+
 const ROOT_SOCKET = "unix:///run/podman/podman.sock";
 
 interface ContainerInfo {
@@ -101,7 +104,7 @@ async function getContainerStatsFromSystemd(
   const units = listResult.stdout
     .split("\n")
     .filter(Boolean)
-    .map((line) => line.trim().split(/\s+/)[0])
+    .map((line) => line.trim().split(getContainerStatsFromSystemdPatternRegex)[0])
     .filter((name) => name.startsWith("podman-") && name.endsWith(".service"));
 
   if (units.length === 0) return [];

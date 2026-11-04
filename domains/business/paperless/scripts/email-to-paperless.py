@@ -20,6 +20,14 @@ from pathlib import Path
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_TEXT_SUB_RE = _compiled_re.compile(r"[ \t]+")
+_SAFE_STEM_SUB_RE = _compiled_re.compile(r"[^A-Za-z0-9._-]+")
+_TEXT_SUB_RE_2 = _compiled_re.compile(r"\n\s*\n\s*\n+")
+
+
 
 MAX_MESSAGE_BYTES = 25 * 1024 * 1024
 MAX_RENDER_CHARS = 120_000
@@ -49,8 +57,8 @@ class TextExtractor(HTMLParser):
 
     def text(self) -> str:
         value = "".join(self.parts)
-        value = re.sub(r"[ \t]+", " ", value)
-        return re.sub(r"\n\s*\n\s*\n+", "\n\n", value).strip()
+        value = _TEXT_SUB_RE.sub(" ", value)
+        return _TEXT_SUB_RE_2.sub("\n\n", value).strip()
 
 
 def decoded_header(value: str | None, default: str = "") -> str:
@@ -91,7 +99,7 @@ def pdf_text(value: str) -> str:
 
 
 def safe_stem(subject: str) -> str:
-    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", pdf_text(subject).lower()).strip("-.")
+    stem = _SAFE_STEM_SUB_RE.sub("-", pdf_text(subject).lower()).strip("-.")
     return (stem or "email-record")[:80]
 
 

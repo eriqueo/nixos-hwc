@@ -12,10 +12,13 @@ import { join } from "node:path";
 import { Item } from "../contracts.js";
 import { GauntletRunBundle, GauntletView, RunFile } from "./gauntlet-views.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const readRunFilePatternRegex = /\/$/;
+
 /** Read a file from an investigation run dir relative to baseDir (traversal-guarded). */
 export function readRunFile(baseDir: string, run: string, name: string): string | null {
   if (!run || run.includes("..") || run.startsWith("/")) return null;
-  const path = join(baseDir, run.replace(/\/$/, ""), name);
+  const path = join(baseDir, run.replace(readRunFilePatternRegex, ""), name);
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
 

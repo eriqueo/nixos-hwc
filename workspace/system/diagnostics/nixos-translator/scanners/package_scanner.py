@@ -11,6 +11,15 @@ import re
 from pathlib import Path
 from typing import Dict, List, Set
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__REMOVE_COMMENTS_SUB_RE = _compiled_re.compile(r'#.*$', _compiled_re.MULTILINE)
+__REMOVE_COMMENTS_SUB_RE_2 = _compiled_re.compile(r'/\*.*?\*/', _compiled_re.DOTALL)
+__EXTRACT_PACKAGES_SPLIT_RE = _compiled_re.compile(r'\s+')
+__EXTRACT_PACKAGES_MATCH_RE = _compiled_re.compile(r'^[a-zA-Z0-9_-]+$')
+
+
 
 class PackageScanner:
     def __init__(self, source_path: Path, verbose: bool = False):
@@ -69,8 +78,8 @@ class PackageScanner:
 
     def _remove_comments(self, content: str) -> str:
         """Remove Nix comments from content"""
-        content = re.sub(r'#.*$', '', content, flags=re.MULTILINE)
-        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+        content = __REMOVE_COMMENTS_SUB_RE.sub('', content)
+        content = __REMOVE_COMMENTS_SUB_RE_2.sub('', content)
         return content
 
     def _find_system_packages(self, content: str, source_file: Path):
@@ -110,7 +119,7 @@ class PackageScanner:
         packages = []
 
         # Split by whitespace and newlines
-        tokens = re.split(r'\s+', packages_text.strip())
+        tokens = __EXTRACT_PACKAGES_SPLIT_RE.split(packages_text.strip())
 
         for token in tokens:
             # Clean up the token
@@ -136,7 +145,7 @@ class PackageScanner:
             token = token.rstrip(',;')
 
             # Skip if still empty or contains invalid characters
-            if token and re.match(r'^[a-zA-Z0-9_-]+$', token):
+            if token and __EXTRACT_PACKAGES_MATCH_RE.match(token):
                 packages.append(token)
 
         return packages

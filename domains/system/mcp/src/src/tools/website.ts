@@ -9,13 +9,16 @@ import matter from "gray-matter";
 import type { ToolDef, ToolResult } from "../types.js";
 import { mcpError, catchError } from "../errors.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const isValidSlugTestRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+
 const CONTENT_TYPES = ["pages", "blog"] as const;
 type ContentType = (typeof CONTENT_TYPES)[number];
 
 const PAGE_EXTENSIONS = [".md", ".njk"];
 
 function isValidSlug(slug: string): boolean {
-  return /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug) && !slug.includes("..");
+  return isValidSlugTestRegex.test(slug) && !slug.includes("..");
 }
 
 export function websiteTools(websiteSiteDir: string): ToolDef[] {

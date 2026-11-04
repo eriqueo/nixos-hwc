@@ -28,6 +28,13 @@ buildNpmPackage rec {
     runHook postBuild
   '';
 
+  doCheck = true;
+  checkPhase = ''
+    runHook preCheck
+    node --import tsx --test src/__tests__/*.test.ts
+    runHook postCheck
+  '';
+
   installPhase = ''
     runHook preInstall
 

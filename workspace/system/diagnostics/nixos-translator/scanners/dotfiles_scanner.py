@@ -12,6 +12,13 @@ import re
 from pathlib import Path
 from typing import Dict, List
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__EXTRACT_CONFIG_PATHS_FINDALL_RE = _compiled_re.compile(r'xdg\.configFile\."([^"]+)"')
+__EXTRACT_CONFIG_PATHS_FINDALL_RE_2 = _compiled_re.compile(r'home\.file\."([^"]+)"')
+
+
 
 class DotfilesScanner:
     def __init__(self, source_path: Path, verbose: bool = False):
@@ -103,12 +110,12 @@ class DotfilesScanner:
                 app_info['config_paths'].append(f"~/.config/{app_name}")
 
             # Check for specific file paths
-            xdg_match = re.findall(r'xdg\.configFile\."([^"]+)"', content)
+            xdg_match = __EXTRACT_CONFIG_PATHS_FINDALL_RE.findall(content)
             for path in xdg_match:
                 app_info['config_paths'].append(f"~/.config/{path}")
 
             # Check for home.file references
-            home_file_match = re.findall(r'home\.file\."([^"]+)"', content)
+            home_file_match = __EXTRACT_CONFIG_PATHS_FINDALL_RE_2.findall(content)
             for path in home_file_match:
                 app_info['dotfiles'].append(f"~/{path}")
 

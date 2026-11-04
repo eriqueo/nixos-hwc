@@ -9,6 +9,8 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+Fixed patterns in the aerc text filter and calendar/task ingestion scripts compile at module load. Matching, date parsing and message handling keep their existing call sites.
+
 `aerc.launchInfo` exposes read-only client/account/configuration facts to declared
 launchers. The optional Workbench helper consumes those facts; Mail still owns
 the account and its generated files. Installing its profile starts no client.
@@ -162,6 +164,7 @@ client launch facts; it adds no arbitrary-command or mailbox-write endpoint.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+- 2026-11-02: Hoist fixed text-filter and calendar/task parser patterns without changing ingestion behavior.
 
 - 2026-10-24: Export aerc-owned launch facts for the optional Workbench native
   Mail helper without duplicating account/configuration or credentials.

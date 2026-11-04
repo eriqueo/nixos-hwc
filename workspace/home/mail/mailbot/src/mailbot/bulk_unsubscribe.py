@@ -13,6 +13,14 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_EXTRACT_LINKS_FROM_HEADER_FINDALL_RE = _compiled_re.compile(r"<mailto:[^>]+>")
+_EXTRACT_LINKS_FROM_HEADER_FINDALL_RE_2 = _compiled_re.compile(r"<https?://[^>]+>")
+_EXTRACT_LINKS_FROM_HTML_FINDITER_RE = _compiled_re.compile(r"<a[^>]+href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", _compiled_re.I|_compiled_re.S)
+
+
 SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/gmail.send",
@@ -58,15 +66,15 @@ def get_header(headers, name):
 def extract_links_from_header(value):
     if not value:
         return [], []
-    mailtos = re.findall(r"<mailto:[^>]+>", value)
-    urls = re.findall(r"<https?://[^>]+>", value)
+    mailtos = _EXTRACT_LINKS_FROM_HEADER_FINDALL_RE.findall(value)
+    urls = _EXTRACT_LINKS_FROM_HEADER_FINDALL_RE_2.findall(value)
     mailtos = [m[1:-1] for m in mailtos]
     urls = [u[1:-1] for u in urls]
     return mailtos, urls
 
 def extract_links_from_html(html):
     results = []
-    for m in re.finditer(r"<a[^>]+href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", html, flags=re.I|re.S):
+    for m in _EXTRACT_LINKS_FROM_HTML_FINDITER_RE.finditer(html):
         href = m.group(1)
         text = m.group(2)
         if "unsubscribe" in href.lower() or "unsubscribe" in text.lower():

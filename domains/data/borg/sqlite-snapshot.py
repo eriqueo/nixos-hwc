@@ -22,6 +22,12 @@ import sys
 import time
 import uuid
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_CREATE_FULLMATCH_RE = _compiled_re.compile(r"[a-z][a-z0-9-]{0,31}")
+
+
 
 class Held(Exception):
     pass
@@ -125,7 +131,7 @@ def entries(fd):
 
 
 def create(args, clock):
-    require(re.fullmatch(r"[a-z][a-z0-9-]{0,31}", args.name), "invalid-name")
+    require(_CREATE_FULLMATCH_RE.fullmatch(args.name), "invalid-name")
     root, source = Path(args.state_root), Path(args.source)
     require(root.is_absolute() and source.is_absolute() and not source.is_relative_to(root),
             "invalid-paths")

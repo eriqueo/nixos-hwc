@@ -28,6 +28,12 @@ import { renderBoard, renderDx1CasesPanel, renderDx1Fleet, renderNightly, render
 import { FileReviewsStore, resolveReviewsDir } from "../stores/reviews-store.js";
 import { loadWorkbenchRegistry } from "./workbench.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const requestRunNowPatternRegex = /[^A-Za-z0-9._-]/g;
+const requestGauntletRunNowPatternRegex = /:/g;
+const requestGauntletRunNowPatternRegex2 = /[^A-Za-z0-9._+-]/g;
+const createShellPatternRegex = /^\/([a-z0-9]+)\/export\/([A-Za-z0-9_-]+)$/;
+
 export interface HttpShellConfig {
   port: number;
   itemsDir: string;
@@ -173,7 +179,7 @@ export function createShell(cfg: HttpShellConfig) {
   // executes `run.sh NB_ONLY_GOAL=<goal>` out-of-band. goalId is a vault folder
   // name (a slug); sanitize hard to keep this a filename, never a path.
   const requestRunNow = (goalId: string): void => {
-    const safe = goalId.replace(/[^A-Za-z0-9._-]/g, "");
+    const safe = goalId.replace((requestRunNowPatternRegex.lastIndex = 0, requestRunNowPatternRegex), "");
     if (!safe || safe === "." || safe === "..") return;
     mkdirSync(cfg.runNowSpoolDir, { recursive: true });
     writeFileSync(join(cfg.runNowSpoolDir, safe), `${safe}\n`);
@@ -196,7 +202,7 @@ export function createShell(cfg: HttpShellConfig) {
   const requestGauntletRunNow = (view: GauntletView, id: string): void => {
     const spool = viewSpool(view);
     if (!spool) return;
-    const safe = id.replace(/:/g, "+").replace(/[^A-Za-z0-9._+-]/g, "");
+    const safe = id.replace((requestGauntletRunNowPatternRegex.lastIndex = 0, requestGauntletRunNowPatternRegex), "+").replace((requestGauntletRunNowPatternRegex2.lastIndex = 0, requestGauntletRunNowPatternRegex2), "");
     if (!safe || safe === "." || safe === "..") return;
     mkdirSync(spool, { recursive: true });
     writeFileSync(join(spool, safe), `${safe}\n`);
@@ -211,7 +217,7 @@ export function createShell(cfg: HttpShellConfig) {
   // run-now spools above — the board never spawns a worktree/git push itself.
   // itemId is a store filename slug; sanitize hard to keep it a bare filename.
   const requestNativeRunNow = (id: string): void => {
-    const safe = id.replace(/[^A-Za-z0-9._-]/g, "");
+    const safe = id.replace((requestRunNowPatternRegex.lastIndex = 0, requestRunNowPatternRegex), "");
     if (!safe || safe === "." || safe === "..") return;
     mkdirSync(cfg.nativeRunNowSpoolDir, { recursive: true });
     writeFileSync(join(cfg.nativeRunNowSpoolDir, safe), `${safe}\n`);
@@ -750,7 +756,7 @@ export function createShell(cfg: HttpShellConfig) {
         // only reads the bundle and serves the file as an attachment. HEAD is
         // honored too (curl -I; Node suppresses the body itself).
         const exportMatch = method === "GET" || method === "HEAD"
-          ? url.match(/^\/([a-z0-9]+)\/export\/([A-Za-z0-9_-]+)$/)
+          ? url.match(createShellPatternRegex)
           : null;
         if (exportMatch) {
           const view = gauntletViewByKey(exportMatch[1]!);

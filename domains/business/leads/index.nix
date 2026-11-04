@@ -39,6 +39,17 @@ let
 
     npmBuildScript = "build";
     dontNpmPrune = false;
+    doCheck = true;
+    nativeCheckInputs = [ pkgs.postgresql ];
+    checkPhase = ''
+      runHook preCheck
+      export PGHOST="$TMPDIR" PGUSER=test PGDATABASE=postgres
+      initdb -D "$TMPDIR/pgdata" -U test -A trust --no-locale >/dev/null
+      pg_ctl -D "$TMPDIR/pgdata" -o "-k $PGHOST -c listen_addresses=" -w start >/dev/null
+      trap 'pg_ctl -D "$TMPDIR/pgdata" -m immediate -w stop >/dev/null' EXIT
+      node --test dist/__tests__/*.test.js
+      runHook postCheck
+    '';
   };
 
   mainJs = "${hwc-leads-pkg}/lib/node_modules/hwc-leads/dist/main.js";

@@ -24,6 +24,10 @@ import catalog from '../data/catalog.json' with { type: 'json' };
 import parameters from '../data/parameters.json' with { type: 'json' };
 import jtMappings from '../data/jtMappings.json' with { type: 'json' };
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const tradeRateKeyPatternRegex = / /g;
+const tradeRateKeyPatternRegex2 = /&/g;
+
 // Allowance cost keys: allowance name -> state key for unit cost
 const ALLOWANCE_COST_KEY = {
   'Allowance | Bathtub': 'tub_allowance',
@@ -54,7 +58,7 @@ const TRADE_RATE_KEY = {
 
 function tradeRateKey(itemName) {
   const trade = (itemName.split(' | ')[1] || '').toLowerCase();
-  return TRADE_RATE_KEY[trade] || trade.replace(/ /g, '_').replace(/&/g, '');
+  return TRADE_RATE_KEY[trade] || trade.replace((tradeRateKeyPatternRegex.lastIndex = 0, tradeRateKeyPatternRegex), '_').replace((tradeRateKeyPatternRegex2.lastIndex = 0, tradeRateKeyPatternRegex2), '');
 }
 
 /**

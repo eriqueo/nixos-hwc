@@ -10,6 +10,12 @@ import re
 from pathlib import Path
 from typing import Dict, List
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+__EXTRACT_CONTAINER_INFO_FINDALL_RE = _compiled_re.compile(r'"(\d+:\d+)"')
+
+
 
 class ContainerScanner:
     def __init__(self, source_path: Path, verbose: bool = False):
@@ -89,7 +95,7 @@ class ContainerScanner:
         if port_match:
             port_text = port_match.group(1)
             # Extract port strings like "8080:8080"
-            port_strings = re.findall(r'"(\d+:\d+)"', port_text)
+            port_strings = __EXTRACT_CONTAINER_INFO_FINDALL_RE.findall(port_text)
             ports = port_strings
 
         return {

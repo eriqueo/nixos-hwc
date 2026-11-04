@@ -27,6 +27,27 @@ import {
   type Task,
 } from "../executors/caldav.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const weeklyRecurrenceTestRegex = /^\d{4}-\d{2}-\d{2}$/;
+const weeklyRecurrenceTestRegex2 = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const weeklyRecurrenceTestRegex3 = /^[A-Za-z_+-]+(?:\/[A-Za-z0-9_+-]+)+$/;
+const parseDialectPatternRegex = /\s+/;
+const tasksToolsPatternRegex = /-/g;
+const tasksToolsPatternRegex2 = /[-:]/g;
+const tasksToolsPatternRegex3 = /\.\d{3}/;
+const icsEscapePatternRegex = /\\/g;
+const icsEscapePatternRegex2 = /;/g;
+const icsEscapePatternRegex3 = /,/g;
+const icsEscapePatternRegex4 = /\r?\n/g;
+const mealToolsTestRegex = /^\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/$/;
+const mealToolsTestRegex2 = /^[a-zA-Z0-9_-]{1,100}$/;
+const mealToolsTestRegex3 = /^"[^"\r\n]{1,200}"$/;
+const mealToolsPatternRegex = /\r?\n/;
+const mealToolsTestRegex4 = /^X-HWC-MEAL-OPERATION:[a-zA-Z0-9_-]+$/;
+const mealToolsPatternRegex2 = /&/g;
+const mealToolsPatternRegex3 = /</g;
+const mealToolsPatternRegex4 = />/g;
+
 // Displayname of eric/work, shared with the calendar. Keep in step with
 // hwc.mail.calendar.primaryCalendar (HM lane, which this system service cannot read).
 const DEFAULT_LIST = "hwc";
@@ -49,9 +70,9 @@ export function weeklyRecurrence(value: unknown): {
   if (
     item.frequency !== "weekly" ||
     !WEEKDAYS.includes(item.weekday as typeof WEEKDAYS[number]) ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(item.startDate || "") ||
-    !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.time || "") ||
-    !/^[A-Za-z_+-]+(?:\/[A-Za-z0-9_+-]+)+$/.test(item.timezone || "")
+    !weeklyRecurrenceTestRegex.test(item.startDate || "") ||
+    !weeklyRecurrenceTestRegex2.test(item.time || "") ||
+    !weeklyRecurrenceTestRegex3.test(item.timezone || "")
   ) return null;
   return {
     start: { date: item.startDate!, time: item.time!, timezone: item.timezone! },
@@ -75,7 +96,7 @@ function parseDialect(line: string): {
   let priority = 0;
   let due: string | null = null;
 
-  for (const tok of line.split(/\s+/)) {
+  for (const tok of line.split(parseDialectPatternRegex)) {
     const pri = tok.match(PRI_RE);
     if (pri) {
       priority = Math.min(pri[1].toUpperCase().charCodeAt(0) - 64, 9);
@@ -104,7 +125,7 @@ function parseDue(raw: string): string | null {
   if (v === "today") return new Date().toISOString().slice(0, 10);
   if (v === "tomorrow" || v === "tom")
     return new Date(Date.now() + day).toISOString().slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  return weeklyRecurrenceTestRegex.test(v) ? v : null;
 }
 
 /* ── helpers ──────────────────────────────────────────────────────── */
@@ -278,7 +299,7 @@ export function tasksTools(today: () => string = () => new Intl.DateTimeFormat("
             return mcpError({ type: "VALIDATION_ERROR", message: "requestVersion must be 1" });
           const uid = idempotencyKey
             ? `hwc-${createHash("sha256").update(`hwc_tasks_add:v1\0${listName}\0${idempotencyKey}`).digest("hex").slice(0, 32)}@${hostname()}`
-            : `${randomUUID().replace(/-/g, "")}@${hostname()}`;
+            : `${randomUUID().replace((tasksToolsPatternRegex.lastIndex = 0, tasksToolsPatternRegex), "")}@${hostname()}`;
           const ics = buildVtodo({
             uid,
             summary: parsed.summary,
@@ -350,8 +371,8 @@ export function tasksTools(today: () => string = () => new Intl.DateTimeFormat("
               return mcpError({ type: "VALIDATION_ERROR", message: "This occurrence changed or was already completed; refresh the task list." });
             const next = nextScheduledDate(schedule.due, schedule.frequency, today(), schedule.until);
             if (next) {
-              const updated = editVtodo(version.raw, { DUE: `;VALUE=DATE:${next.replace(/-/g, "")}`,
-                DTSTART: `;VALUE=DATE:${next.replace(/-/g, "")}`, STATUS: ":NEEDS-ACTION",
+              const updated = editVtodo(version.raw, { DUE: `;VALUE=DATE:${next.replace((tasksToolsPatternRegex.lastIndex = 0, tasksToolsPatternRegex), "")}`,
+                DTSTART: `;VALUE=DATE:${next.replace((tasksToolsPatternRegex.lastIndex = 0, tasksToolsPatternRegex), "")}`, STATUS: ":NEEDS-ACTION",
                 COMPLETED: null, "PERCENT-COMPLETE": null, "X-HWC-LAST-COMPLETED-DUE": `:${schedule.due}` });
               await putVersionedItem(task.href, updated, version.etag);
               return { status: "ok", message: `Completed '${task.summary}'; next due ${next}`, data: { uid, due: next, recurring: true } };
@@ -361,7 +382,7 @@ export function tasksTools(today: () => string = () => new Intl.DateTimeFormat("
           if (action === "complete") {
             props.STATUS = ":COMPLETED";
             props["PERCENT-COMPLETE"] = ":100";
-            props.COMPLETED = `:${new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`;
+            props.COMPLETED = `:${new Date().toISOString().replace((tasksToolsPatternRegex2.lastIndex = 0, tasksToolsPatternRegex2), "").replace(tasksToolsPatternRegex3, "")}`;
           } else if (action === "reopen") {
             props.STATUS = ":NEEDS-ACTION";
             props["PERCENT-COMPLETE"] = null;
@@ -378,7 +399,7 @@ export function tasksTools(today: () => string = () => new Intl.DateTimeFormat("
               const due = (args.due as string) === "" ? null : parseDue(args.due as string);
               if ((args.due as string) !== "" && !due)
                 return mcpError({ type: "VALIDATION_ERROR", message: `Bad due date '${args.due}' (YYYY-MM-DD/today/tomorrow)` });
-              props.DUE = due ? `;VALUE=DATE:${due.replace(/-/g, "")}` : null;
+              props.DUE = due ? `;VALUE=DATE:${due.replace((tasksToolsPatternRegex.lastIndex = 0, tasksToolsPatternRegex), "")}` : null;
             }
             if (args.description !== undefined)
               props.DESCRIPTION = (args.description as string) ? `:${icsEscape(args.description as string)}` : null;
@@ -389,7 +410,7 @@ export function tasksTools(today: () => string = () => new Intl.DateTimeFormat("
                 const repeat = fixedRecurrence(args.recurrence);
                 if (!repeat) return mcpError({ type: "VALIDATION_ERROR", message: "Invalid repeat schedule" });
                 props.RRULE = `:${repeat.rrule}`; props["X-HWC-REPEAT"] = ":fixed-v1";
-                props.DUE = `;VALUE=DATE:${repeat.due.replace(/-/g, "")}`; props.DTSTART = props.DUE;
+                props.DUE = `;VALUE=DATE:${repeat.due.replace((tasksToolsPatternRegex.lastIndex = 0, tasksToolsPatternRegex), "")}`; props.DTSTART = props.DUE;
                 props.STATUS = ":NEEDS-ACTION"; props.COMPLETED = null; props["PERCENT-COMPLETE"] = null;
                 props["X-HWC-LAST-COMPLETED-DUE"] = null;
               }
@@ -460,12 +481,11 @@ export function tasksTools(today: () => string = () => new Intl.DateTimeFormat("
 
 function icsEscape(s: string): string {
   return s
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
+    .replace((icsEscapePatternRegex.lastIndex = 0, icsEscapePatternRegex), "\\\\")
+    .replace((icsEscapePatternRegex2.lastIndex = 0, icsEscapePatternRegex2), "\\;")
+    .replace((icsEscapePatternRegex3.lastIndex = 0, icsEscapePatternRegex3), "\\,")
+    .replace((icsEscapePatternRegex4.lastIndex = 0, icsEscapePatternRegex4), "\\n");
 }
-
 
 /** Additive conditional protocol for reviewed meal effects; no legacy upsert reuse. */
 export function mealTools(collections: Record<string, { href: string; name: string }> = {}): ToolDef[] {
@@ -476,17 +496,17 @@ export function mealTools(collections: Record<string, { href: string; name: stri
   const kind=args.collection as string, action=args.action as string, uid=args.uid as string, target=collections[kind];
   const invalid=(message:string)=>mcpError({type:"VALIDATION_ERROR",message});
   const prefix=kind==="groceries"?"meal-grocery-":"meal-dinner-";
-  if(args.schemaVersion!==1 || !["groceries","meals"].includes(kind) || !target || !/^\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/$/.test(target.href) || typeof uid!=="string" || !uid.startsWith(prefix) || !/^[a-zA-Z0-9_-]{1,100}$/.test(uid) || !["read","create","update","delete"].includes(action)) return invalid("Invalid meal operation");
-  if(["update","delete"].includes(action) && (typeof args.expectedEtag!=="string" || !/^"[^"\r\n]{1,200}"$/.test(args.expectedEtag))) return invalid("A strong reviewed ETag is required");
+  if(args.schemaVersion!==1 || !["groceries","meals"].includes(kind) || !target || !mealToolsTestRegex.test(target.href) || typeof uid!=="string" || !uid.startsWith(prefix) || !mealToolsTestRegex2.test(uid) || !["read","create","update","delete"].includes(action)) return invalid("Invalid meal operation");
+  if(["update","delete"].includes(action) && (typeof args.expectedEtag!=="string" || !mealToolsTestRegex3.test(args.expectedEtag))) return invalid("A strong reviewed ETag is required");
   const raw=args.raw;
   if(["create","update"].includes(action)) {
    if(typeof raw!=="string" || raw.length>65536) return invalid("Invalid calendar payload");
-   const lines=unfoldIcs(raw).split(/\r?\n/), component=kind==="groceries"?"VTODO":"VEVENT";
-   if(lines.filter(l=>l===`BEGIN:${component}`).length!==1 || lines.filter(l=>l.startsWith("UID:")).length!==1 || !lines.includes(`UID:${uid}`) || !lines.includes("X-HWC-MEAL-SCHEMA:1") || !lines.some(l=>/^X-HWC-MEAL-OPERATION:[a-zA-Z0-9_-]+$/.test(l)) || lines.some(l=>l===`BEGIN:${component==="VTODO"?"VEVENT":"VTODO"}`)) return invalid("Payload identity does not match managed item");
+   const lines=unfoldIcs(raw).split(mealToolsPatternRegex), component=kind==="groceries"?"VTODO":"VEVENT";
+   if(lines.filter(l=>l===`BEGIN:${component}`).length!==1 || lines.filter(l=>l.startsWith("UID:")).length!==1 || !lines.includes(`UID:${uid}`) || !lines.includes("X-HWC-MEAL-SCHEMA:1") || !lines.some(l=>mealToolsTestRegex4.test(l)) || lines.some(l=>l===`BEGIN:${component==="VTODO"?"VEVENT":"VTODO"}`)) return invalid("Payload identity does not match managed item");
   }
   try {
    const metadata=await davRequest("PROPFIND",target.href,{timeoutMs:10000,headers:{Depth:"0"},body:'<D:propfind xmlns:D="DAV:"><D:prop><D:displayname/></D:prop></D:propfind>'});
-   const escaped=target.name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+   const escaped=target.name.replace((mealToolsPatternRegex2.lastIndex = 0, mealToolsPatternRegex2),"&amp;").replace((mealToolsPatternRegex3.lastIndex = 0, mealToolsPatternRegex3),"&lt;").replace((mealToolsPatternRegex4.lastIndex = 0, mealToolsPatternRegex4),"&gt;");
    if(metadata.status!==207 || !metadata.body.includes(`>${escaped}</`)) return {status:"ok",message:"Configured collection is unavailable",data:{code:"COLLECTION_UNAVAILABLE",httpStatus:503}};
    const href=`${target.href}${uid}.ics`;
    if(action!=="read") {
@@ -496,7 +516,7 @@ export function mealTools(collections: Record<string, { href: string; name: stri
    }
    const result=await davRequest("GET",href,{timeoutMs:10000});
    if(result.status===404) return {status:"ok",message:"Absent",data:{code:"OK",item:null}};
-   if(result.status!==200 || !result.etag || !/^"[^"\r\n]{1,200}"$/.test(result.etag) || result.body.length>65536) return {status:"ok",message:"Read failed",data:{code:"REMOTE_READ",httpStatus:result.status}};
+   if(result.status!==200 || !result.etag || !mealToolsTestRegex3.test(result.etag) || result.body.length>65536) return {status:"ok",message:"Read failed",data:{code:"REMOTE_READ",httpStatus:result.status}};
    return {status:"ok",message:"Read",data:{code:"OK",item:{uid,href,raw:result.body,etag:result.etag}}};
   }catch(err){return catchError("NETWORK_ERROR","Meal outcome may be uncertain; read before retrying",err);}
  }}];

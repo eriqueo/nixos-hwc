@@ -1,6 +1,9 @@
 import catalog from '../data/catalog.json' with { type: 'json' };
 import { tradeRate, matPrice } from './pricing.js';
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const parseFlooringTestRegex = /^[A-Za-z0-9_-]{1,80}$/;
+
 export const MAX_FLOORING_AREAS = 50;
 export const FLOORING_CHOICES = {
   finish: { label: 'Flooring', options: { unknown: 'Choose flooring', lvp: 'Click-lock LVT / LVP', tile: 'Tile' } },
@@ -51,7 +54,7 @@ export function parseFlooring(raw) {
   validateNumbers(raw, FLOORING_JOB_FIELDS);
   const ids = new Set();
   const areas = raw.areas.map(a => {
-    if (!a || typeof a.id !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(a.id) || ids.has(a.id) || typeof a.name !== 'string' || a.name.length > 120) throw Error('Invalid flooring area identity');
+    if (!a || typeof a.id !== 'string' || !parseFlooringTestRegex.test(a.id) || ids.has(a.id) || typeof a.name !== 'string' || a.name.length > 120) throw Error('Invalid flooring area identity');
     ids.add(a.id);
     const area = { ...createFlooringArea(a.id, a.name), ...a };
     for (const [key, f] of Object.entries(FLOORING_CHOICES)) if (!Object.hasOwn(f.options, area[key])) throw Error(`Invalid flooring field: ${f.label}`);

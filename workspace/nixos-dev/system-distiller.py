@@ -20,6 +20,12 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import sys
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_PARSE_IP_ADDR_MATCH_RE = _compiled_re.compile(r'^\d+:')
+
+
 class SystemDistiller:
     def __init__(self):
         self.output = {
@@ -197,7 +203,7 @@ class SystemDistiller:
         
         for line in ip_output.split('\n'):
             # Interface line: "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500"
-            if re.match(r'^\d+:', line):
+            if _PARSE_IP_ADDR_MATCH_RE.match(line):
                 parts = line.split()
                 if len(parts) >= 2:
                     current_interface = parts[1].rstrip(':')

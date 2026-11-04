@@ -29,6 +29,13 @@ import sys
 import os
 from collections import defaultdict
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_EXTRACT_IDENTIFIERS_SUB_RE = _compiled_re.compile(r'"[^"]*"')
+_EXTRACT_IDENTIFIERS_SUB_RE_2 = _compiled_re.compile(r"'[^']*'")
+
+
 # ─── Configuration ───────────────────────────────────────────────────────────
 
 # Valid state keys produced by enrichState() — derived geometry values
@@ -117,8 +124,8 @@ def extract_identifiers(expr: str) -> set:
     if not expr or expr == "always":
         return set()
     # Remove quoted strings (both single and double quoted, including escaped quotes)
-    cleaned = re.sub(r'"[^"]*"', '', expr)
-    cleaned = re.sub(r"'[^']*'", '', cleaned)
+    cleaned = _EXTRACT_IDENTIFIERS_SUB_RE.sub('', expr)
+    cleaned = _EXTRACT_IDENTIFIERS_SUB_RE_2.sub('', cleaned)
     return set(IDENT_RE.findall(cleaned))
 
 

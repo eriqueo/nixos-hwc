@@ -12,6 +12,8 @@ storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSyn
 
 ## Structure
 
+`borg/sqlite-snapshot.py` compiles its fixed database-name pattern once at module load. Snapshot ordering, retention and read-only SQL stay unchanged.
+
 Machine references follow machines/home; the home job pins its historical Borg archive/prune identity.
 
 ```
@@ -27,6 +29,7 @@ data/
 ```
 
 ## Changelog
+- 2026-11-02: Hoist the SQLite snapshot name pattern without changing backup behavior.
 - 2026-10-24: Give SQLite snapshot workers registered database-parent access for temporary WAL/SHM creation while keeping SQL read-only; forbid root-level database parents and test native job wiring.
 - 2026-10-23: Allow an explicit additional-destination-only Borg client, so XPS Jellyfin state can use a bounded home repository without claiming T3 or full-host coverage.
 - 2026-10-23: Keep per-destination time/rate limits in the Borg capability; server roles assign typed policy and receive instance metadata from flake composition.

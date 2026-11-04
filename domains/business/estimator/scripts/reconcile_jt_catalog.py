@@ -28,6 +28,14 @@ from pathlib import Path
 from typing import Optional
 from urllib.request import Request, urlopen
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_NORMALIZE_SUB_RE = _compiled_re.compile(r'["""\u201c\u201d]')
+_NORMALIZE_SUB_RE_2 = _compiled_re.compile(r"['''\u2018\u2019]")
+_NORMALIZE_SUB_RE_3 = _compiled_re.compile(r'\s+')
+
+
 # ── Constants ────────────────────────────────────────────────────────────────
 
 SCRIPT_DIR = Path(__file__).parent
@@ -380,9 +388,9 @@ def normalize(name: str) -> str:
     """Normalize a name for comparison."""
     s = name.lower().strip()
     # Remove common noise
-    s = re.sub(r'["""\u201c\u201d]', '"', s)
-    s = re.sub(r"['''\u2018\u2019]", "'", s)
-    s = re.sub(r'\s+', ' ', s)
+    s = _NORMALIZE_SUB_RE.sub('"', s)
+    s = _NORMALIZE_SUB_RE_2.sub("'", s)
+    s = _NORMALIZE_SUB_RE_3.sub(' ', s)
     return s
 
 

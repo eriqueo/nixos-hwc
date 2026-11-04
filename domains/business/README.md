@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Lead resubmissions read only the existing JobTread ID columns. Report views omit view history and omit payload reads for revoked reports. The lead package checks these projections against an isolated PostgreSQL cluster with poisoned unused fields. Estimator catalog exports select named fields; fixed patterns compile at module load.
+
 Morning-briefing live sources run concurrently after the MCP handshake. Research queues use four-profile batches alongside lessons and ingest-health reads; refinery files use sixteen-read batches. `morning-briefing/gather.test.mjs` checks overlap, bounds and stable partial output through the `morning-briefing-async` flake check.
 
 The website backend defers access logging to the networking tunnel logger when
@@ -83,6 +85,7 @@ business/
 ```
 
 ## Changelog
+- 2026-11-02: Narrow lead, report and catalog projections; remove query-only URL parsing and hoist fixed patterns across business code.
 - 2026-11-02: Overlap independent morning-briefing gathers while preserving alert order, profile order and partial results; bound profile and file batches.
 
 - 2026-11-01: Defer public website access logging to the sanitized origin logger.

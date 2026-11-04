@@ -6,6 +6,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OVERVIEW_SOURCES, serverOverviewTool } from "../src/tools/server-overview.js";
 import type { ToolDef, ToolResult } from "../src/types.js";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import ts from "typescript";
 
 type Card = { id: string; status: string; reason: string; facts: [string, string][] };
 type Column = { id: string; title: string; cards: Card[] };
@@ -289,5 +292,59 @@ describe("status read scheduling", () => {
     expect(data.disk.mounts.map((m) => m.tier)).toEqual(["root", "hot", "media", "backup"]);
     expect(data.disk.mounts[1].error).toBe("Mount not available");
     expect(result.message).toBe("Disk: worst 10%, Backup: inactive");
+  });
+});
+
+describe("request parsing and fixed pattern allocations", () => {
+  const sourceDir = join(import.meta.dirname, "../src");
+
+  it("keeps fixed regex literals outside functions throughout the gateway", () => {
+    const violations: string[] = [];
+    function scan(dir: string) {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) { scan(path); continue; }
+        if (!entry.name.endsWith(".ts")) continue;
+        const file = ts.createSourceFile(path, readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true);
+        function walk(node: ts.Node, inFunction = false) {
+          const inside = inFunction || ts.isFunctionLike(node);
+          if (inside && ts.isRegularExpressionLiteral(node)) {
+            violations.push(`${path}:${file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1}`);
+          }
+          ts.forEachChild(node, (child) => walk(child, inside));
+        }
+        walk(file);
+      }
+    }
+    scan(sourceDir);
+    expect(violations).toEqual([]);
+  });
+
+  it("preserves URL query decoding without constructing a full URL in the SSE handler", () => {
+    const path = join(sourceDir, "index.ts");
+    const file = ts.createSourceFile(path, readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true);
+    let production = "";
+    function find(node: ts.Node) {
+      if (ts.isNewExpression(node) && node.expression.getText(file) === "URLSearchParams") {
+        let statement: ts.Node = node;
+        while (!ts.isVariableStatement(statement)) statement = statement.parent;
+        const block = statement.parent as ts.Block;
+        const index = block.statements.indexOf(statement);
+        production = block.statements.slice(index - 3, index + 1).map((s) => s.getText(file)).join("\n");
+      }
+      ts.forEachChild(node, find);
+    }
+    find(file);
+    expect(production).toContain("new URLSearchParams");
+    expect(production).not.toContain("new URL(");
+    const parse = new Function("url", `${production}\nreturn params;`) as (url: string) => URLSearchParams;
+    for (const target of [
+      "/messages", "/messages?", "/messages?sessionId=", "/messages?sessionId=one&sessionId=two",
+      "/messages?sessionId=a+b", "/messages?sessionId=a%2Bb%26c", "/messages?other=a?b&sessionId=%E2%9C%93",
+      "/messages?sessionId=one#ignored", "/messages#ignored?sessionId=none", "/messages?sessionId=%zz",
+      "http://localhost/messages?sessionId=absolute",
+    ]) {
+      expect([...parse(target)]).toEqual([...new URL(target, "http://localhost").searchParams]);
+    }
   });
 });

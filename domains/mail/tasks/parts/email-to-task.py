@@ -16,6 +16,15 @@ from email.header import decode_header
 from email.parser import BytesParser
 from html.parser import HTMLParser
 
+import re as _compiled_re
+
+# Fixed patterns compile once; matching stays at the original call sites.
+_TEXT_SUB_RE = _compiled_re.compile(r"[ \t]+")
+_TEXT_SUB_RE_2 = _compiled_re.compile(r"\n\s*\n\s*\n+")
+_PARSE_PROPOSAL_MATCH_RE = _compiled_re.compile(r"^(Summary|List|Due|Categories|Priority):\s*(.*)$", _compiled_re.IGNORECASE)
+_MAIN_SPLIT_RE = _compiled_re.compile(r"[,\s]+")
+
+
 
 MAX_MESSAGE_BYTES = 25 * 1024 * 1024
 MAX_DESCRIPTION_CHARS = 8000
@@ -45,8 +54,8 @@ class TextExtractor(HTMLParser):
 
     def text(self) -> str:
         value = "".join(self.parts)
-        value = re.sub(r"[ \t]+", " ", value)
-        value = re.sub(r"\n\s*\n\s*\n+", "\n\n", value)
+        value = _TEXT_SUB_RE.sub(" ", value)
+        value = _TEXT_SUB_RE_2.sub("\n\n", value)
         return value.strip()
 
 
@@ -96,7 +105,7 @@ def parse_proposal(text: str) -> dict[str, str] | None:
         if in_notes:
             notes.append(line)
             continue
-        match = re.match(r"^(Summary|List|Due|Categories|Priority):\s*(.*)$", line, re.IGNORECASE)
+        match = _PARSE_PROPOSAL_MATCH_RE.match(line)
         if match:
             values[match.group(1).lower()] = match.group(2).strip()
     values["description"] = "\n".join(notes).strip()
@@ -195,7 +204,7 @@ Priority:
         "idempotencyKey": f"email:{source_key}",
         "requestVersion": 1,
     }
-    categories = [token for token in re.split(r"[,\s]+", values.get("categories", "")) if token]
+    categories = [token for token in _MAIN_SPLIT_RE.split(values.get("categories", "")) if token]
     if categories:
         arguments["categories"] = categories
     if values.get("due"):

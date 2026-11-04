@@ -16,6 +16,9 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mailThreadsByState, MAIL_STATES, MAIL_STATE_DISPLAY_NAMES } from "./mail.js";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const morningBriefToolPatternRegex = /_/g;
+
 const BRIEFING_PATH =
   "/home/eric/.nixos/domains/business/morning-briefing/output/briefing.json";
 
@@ -251,7 +254,7 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
       // Weekly snapshot
       const weeklyLines = Object.entries(weekly)
         .filter(([, v]) => v != null && v !== "")
-        .map(([k, v]) => `- ${k.replace(/_/g, " ")}: **${asStr(v)}**`);
+        .map(([k, v]) => `- ${k.replace((morningBriefToolPatternRegex.lastIndex = 0, morningBriefToolPatternRegex), " ")}: **${asStr(v)}**`);
       section("Weekly Snapshot", weeklyLines);
 
       // Comms
@@ -259,7 +262,7 @@ export function morningBriefTool(briefingPath = BRIEFING_PATH): ToolDef {
       const commsFields = ["calls_yesterday", "texts_yesterday", "missed_calls", "unread_texts"];
       const commsStats = commsFields
         .filter((k) => num(comms[k]) != null)
-        .map((k) => `${k.replace(/_/g, " ")}: ${num(comms[k])}`);
+        .map((k) => `${k.replace((morningBriefToolPatternRegex.lastIndex = 0, morningBriefToolPatternRegex), " ")}: ${num(comms[k])}`);
       if (commsStats.length) commsLines.push(`- ${commsStats.join(" · ")}`);
       commsLines.push(...bullets(asArr(comms["items"])).map((c) => `- ${c}`));
       section("Comms", commsLines);

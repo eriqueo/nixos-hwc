@@ -15,6 +15,30 @@
 import { join, resolve, relative, dirname } from "jsr:@std/path@1";
 import { walk, exists } from "jsr:@std/fs@1";
 
+// Fixed patterns are shared; stateful uses reset their cursor below.
+const noteBasenamePatternRegex = /.*\//;
+const noteBasenamePatternRegex2 = /\.md$/;
+const escapeRegExpPatternRegex = /[.*+?^${}()|[\]\\]/g;
+const parseWikilinksPatternRegex = /\[\[([^\[\]]+?)\]\]/g;
+const parseWikilinksPatternRegex2 = /[#|]/;
+const setFrontmatterKeyPatternRegex = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
+const gitPatternRegex = /\/\.sync\.lock$/;
+const callToolPatternRegex = /\/.obsidian\//;
+const callToolPatternRegex2 = /\/.git\//;
+const callToolPatternRegex3 = /\/.trash\//;
+const callToolPatternRegex4 = /\/$/;
+const callToolPatternRegex5 = /^\//;
+const callToolPatternRegex6 = /\[\[([^\]|#]+)/g;
+const callToolPatternRegex7 = /[:.]/g;
+const callToolPatternRegex8 = /:/g;
+const callToolPatternRegex9 = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
+const callToolPatternRegex10 = /^#\s+(.+)$/m;
+const callToolPatternRegex11 = /[^a-z0-9\s-]/g;
+const callToolPatternRegex12 = /\s+/g;
+const callToolPatternRegex13 = /-+/g;
+const callToolPatternRegex14 = /^-|-$/g;
+const callToolPatternRegex15 = /[\r\n]/g;
+
 // ── Configuration ────────────────────────────────────────────────────────────
 const VAULT_ROOT = resolve(Deno.env.get("BRAIN_VAULT_ROOT") ?? "/home/eric/900_vaults/brain");
 const PORT = parseInt(Deno.env.get("BRAIN_MCP_PORT") ?? "9876");
@@ -57,11 +81,11 @@ const WALK_SKIP = [
 ];
 
 function noteBasename(p: string): string {
-  return p.replace(/.*\//, "").replace(/\.md$/, "");
+  return p.replace(noteBasenamePatternRegex, "").replace(noteBasenamePatternRegex2, "");
 }
 
 function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return s.replace((escapeRegExpPatternRegex.lastIndex = 0, escapeRegExpPatternRegex), "\\$&");
 }
 
 // ── Wikilink parsing/rewriting (shared by delete_note + move_note) ─────────────
@@ -72,8 +96,8 @@ type WikiLink = { full: string; target: string };
 
 function parseWikilinks(text: string): WikiLink[] {
   const out: WikiLink[] = [];
-  for (const m of text.matchAll(/\[\[([^\[\]]+?)\]\]/g)) {
-    const target = m[1].split(/[#|]/)[0].trim();
+  for (const m of text.matchAll((parseWikilinksPatternRegex.lastIndex = 0, parseWikilinksPatternRegex))) {
+    const target = m[1].split(parseWikilinksPatternRegex2)[0].trim();
     out.push({ full: m[0], target });
   }
   return out;
@@ -83,8 +107,8 @@ function parseWikilinks(text: string): WikiLink[] {
 // tails. Exact-token match (target === oldBase) so [[api]] never touches [[api-v2]].
 function rewriteLinks(content: string, oldBase: string, newBase: string): { content: string; count: number } {
   let count = 0;
-  const out = content.replace(/\[\[([^\[\]]+?)\]\]/g, (full, inner: string) => {
-    const sep = inner.search(/[#|]/);
+  const out = content.replace((parseWikilinksPatternRegex.lastIndex = 0, parseWikilinksPatternRegex), (full, inner: string) => {
+    const sep = inner.search(parseWikilinksPatternRegex2);
     const target = (sep === -1 ? inner : inner.slice(0, sep)).trim();
     const rest = sep === -1 ? "" : inner.slice(sep);
     if (target === oldBase) {
@@ -148,7 +172,7 @@ async function scanPathMentions(relPath: string, excludeFull?: string): Promise<
 // ── Frontmatter ───────────────────────────────────────────────────────────────
 // Set/replace a single key in the leading --- block without touching the body.
 function setFrontmatterKey(content: string, key: string, value: string): string {
-  const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  const fm = content.match(setFrontmatterKeyPatternRegex);
   const line = `${key}: ${value}`;
   if (!fm) return `---\n${line}\n---\n\n${content}`;
   const block = fm[1];
@@ -173,7 +197,7 @@ async function git(gitArgs: string[]): Promise<{ code: number; stdout: string; s
   // flock(1) blocks until the lock is free, then runs git holding it. Fall back
   // to a direct git call only when .git does not exist yet (first-run init),
   // since the lock path lives inside .git.
-  const useLock = await exists(GIT_LOCK.replace(/\/\.sync\.lock$/, ""));
+  const useLock = await exists(GIT_LOCK.replace(gitPatternRegex, ""));
   const cmd = useLock
     ? new Deno.Command("flock", { args: [GIT_LOCK, "git", ...gitArgs], cwd: VAULT_ROOT, stdout: "piped", stderr: "piped" })
     : new Deno.Command("git", { args: gitArgs, cwd: VAULT_ROOT, stdout: "piped", stderr: "piped" });
@@ -476,7 +500,7 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
       const files: string[] = [];
       for await (const entry of walk(dir, {
         exts: [".md"],
-        skip: [/\/.obsidian\//, /\/.git\//, /\/.trash\//],
+        skip: [callToolPatternRegex, callToolPatternRegex2, callToolPatternRegex3],
         includeDirs: false,
       })) {
         files.push(relative(VAULT_ROOT, entry.path));
@@ -520,7 +544,7 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
         return { content: [{ type: "text", text: `Embedding backend down (${EMBED_BASE_URL}, llama-embed) — semantic search unavailable; use search_notes (keyword) instead.` }] };
       }
       const k = args.k ? Number(args.k) : 10;
-      const folder = args.folder ? String(args.folder).replace(/\/$/, "") + "/" : null;
+      const folder = args.folder ? String(args.folder).replace(callToolPatternRegex4, "") + "/" : null;
       const pool = folder ? entries.filter((e) => e.path.startsWith(folder)) : entries;
       const hits = vecTopK(queryVec, pool, k);
       let text = formatHits(hits);
@@ -536,7 +560,7 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
       if (!entries || !entries.length) {
         return { content: [{ type: "text", text: `Semantic index not found/empty at ${BRAINVEC_INDEX} — run brainvec-ingest on the server first.` }] };
       }
-      const rel = String(args.path).replace(/^\//, "");
+      const rel = String(args.path).replace(callToolPatternRegex5, "");
       const self = entries.find((e) => e.path === rel) ?? entries.find((e) => e.path.endsWith(rel));
       if (!self) {
         return { content: [{ type: "text", text: `Note not in the semantic index: ${rel} (new/renamed since the last ingest tick? next *:5/15 run picks it up).` }] };
@@ -556,7 +580,7 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
       const inbound = new Map<string, Set<string>>(); // slug → set of pages linking to it
 
       for await (const entry of walk(wikiDir, { exts: [".md"], includeDirs: false })) {
-        const slug = entry.name.replace(/\.md$/, "");
+        const slug = entry.name.replace(noteBasenamePatternRegex2, "");
         wikiFiles.set(slug, entry.path);
         inbound.set(slug, new Set());
       }
@@ -571,8 +595,8 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
           frontmatterIssues.push(`${slug}: missing frontmatter`);
         }
 
-        for (const m of content.matchAll(/\[\[([^\]|#]+)/g)) {
-          const target = m[1].trim().replace(/\.md$/, "");
+        for (const m of content.matchAll((callToolPatternRegex6.lastIndex = 0, callToolPatternRegex6))) {
+          const target = m[1].trim().replace(noteBasenamePatternRegex2, "");
           if (wikiFiles.has(target)) {
             inbound.get(target)!.add(slug);
           } else {
@@ -601,7 +625,7 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
 
     case "append_to_inbox": {
       const content = String(args.content);
-      const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const ts = new Date().toISOString().replace((callToolPatternRegex7.lastIndex = 0, callToolPatternRegex7), "-").slice(0, 19);
       const filename = args.filename ? String(args.filename) : `capture-${ts}.md`;
       const full = safePath(`inbox/${filename}`);
       await Deno.mkdir(dirname(full), { recursive: true });
@@ -622,27 +646,27 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
 
       const now = new Date();
       const dateDir = now.toISOString().slice(0, 10);     // YYYY-MM-DD
-      const timeSlug = now.toISOString().slice(11, 19).replace(/:/g, "");
+      const timeSlug = now.toISOString().slice(11, 19).replace((callToolPatternRegex8.lastIndex = 0, callToolPatternRegex8), "");
 
       // Derive a kebab-case slug from the first heading or first 60 chars
       // of body. Strip frontmatter if the caller pre-embedded any.
-      const stripFm = content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
-      const firstH1 = stripFm.match(/^#\s+(.+)$/m);
+      const stripFm = content.replace(callToolPatternRegex9, "");
+      const firstH1 = stripFm.match(callToolPatternRegex10);
       const seed = (firstH1 ? firstH1[1] : stripFm)
         .trim().slice(0, 60);
       const slug = seed
         .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "") || "note";
+        .replace((callToolPatternRegex11.lastIndex = 0, callToolPatternRegex11), "")
+        .replace((callToolPatternRegex12.lastIndex = 0, callToolPatternRegex12), "-")
+        .replace((callToolPatternRegex13.lastIndex = 0, callToolPatternRegex13), "-")
+        .replace((callToolPatternRegex14.lastIndex = 0, callToolPatternRegex14), "") || "note";
 
       const filename = `${timeSlug}-${slug}.md`;
       const rel = `_llm-inbox/${dateDir}/${filename}`;
       const full = safePath(rel);
 
       const fm: string[] = ["---"];
-      fm.push(`title: ${seed.replace(/[\r\n]/g, " ") || "(untitled)"}`);
+      fm.push(`title: ${seed.replace((callToolPatternRegex15.lastIndex = 0, callToolPatternRegex15), " ") || "(untitled)"}`);
       fm.push(`created: ${now.toISOString()}`);
       fm.push(`updated: ${now.toISOString()}`);
       fm.push(`source: [${JSON.stringify(source)}]`);
@@ -742,7 +766,8 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
       const useRegex = args.regex === true;
       const dryRun = args.dry_run !== false;
       const dir = folder ? safePath(folder) : VAULT_ROOT;
-      const buildRe = () => new RegExp(useRegex ? pattern : escapeRegExp(pattern), "g");
+      // Caller-supplied pattern: compile once per request, not per line/file.
+      const compiled = new RegExp(useRegex ? pattern : escapeRegExp(pattern), "g");
 
       type FileChange = { file: string; full: string; hits: Array<{ line: number; before: string; after: string }> };
       const changes: FileChange[] = [];
@@ -751,8 +776,9 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
         const lines = content.split("\n");
         const hits: Array<{ line: number; before: string; after: string }> = [];
         for (let i = 0; i < lines.length; i++) {
-          if (buildRe().test(lines[i])) {
-            hits.push({ line: i + 1, before: lines[i], after: lines[i].replace(buildRe(), replacement) });
+          compiled.lastIndex = 0;
+          if (compiled.test(lines[i])) {
+            hits.push({ line: i + 1, before: lines[i], after: lines[i].replace(compiled, replacement) });
           }
         }
         if (hits.length) changes.push({ file: relative(VAULT_ROOT, entry.path), full: entry.path, hits });
@@ -779,7 +805,7 @@ async function callTool(name: string, args: ToolArgs): Promise<ToolResult> {
       const { commit } = await withCheckpoint(label, async () => {
         for (const c of changes) {
           const content = await Deno.readTextFile(c.full);
-          await Deno.writeTextFile(c.full, content.replace(buildRe(), replacement));
+          await Deno.writeTextFile(c.full, content.replace(compiled, replacement));
         }
       });
       return { content: [{ type: "text", text:
