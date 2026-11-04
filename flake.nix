@@ -2311,6 +2311,35 @@
           touch "$out"
         '';
 
+      sonarr-runtime-wiring = let
+        c = self.nixosConfigurations.hwc-home.config;
+        binding = pkgs.writeText "sonarr-runtime-binding.json" (builtins.toJSON {
+          image = c.virtualisation.oci-containers.containers.sonarr.image;
+          pull = c.virtualisation.oci-containers.containers.sonarr.pull;
+          ports = c.virtualisation.oci-containers.containers.sonarr.ports;
+          volumes = c.virtualisation.oci-containers.containers.sonarr.volumes;
+          context = c.system.build.sonarrRuntimeImageContext;
+        });
+      in pkgs.runCommand "sonarr-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+        python3 - ${binding} <<'PY'
+        import json,hashlib,pathlib,sys
+        b=json.loads(pathlib.Path(sys.argv[1]).read_text());context=pathlib.Path(b['context'])
+        recipe=(context/'Dockerfile').read_text()
+        def valid(binding):
+          return binding['image'].startswith('localhost/sonarr-runtime:') and binding['image'].endswith('-'+hashlib.sha256(recipe.encode()).hexdigest()[:12]) and binding['pull']=='never'
+        assert valid(b)
+        assert not valid(dict(b,image='lscr.io/linuxserver/sonarr:latest'))
+        assert not valid(dict(b,pull='missing'))
+        assert b['ports']==['127.0.0.1:8989:8989']
+        assert len(b['volumes'])==3 and all(any(v.endswith(':'+p) for v in b['volumes']) for p in ['/config','/tv','/downloads'])
+        script=(context/'apply-runtime.sh').read_text()
+        assert 'comm -12 /tmp/runtime-owned.txt /tmp/app-owned.txt' in script
+        assert 'sha256sum -c -' in script
+        assert 'includedFrameworks' in script and 'frameworks' in script
+        PY
+        touch "$out"
+      '';
+
       hyprland-lua-config = let
         home = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
         hypr = home.wayland.windowManager.hyprland;

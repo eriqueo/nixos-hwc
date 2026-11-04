@@ -11,6 +11,7 @@ in
     (helpers.mkContainer {
       name = "sonarr";
       image = cfg.image;
+      pull = if lib.hasPrefix "localhost/sonarr-runtime:" cfg.image then "never" else "missing";
       networkMode = cfg.network.mode;
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";  # Static default - GPU detection deferred

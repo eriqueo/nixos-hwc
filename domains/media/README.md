@@ -48,7 +48,7 @@ media/
 ├── audiobookshelf/          # Pinned app/supported Node recipe, config path and Borg recovery registration
 ├── jellyseerr/              # Media requests; app/Next routing fixes, signed native updates and private config
 │
-├── sonarr/                  # TV show management
+├── sonarr/                  # Pinned app/supported .NET recipe; existing TV/config/download binds
 ├── radarr/                  # Movie management
 ├── lidarr/                  # Music management
 ├── prowlarr/                # Indexer management
@@ -92,6 +92,7 @@ workspace/media/
 ```
 
 ## Changelog
+- 2026-11-04: Pin Sonarr 4.0.20.3014 and rehost its managed assemblies on verified ASP.NET 10.0.14; derive runtime-owned removals from the vendor manifest and retain application assets.
 
 - 2026-11-03: Pin Calibre 9.17.0 by vendor digest for current content-server, metadata and conversion security fixes. Preserve the existing library and desktop/content routes.
 
