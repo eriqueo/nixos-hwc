@@ -342,12 +342,19 @@ apps = json.loads(Path('${pkgs.writeText "python-runtime-applications.json" (bui
   original = toString app.sourceApplication;
   python = toString app.pythonHttpRuntime;
   sourcePython = toString app.sourcePython;
+  extraOutputs = map (name: { inherit name;
+    path = toString app.${name}; original = toString app.sourceApplication.${name};
+  }) (lib.remove "out" app.outputs);
   executable = app.sourcePython.executable;
 }) applications))}').read_text())
 for app in apps:
     root, original, runtime = map(Path, (app['path'], app['original'], app['python']))
     proof = json.loads((root / 'nix-support/http-framing-application.json').read_text())
     assert proof['original'] == str(original) and proof['runtime'] == str(runtime), 'APP_SOURCE_BINDING'
+    for extra in app['extraOutputs']:
+        path = Path(extra['path'])
+        assert path.is_symlink() and path.resolve() == Path(extra['original']).resolve(), 'APP_SIDE_OUTPUT_PARITY'
+        assert not any((path / name).exists() for name in ['bin', 'sbin', 'libexec']), 'APP_SIDE_OUTPUT_EXECUTABLE'
     for entry in original.iterdir():
         if entry.name not in {'bin', 'nix-support'}:
             assert (root / entry.name).is_symlink() and (root / entry.name).resolve() == entry.resolve(), 'APP_ASSET_PARITY'

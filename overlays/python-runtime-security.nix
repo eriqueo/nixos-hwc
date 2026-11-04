@@ -225,8 +225,16 @@ let
     (support / "http-framing-application.json").write_text(json.dumps(proof, indent=2) + "\n")
   '';
   mkApplication = { application, python }:
-    let runtime = mkRuntime python; in
-    prev.runCommand "${application.name}-http-framing" {
+    let
+      runtime = mkRuntime python;
+      outputs = application.outputs or [ "out" ];
+      extraOutputs = lib.remove "out" outputs;
+    in
+    assert lib.assertMsg (builtins.elem "out" outputs && builtins.length outputs <= 2
+      && lib.all (name: name == "man") extraOutputs
+      && lib.all (name: builtins.elem name outputs) (application.meta.outputsToInstall or [ "out" ]))
+      "APP_OUTPUT_PROTOCOL_UNSUPPORTED";
+    prev.runCommand "${application.name}-http-framing" ({
       preferLocalBuild = true;
       pname = lib.getName application;
       version = application.version or (lib.getVersion application);
@@ -237,8 +245,9 @@ let
         pythonHttpRuntime = runtime;
       };
       meta = application.meta or {};
-    } ''
-      ${prev.python3}/bin/python3 -B ${applicationBuilder} ${application} ${python} ${runtime} "$out" ${python.executable}
+    } // lib.optionalAttrs (extraOutputs != []) { inherit outputs; }) ''
+      ${prev.python3}/bin/python3 -B ${applicationBuilder} ${application} ${python} ${runtime} "$out" ${python.executable}${lib.concatMapStrings (name:
+        "\n      ln -s ${lib.escapeShellArg (toString application.${name})} \"$" + name + "\"") extraOutputs}
       ${prev.python3}/bin/python3 -B - "$out" <<'PY'
 from pathlib import Path
 import subprocess
