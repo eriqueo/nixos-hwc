@@ -12,11 +12,9 @@
   # at the version it branched with — 0.146.0, with no path forward short of a
   # channel bump. The pin is the module's documented opt-in for exactly this.
   #
-  # NOT promoted to a profile or made the module default, even though
-  # machines/laptop/home.nix carries the same line: parts/package.nix fetches
-  # an x86_64 musl tarball, and hwc-firestick is aarch64, so a default would
-  # break its build. hwc-home also stays on stock pkgs.codex deliberately.
-  # Promote only together with arch selection in the module.
+  # The laptop now uses its newer unstable-channel package. Keep this opt-in
+  # scoped to XPS: the release tarball is x86_64-only.
+  # Remove when this machine's channel provides Codex >= 0.164.0.
   hwc.home.apps.codex.package =
     pkgs.callPackage ../../domains/home/apps/codex/parts/package.nix { };
 

@@ -64,7 +64,7 @@ in
       # Server bundle
       ++ (lib.optionals cfg.server.enable (with pkgs; [
         xorg.xauth evince feh fping ethtool
-        picard claude-code flac
+        picard flac
         htop iotop lsof nettools iproute2 tcpdump nmap
         age docker-compose podman-compose rsync rclone unzip p7zip
         postgresql redis ffmpeg imagemagick mediainfo

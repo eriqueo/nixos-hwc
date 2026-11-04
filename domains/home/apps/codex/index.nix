@@ -80,7 +80,7 @@ in
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
-      description = "Codex package to use. If null, will use flake input.";
+      description = "Codex package to use. If null, use pkgs.codex from the selected channel.";
     };
 
     env = lib.mkOption {
