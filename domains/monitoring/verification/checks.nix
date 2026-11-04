@@ -161,7 +161,7 @@ website-security-probes = let
       (lib.concatMap (g: g.rules) (import (repoRoot + "/domains/monitoring/prometheus/parts/alerts.nix") { inherit lib; }).groups);
   });
 in pkgs.runCommand "website-security-probes" {
-  nativeBuildInputs = [ pkgs.python3 c.services.prometheus.exporters.blackbox.package pkgs.prometheus.cli ];
+  nativeBuildInputs = [ pkgs.python3 self.nixosConfigurations.hwc-work.pkgs.prometheus-blackbox-exporter pkgs.prometheus.cli ];
 } ''
   python3 - ${fixture} <<'PY'
   import http.server,json,pathlib,socket,subprocess,sys,threading,time,urllib.request,urllib.parse
