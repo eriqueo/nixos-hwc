@@ -33,17 +33,23 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.home.apps.claude-code = {
-    enable = lib.mkEnableOption "Claude Code CLI (Nix package + Obsidian MCP cert)";
+    enable = lib.mkEnableOption "Claude Code CLI";
+
+    installMethod = lib.mkOption {
+      type = lib.types.enum [ "nix" "native" ];
+      default = "nix";
+      description = "Nix installs the channel package; native uses the existing self-updating CLI in ~/.local/bin.";
+    };
+
+    obsidianCert.enable = lib.mkEnableOption "trust for the local Obsidian REST API certificate";
 
     # Shared, version-controlled skill/agent/command/CLAUDE.md/engineering-principles set. Lives in a
     # standalone git repo (NOT ~/.nixos — branch switches there would vaporize
     # the symlink targets mid-session). Symlinked live so edits are immediate
     # and identical across every host.
     #
-    # Deliberately INDEPENDENT of `enable`: hwc-server runs claude from an
-    # ad-hoc npm global and must NOT get the Nix package or the laptop-only
-    # Obsidian cert var (the cert file does not exist there). It opts into the
-    # shared config alone via shareConfig.enable.
+    # Legacy sharing remains independent of CLI installation. The pinned
+    # agent-harness module now owns shared configuration on the fleet.
     shareConfig = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -179,10 +185,13 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkMerge [
-    # Package + Obsidian MCP cert — laptop-class hosts only (cfg.enable).
+    # The app owns CLI installation. Native updates remain outside Nix.
     (lib.mkIf cfg.enable {
-      home.packages = [ pkgs.claude-code ];
+      home.packages = lib.optional (cfg.installMethod == "nix") pkgs.claude-code;
+      home.sessionPath = lib.optional (cfg.installMethod == "native") "${config.home.homeDirectory}/.local/bin";
+    })
 
+    (lib.mkIf (cfg.enable && cfg.obsidianCert.enable) {
       # Trust the self-signed cert from the Obsidian Local REST API plugin
       # so Claude Code's HTTP MCP transport can connect without validation errors.
       # Cert source: https://127.0.0.1:27124/obsidian-local-rest-api.crt

@@ -12,11 +12,6 @@ let
 in
 
 {
-  # Codex pinned to the upstream release binary (faster-moving than the
-  # unstable channel). Server intentionally stays on stock pkgs.codex.
-  hwc.home.apps.codex.package =
-    pkgs.callPackage ../../domains/home/apps/codex/parts/package.nix { };
-
   # Blender pinned to the official upstream binary. pkgs.blender.override
   # { cudaSupport = true; } is a variant Hydra never builds, so the default path
   # recompiles blender + its CUDA-context deps (~30 min) on every nixpkgs bump.
@@ -35,8 +30,11 @@ in
     qutebrowser.enable = true;
     vesktop.enable = true;
     qbittorrent.enable = true;
-    # shareConfig (and its two-way sync) defaults on with the package.
-    claude-code.enable = true;
+    # Keep the existing self-updating CLI; Nix must not install a second copy.
+    claude-code = {
+      installMethod = "native";
+      obsidianCert.enable = true;
+    };
     claude-desktop.enable = true;
     # This machine's own tailnet address, pinned so the phone's endpoint does not
     # depend on whether tailscale0 had an address when the app started. See the
