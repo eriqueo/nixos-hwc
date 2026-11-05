@@ -496,7 +496,7 @@ pkgs.runCommand "immich-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; 
   installer=emitted(ml)[0][0]
   # Execute the emitted installer on disposable package owners and real wheels.
   # A bad second input must leave the entire original tree intact.
-  for failure in ['none','missing-second','corrupt-second','escape-second']:
+  for failure in ['none','missing-second','corrupt-second','escape-second','link-second']:
       with tempfile.TemporaryDirectory() as directory:
           root=pathlib.Path(directory);site=root/'site';inputs=root/'wheels';site.mkdir();inputs.mkdir()
           value=copy.deepcopy(manifest);value['sitePackages']=str(site);value['wheelDirectory']=str(inputs)
@@ -510,6 +510,11 @@ pkgs.runCommand "immich-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; 
           elif failure=='escape-second':
               with zipfile.ZipFile(path,'w') as archive:archive.writestr('../escape','wrong-owner')
               second['sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+          elif failure=='link-second':
+              with zipfile.ZipFile(path,'w') as archive:
+                  link=zipfile.ZipInfo('urllib3/escape');link.external_attr=0o120777<<16
+                  archive.writestr(link,'wrong-owner')
+              second['sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
           before={str(p.relative_to(site)):p.read_bytes() for p in site.rglob('*') if p.is_file()}
           harness="import importlib.metadata,json,pathlib,sys,types;spec=json.loads(sys.argv[1]);root=pathlib.Path(spec['sitePackages']);importlib.metadata.distribution=lambda n:types.SimpleNamespace(version=spec['wheels'][n]['originalVersion'],locate_file=lambda _:root,files=[pathlib.Path(n)/'sentinel']);exec(compile("+repr(installer)+",'<actual-installer>','exec',optimize=0),{'__name__':'__main__'})"
           result=subprocess.run([sys.executable,'-OO','-c',harness,json.dumps(value)],capture_output=True,timeout=10)
@@ -519,7 +524,7 @@ pkgs.runCommand "immich-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; 
               assert before.keys().isdisjoint(after) and all((site/name/'__init__.py').is_file() for name in value['wheels'])
           else:
               assert result.returncode!=0 and after==before,(failure,result.stderr)
-              wanted={'missing-second':b'FileNotFoundError','corrupt-second':b'ML_HTTP_WHEEL_DRIFT','escape-second':b'ML_HTTP_ARCHIVE_PATH'}[failure]
+              wanted={'missing-second':b'FileNotFoundError','corrupt-second':b'ML_HTTP_WHEEL_DRIFT','escape-second':b'ML_HTTP_ARCHIVE_PATH','link-second':b'ML_HTTP_ARCHIVE_TYPE'}[failure]
               assert wanted in result.stderr,(failure,result.stderr)
   # Security backports preserve the accepted same-app Node recipe prefix.
   assert sha(seerr.split('# Security backports', 1)[0].replace(' AS seerr-base', "")) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'

@@ -178,7 +178,9 @@ let
                 if member.is_dir():
                     continue
                 mode = member.external_attr >> 16
-                assert mode == 0 or stat.S_ISREG(mode), 'ML_HTTP_ARCHIVE_TYPE'
+                # ZIP may carry permission bits without Unix file-type bits.
+                # Accept that regular-file convention; reject links/devices.
+                assert stat.S_IFMT(mode) in {0, stat.S_IFREG}, 'ML_HTTP_ARCHIVE_TYPE'
                 outputs.append((rel, archive.read(member)))
             assert outputs and any(str(p) == new_info + '/METADATA' for p, _ in outputs), 'ML_HTTP_ARCHIVE_METADATA'
         prepared.append((name, old_info, outputs))

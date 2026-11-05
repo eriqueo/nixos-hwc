@@ -22,6 +22,7 @@ The final layer installs hash-bound Requests2.33.0 and urllib32.8.0 pure wheels,
 then applies the shared strict stdlib/urllib3 framing pair. Both wheel owners,
 paths and archives are validated before either package changes. No resolver or
 native build runs in this layer.
+ZIP entries may omit Unix type bits; link and device entries remain rejected.
 
 The pinned Ubuntu image owns its emSign distrust list independently of the newer host NSS bundle. An empty host blacklist does not remove roots from this container. Prebuild its exact context before activation.
 
@@ -102,6 +103,7 @@ trigger an automatic database file-path migration. Keep `/usr/src/app/upload`
 and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
+- 2026-11-05: Correct the ZIP type guard for upstream urllib3 metadata and exercise symlink rejection with all original fixture files preserved.
 - 2026-11-05: Preserve the consumed security base and add an offline HTTP dependency/framing layer. Follow both layers in existing checks and reject missing, corrupt or escaping wheel inputs before writes.
 - 2026-11-03: Wire the existing password-file option to vendor startup, use Immich's restricted owning role, and require protected shared PostgreSQL provisioning.
 

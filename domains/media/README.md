@@ -42,6 +42,7 @@ selection. Its image build exercises the actual GUI import and fork_job worker.
 `immich-container/` keeps its pinned Ubuntu CA distrust policy even after host NSS removes the same roots. Its exact local runtime images must be built before activation.
 Its ML HTTP derivative inherits the existing TLS/Pillow/Starlette base and
 installs only fixed-hash Requests/urllib3 wheels plus shared framing guards.
+Wheel guards accept standard ZIP permission metadata and reject links and escapes.
 
 `youtube/` runs the transcripts site with captions-first extraction and a bounded Deepgram audio fallback, using the generated `deepgram-api-key` mount.
 
@@ -107,6 +108,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Accept wheel entries with permissions but no Unix type bits; retain fail-before-write path and link checks.
 
 - 2026-11-05: Add an offline Immich ML HTTP derivative and preserve its previous security base. Share urllib3 source identities with Frigate while retaining Frigate's emitted recipe.
 
