@@ -518,14 +518,93 @@ calibre-security-wiring = let
     volumes = c.virtualisation.oci-containers.containers.calibre.volumes;
     library = toString c.hwc.media.calibre.library;
     config = "${c.hwc.paths.apps.root}/calibre/config";
+    pull = c.virtualisation.oci-containers.containers.calibre.pull;
+    preStart = c.systemd.services.podman-calibre.preStart;
   });
 in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-  python3 - ${binding} <<'PYTEST'
-  import json,sys
-  v=json.load(open(sys.argv[1]))
-  assert v['selected'] == v['container'] == 'lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378'
+  python3 - ${binding} ${c.system.build.calibreRuntimeImageRecipe} ${c.system.build.calibreRuntimeImageContext} <<'PYTEST'
+  import ast, copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
+  v=json.loads(pathlib.Path(sys.argv[1]).read_text())
+  recipe=pathlib.Path(sys.argv[2]).read_text()
+  context=pathlib.Path(sys.argv[3])
+  manifest=json.loads((context/'manifest.json').read_text())
+  assert (context/'Dockerfile').read_text()==recipe
+  assert manifest['schemaVersion']==1 and manifest['pythonVersion']==[3,14,8]
+  assert manifest['frozenBundle']=='/opt/calibre/lib/calibre-extensions/python-lib.bypy.frozen'
+  assert manifest['frozenBundleSha256']=='558037f93bef7df037ff1c38519680ed1083263b9e86b38407c4e819a2acffb2'
+  assert manifest['selectionVariable']=='CALIBRE_DEVELOP_FROM' and manifest['rootPath']=='/opt/hwc-calibre-http'
+  assert manifest['sourcePath']=='/tmp/hwc-calibre-http/client.py'
+  raw=(context/'client.py').read_bytes()
+  assert hashlib.sha256(raw).hexdigest()==manifest['sourceSha256']
+  source=raw.decode()
+  for old,new in manifest['replacements']:
+      assert source.count(old)==1
+      source=source.replace(old,new)
+  assert hashlib.sha256(source.encode()).hexdigest()==manifest['patchedSha256']
+  assert recipe.startswith('FROM lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378\n')
+  def commands(text):
+      result=[]
+      for line in text.splitlines():
+          if not line.startswith('RUN ') or '/opt/calibre/calibre-debug' not in line: continue
+          argv=shlex.split(line[4:]); at=argv.index('/opt/calibre/calibre-debug')
+          assert argv[at+1]=='-c'
+          module=ast.parse(argv[at+2]); invoke=module.body[-1].value
+          assert isinstance(invoke,ast.Call) and invoke.func.id=='exec'
+          compiler=invoke.args[0]
+          assert compiler.func.id=='compile'
+          optimize=next(x.value.value for x in compiler.keywords if x.arg=='optimize')
+          body=ast.literal_eval(compiler.args[0])
+          selected=json.loads(ast.literal_eval(module.body[1].value.elts[1]))
+          result.append((body,optimize,selected))
+      return result
+  def wired(binding,text):
+      wanted='localhost/calibre-runtime:9.17.0-http-framing-'+hashlib.sha256(text.encode()).hexdigest()[:12]
+      return (binding['selected']==binding['container']==wanted and binding['pull']=='never'
+          and 'ENV '+manifest['selectionVariable']+'='+manifest['rootPath'] in text
+          and len(commands(text))==2 and all(x[1]==0 and x[2]==manifest for x in commands(text)))
+  assert wired(v,recipe)
+  def rebound(text):
+      binding=copy.deepcopy(v)
+      binding['selected']=binding['container']='localhost/calibre-runtime:9.17.0-http-framing-'+hashlib.sha256(text.encode()).hexdigest()[:12]
+      return binding
+  omitted=recipe.replace('ENV '+manifest['selectionVariable']+'='+manifest['rootPath'], '# omitted source selection')
+  assert not wired(rebound(omitted),omitted)
+  optimized=recipe.replace('optimize=0','optimize=2')
+  assert not wired(rebound(optimized),optimized)
+  wrong=copy.deepcopy(v);wrong['container']='lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378'
+  assert not wired(wrong,recipe)
+  assert ' image exists ' in v['preStart'] and v['selected'] in v['preStart']
+  assert 'podman build' not in v['preStart']
   assert v['library'] + ':/books' in v['volumes']
   assert v['config'] + ':/config' in v['volumes']
+  program=commands(recipe)[0][0]
+  assert 'FROZEN_HTTP_SOURCE_CODE_DRIFT' in program
+  sha=lambda b:hashlib.sha256(b).hexdigest()
+  for kind,code in [('source','FROZEN_HTTP_SOURCE_DRIFT'),('result','FROZEN_HTTP_RESULT_DRIFT'),
+      ('hunk','FROZEN_HTTP_HUNK_DRIFT'),('bound','FROZEN_HTTP_SOURCE_BOUND'),('bundle','FROZEN_HTTP_ARCHIVE_DRIFT')]:
+      with tempfile.TemporaryDirectory() as d:
+          root=pathlib.Path(d); original=root/'client.py'; archive=root/'bundle'; output=root/'selected'
+          original.write_bytes(b'sentinel=1\n');archive.write_bytes(b'fixture-bundle')
+          spec=copy.deepcopy(manifest)
+          spec.update(sourcePath=str(original),sourceSha256=sha(original.read_bytes()),
+              patchedSha256=sha(b'sentinel=2\n'),replacements=[['sentinel=1','sentinel=2']],
+              frozenBundle=str(archive),frozenBundleSha256=sha(archive.read_bytes()),rootPath=str(output))
+          if kind=='source':spec['sourceSha256']='0'*64
+          elif kind=='result':spec['patchedSha256']='0'*64
+          elif kind=='hunk':spec['replacements']=[['missing-sentinel','sentinel=2']]
+          elif kind=='bound':original.write_bytes(b'x'*262145)
+          elif kind=='bundle':spec['frozenBundleSha256']='0'*64
+          before=original.read_bytes()
+          def execute(optimize):
+              command='import sys;sys.argv='+repr(['fixture',json.dumps(spec)])+';exec(compile('+repr(program)+',"<frozen-http>","exec",optimize='+str(optimize)+'),{"__name__":"__main__"})'
+              return subprocess.run([sys.executable,'-OO','-c',command],capture_output=True,timeout=10)
+          result=execute(0)
+          assert result.returncode!=0 and code.encode() in result.stderr,kind
+          assert not output.exists() and original.read_bytes()==before,'PARTIAL_FROZEN_WRITE:'+kind
+          if kind=='source':
+              seeded=execute(2)
+              assert seeded.returncode==0 and output.exists(),'OPTIMIZED_GUARD_SEED_NOT_EXERCISED'
+  print('actual Calibre recipe/context/selection and optimized-launcher drift guards pass; actual image consumer remains a runtime qualification')
   PYTEST
   touch "$out"
 '';

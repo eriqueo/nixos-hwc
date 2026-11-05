@@ -10,6 +10,7 @@ in
     (helpers.mkContainer {
       name = "calibre";
       image = cfg.image;
+      pull = if lib.hasPrefix "localhost/calibre-runtime:" cfg.image then "never" else "missing";
       networkMode = cfg.network.mode;
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";

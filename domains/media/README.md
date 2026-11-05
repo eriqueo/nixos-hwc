@@ -75,7 +75,7 @@ media/
 ├── recyclarr/               # *arr quality profile sync; preserves Radarr executable rejection
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
-├── calibre/                 # Immutable Calibre 9.17 image; existing library/config paths
+├── calibre/                 # Calibre 9.17 frozen HTTP source repair; existing library/config paths
 ├── books/                   # LazyLibrarian
 │
 ├── immich-container/        # Photo management, pinned runtime/library contexts
@@ -102,6 +102,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-04: Add a Calibre 9.17 runtime context that selects one hash-bound CPython HTTP source through the vendor frozen importer. Preserve the archive, app, data paths and credentials; require a prebuilt image and guard actual selection and optimized-launcher failures.
 
 - 2026-11-04: Add Frigate's paired HTTP response framing backport and actual emitted-builder drift/integration checks; retain its app, model, native inputs and data paths.
 
