@@ -14,7 +14,12 @@ photo management, and video surveillance services.
 
 Calibre's native extension constructor shares source, SDK and ELF guards across
 SSL and the two source-only socket repair artifacts. The frozen socket build
-keeps its original feature set. Distro startup integration is a separate slice.
+keeps its original feature set. The shared socket installer replaces the frozen
+module at its original path and selects the distro extension at global and
+virtualenv site startup. One checked guard validates repeated selection and
+stops startup on mismatched inputs. Python `-S` bypasses the distro hook; its
+embedded builtin remains unchanged. Final image and release checks must prove
+the configured application consumers select the patched module.
 
 Calibre's existing producer also exports one shared Ubuntu Python repair for
 Selkies and the Books candidate. It keeps the distro interpreter and packages,
@@ -168,6 +173,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Wire guarded frozen socket replacement and shared distro startup selection into Calibre/Books, including parent/worker probes and donor verification; retain separate image/current-data/release gates.
 
 - 2026-11-05: Add matched frozen/distro socket artifacts from the upstream3.14 NUL-byte backport; share the existing native constructor and SDK/source guards without changing interpreter or virtualenv inputs.
 

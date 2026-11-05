@@ -27,21 +27,22 @@ let
       CALIBRE_CONFIG_DIRECTORY = "/tmp/hwc-frozen-config";
       XDG_CACHE_HOME = "/tmp/hwc-frozen-cache";
     };
-    consumerVerification = stdlibRuntimeProof + sslRuntimeProof + ''
+    consumerVerification = stdlibRuntimeProof + sslRuntimeProof + socketFrozenRuntimeProof + ''
       native_ssl = native_ssl_proof()
+      native_socket = native_socket_proof()
       libraries = stdlib_proof()
       import calibre.gui2
       from calibre.constants import is_running_from_develop
       from calibre.utils.ipc.simple_worker import fork_job
       assert not is_running_from_develop, 'CALIBRE_GUI_DEVELOP_MODE'
-      worker = ${builtins.toJSON (stdlibRuntimeProof + sslRuntimeProof + ''
+      worker = ${builtins.toJSON (stdlibRuntimeProof + sslRuntimeProof + socketFrozenRuntimeProof + ''
         def prove():
             import http.client
             from calibre.constants import is_running_from_develop
-            return (is_running_from_develop,http.client.__file__,bool(http.client._is_legal_chunk_size(b"a")),bool(http.client._is_legal_chunk_size(b"+a")),native_ssl_proof(),stdlib_proof())
+            return (is_running_from_develop,http.client.__file__,bool(http.client._is_legal_chunk_size(b"a")),bool(http.client._is_legal_chunk_size(b"+a")),native_ssl_proof(),stdlib_proof(),native_socket_proof())
       '')}
       actual = fork_job(worker, 'prove', timeout=15, no_output=True, module_is_source_code=True)['result']
-      assert actual == (False, str(path), True, False, native_ssl, libraries), 'CALIBRE_WORKER_HTTP_SELECTION'
+      assert actual == (False, str(path), True, False, native_ssl, libraries, native_socket), 'CALIBRE_WORKER_HTTP_SELECTION'
     '';
   };
   # Temporary: frozen3.14.8 lacks these upstream library repairs. Retire only
@@ -783,7 +784,7 @@ let
   distroSslRuntimeSpec = pkgs.writeText "calibre-system-python-ssl-runtime.json" (builtins.toJSON distroSslRuntimeDescriptor);
   distroStaging = "/tmp/hwc-system-python";
   distroInputHash = builtins.hashString "sha256"
-    (distroSpec.text + stdlibSourceGuard.text + distroSslRuntimeSpec.text + sslGuard.text + toString distroSources + toString distroSslPackage);
+    (distroSpec.text + stdlibSourceGuard.text + distroSslRuntimeSpec.text + sslGuard.text + toString distroSources + toString distroSslPackage + socketInputHash);
   distroRuntimeProof = ''
     import hashlib, importlib, importlib.metadata, json
     from pathlib import Path
@@ -818,10 +819,12 @@ let
     cp ${distroSslRuntimeSpec} "$out/ssl/spec.json"
     cp ${sslGuard} "$out/ssl/guard.py"
     cp -r ${distroSslPackage}/lib ${distroSslPackage}/manifest.json "$out/ssl/"
+    cp -r ${socketContext}/system "$out/socket"
   '';
   # Temporary: both selected Python runtimes truncate NUL host/port inputs.
   # Retire when unmodified vendor modules pass the NUL/API/normal/GUI/worker
-  # contract. Ubuntu's builtin remains unchanged until the startup slice below.
+  # contract. Ubuntu's binary builtin stays unchanged; checked site startup
+  # selects the patched extension before configured application clients load.
   socketUpstreamCommit = "c53e59385eda89fade1531240ef6479341a55b53";
   socketModuleName = "_socket";
   socketPatchFacts = {
@@ -941,6 +944,299 @@ let
     schemaVersion = 1;
     variants = socketDescriptors;
   });
+  socketCommands = { install = "install"; installed = "installed"; runtime = "runtime"; startup = "startup"; };
+  socketGlobalSite = "/usr/lib/python3/dist-packages";
+  socketProofRoot = "${socketGlobalSite}/_hwc_native_socket";
+  socketRuntimePaths = {
+    frozen = {
+      root = builtins.dirOf calibrePython;
+      proof = "${builtins.dirOf calibrePython}/.hwc-native-socket";
+      target = socketDescriptors.frozen.original.path;
+      mode = socketDescriptors.frozen.original.mode;
+      startup = [];
+    };
+    system = {
+      root = "/";
+      proof = socketProofRoot;
+      target = "${socketProofRoot}/${socketModuleName}.so";
+      mode = 292; # Immutable, root-owned DLL; dlopen does not need execute bits.
+      startup = map (site: "${site}/00-hwc-native-socket.pth") [ socketGlobalSite
+        "/lsiopy/lib/python${lib.concatMapStringsSep "." toString (lib.take 2 distroPythonVersion)}/site-packages" ];
+    };
+  };
+  socketRuntimeLimits = { guardBytes = 65536; startupBytes = 8192; originalBytes = 16777216; };
+  socketRuntimeGuard = pkgs.writeText "calibre-native-socket-guard.py" ''
+    import hashlib, importlib.util, json, os, pathlib, stat, sys
+    COMMANDS = ${builtins.toJSON socketCommands}
+    PATHS = ${builtins.toJSON socketRuntimePaths}
+    LIMITS = ${builtins.toJSON socketRuntimeLimits}
+    MODULE = ${builtins.toJSON socketModuleName}
+    ORIGINALS = ${builtins.toJSON (lib.mapAttrs (_: value: {
+      inherit (value.original) kind path mode;
+    }) socketDescriptors)}
+    NATIVE_LIMITS = ${builtins.toJSON socketDescriptors.frozen.limits}
+
+    def require(value, code):
+        if not value:
+            raise RuntimeError("CALIBRE_SOCKET_" + code)
+
+    def canonical(value):
+        return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+
+    def sha(raw):
+        return hashlib.sha256(raw).hexdigest()
+
+    def read(path, maximum):
+        identity = path.lstat()
+        require(stat.S_ISREG(identity.st_mode) and 0 < identity.st_size <= maximum, "FILE_TYPE_BOUND")
+        return path.read_bytes()
+
+    def at(spec, root, absolute):
+        require(root.is_dir() and not root.is_symlink(), "ROOT")
+        relative = pathlib.Path(absolute).relative_to(spec["paths"]["root"])
+        require(".." not in relative.parts, "PATH")
+        path = root / relative
+        require(all(not p.is_symlink() for p in path.parents if p.is_relative_to(root)), "PATH_PARENT")
+        return path
+
+    def validate(spec):
+        require(type(spec["schemaVersion"]) is int and spec["schemaVersion"] == 1 and spec["variant"] in PATHS, "SPEC_SCHEMA")
+        native = spec["native"]
+        require(type(native["schemaVersion"]) is int and native["schemaVersion"] == 1 and native["variant"] == spec["variant"] and native["moduleName"] == MODULE, "SPEC_NATIVE")
+        require(native["limits"] == NATIVE_LIMITS and all(native["original"][name] == value for name, value in ORIGINALS[spec["variant"]].items()), "SPEC_ORIGINAL")
+        require(spec["paths"] == PATHS[spec["variant"]] and spec["limits"] == LIMITS, "SPEC_PATHS")
+        require(type(spec["owner"]["uid"]) is int and type(spec["owner"]["gid"]) is int, "SPEC_OWNER")
+        require(0 < native["original"]["bytes"] <= LIMITS["originalBytes"], "ORIGINAL_BOUND")
+        require(len(canonical(spec)) <= native["limits"]["manifestBytes"], "SPEC_BOUND")
+
+    def package(spec, directory):
+        validate(spec)
+        native = spec["native"]
+        manifest = json.loads(read(directory / "manifest.json", native["limits"]["manifestBytes"]))
+        require(manifest["schemaVersion"] == 1 and manifest["descriptor"] == native, "PACKAGE_METADATA")
+        library = directory / "lib"
+        require(library.is_dir() and not library.is_symlink() and {p.name for p in library.iterdir()} == {MODULE + ".so"}, "PACKAGE_SET")
+        raw = read(library / (MODULE + ".so"), native["limits"]["fileBytes"])
+        check_payload(native, manifest, raw)
+        return manifest, raw
+
+    def check_payload(native, manifest, raw):
+        file = manifest["file"]
+        require(manifest["schemaVersion"] == 1 and manifest["descriptor"] == native, "PAYLOAD_METADATA")
+        require(file["needed"] == native["needed"] and file["rpath"] == native["rpath"] and not file["soname"], "PAYLOAD_ABI")
+        require(len(raw) == file["bytes"] and sha(raw) == file["sha256"], "PAYLOAD_HASH")
+
+    def owner_mode(path, owner, mode):
+        identity = path.lstat()
+        require((identity.st_uid, identity.st_gid, stat.S_IMODE(identity.st_mode)) == (owner["uid"], owner["gid"], mode), "OWNER_MODE")
+
+    def original(spec, root):
+        entry = spec["native"]["original"]
+        path = at(spec, root, entry["path"])
+        raw = read(path, LIMITS["originalBytes"])
+        require(len(raw) == entry["bytes"] and sha(raw) == entry["sha256"], "ORIGINAL_HASH")
+        owner_mode(path, spec["owner"], entry["mode"])
+        return path
+
+    def startup_line(spec):
+        body = (
+            "try:\n"
+            " import hashlib,json,pathlib,stat\n"
+            " root=pathlib.Path(" + repr(spec["paths"]["proof"]) + ")\n"
+            " identity=(root/'guard.py').lstat()\n"
+            " if not stat.S_ISREG(identity.st_mode) or not 0<identity.st_size<=" + str(LIMITS["guardBytes"]) + ": raise RuntimeError('CALIBRE_SOCKET_GUARD_BOUND')\n"
+            " identity=(root/'spec.json').lstat()\n"
+            " if not stat.S_ISREG(identity.st_mode) or not 0<identity.st_size<=" + str(spec["native"]["limits"]["manifestBytes"]) + ": raise RuntimeError('CALIBRE_SOCKET_SPEC_BOUND')\n"
+            " raw=(root/'guard.py').read_bytes()\n"
+            " data=(root/'spec.json').read_bytes()\n"
+            " if len(raw)>" + str(LIMITS["guardBytes"]) + " or hashlib.sha256(raw).hexdigest()!=" + repr(spec["guardSha256"]) + ": raise RuntimeError('CALIBRE_SOCKET_GUARD_HASH')\n"
+            " if len(data)>16384 or hashlib.sha256(data).hexdigest()!=" + repr(sha(canonical(spec))) + ": raise RuntimeError('CALIBRE_SOCKET_SPEC_HASH')\n"
+            " namespace={'__name__':'hwc_native_socket_startup'}\n"
+            " exec(compile(raw,str(root/'guard.py'),'exec',optimize=0),namespace)\n"
+            " namespace[" + repr(COMMANDS["startup"]) + "](json.loads(data),pathlib.Path('/'))\n"
+            "except BaseException:\n"
+            " raise SystemExit('CALIBRE_SOCKET_STARTUP_FAILED') from None\n"
+        )
+        raw = ("import sys; exec(" + repr(body) + ")\n").encode()
+        require(len(raw) <= LIMITS["startupBytes"] and len(raw.splitlines()) == 1, "STARTUP_LINE")
+        return raw
+
+    def installed(spec, root):
+        validate(spec)
+        proof = at(spec, root, spec["paths"]["proof"])
+        require(proof.is_dir() and not proof.is_symlink(), "PROOF_ROOT")
+        owner_mode(proof, spec["owner"], 0o555)
+        expected = {"guard.py", "spec.json", "manifest.json"}
+        if spec["variant"] == "system":
+            expected.add(MODULE + ".so")
+        require({p.name for p in proof.iterdir()} == expected, "PROOF_SET")
+        for name in ["guard.py", "spec.json", "manifest.json"]:
+            owner_mode(proof / name, spec["owner"], 0o444)
+        require(sha(read(proof / "guard.py", LIMITS["guardBytes"])) == spec["guardSha256"], "GUARD_HASH")
+        require(json.loads(read(proof / "spec.json", 16384)) == spec, "INSTALLED_SPEC")
+        native = spec["native"]
+        manifest = json.loads(read(proof / "manifest.json", native["limits"]["manifestBytes"]))
+        target = at(spec, root, spec["paths"]["target"])
+        check_payload(native, manifest, read(target, native["limits"]["fileBytes"]))
+        owner_mode(target, spec["owner"], spec["paths"]["mode"])
+        for absolute in spec["paths"]["startup"]:
+            path = at(spec, root, absolute)
+            owner_mode(path, spec["owner"], 0o444)
+            require(read(path, LIMITS["startupBytes"]) == startup_line(spec), "STARTUP_FILE")
+        if spec["variant"] == "system":
+            original(spec, root)
+        return manifest
+
+    def install(spec, directory, root, guard_file):
+        manifest, payload = package(spec, directory)
+        source = original(spec, root)
+        proof = at(spec, root, spec["paths"]["proof"])
+        target = at(spec, root, spec["paths"]["target"])
+        require(proof.parent.is_dir() and not proof.exists() and not proof.is_symlink(), "EXISTING_PROOF")
+        ports = [at(spec, root, p) for p in spec["paths"]["startup"]]
+        require(all(p.parent.is_dir() and not p.exists() and not p.is_symlink() for p in ports), "EXISTING_STARTUP")
+        guard = read(guard_file, LIMITS["guardBytes"])
+        require(sha(guard) == spec["guardSha256"], "INPUT_GUARD_HASH")
+        if spec["variant"] == "frozen":
+            require(target == source, "FROZEN_TARGET")
+        else:
+            require(target.parent == proof and not target.exists() and not target.is_symlink(), "SYSTEM_TARGET")
+        line = startup_line(spec)
+        # Image-local, non-retriable. All preimages and ports validate before
+        # writes; hooks publish last. A failed layer is discarded, never retried.
+        proof.mkdir(mode=0o755)
+        target.write_bytes(payload)
+        target.chmod(spec["paths"]["mode"])
+        for name, raw in [("guard.py", guard), ("spec.json", canonical(spec)), ("manifest.json", canonical(manifest))]:
+            (proof / name).write_bytes(raw)
+            (proof / name).chmod(0o444)
+        proof.chmod(0o555)
+        for path in ports:
+            path.write_bytes(line)
+            path.chmod(0o444)
+        installed(spec, root)
+
+    def api(module, additions):
+        members = sorted(dir(module))
+        require(all(name in members for name in additions), "API_METADATA")
+        for name in additions:
+            members.remove(name)
+        constants = {}
+        for name in members:
+            value = getattr(module, name)
+            if name.isupper() and (isinstance(value, (str, int, bool)) or value is None or isinstance(value, tuple) and all(isinstance(item, int) for item in value)):
+                constants[name] = value
+        return sha(canonical(dict(members=members, constants=constants,
+            socketMembers=sorted(dir(module.socket)), socketBasicSize=module.socket.__basicsize__)))
+
+    def startup(spec, root):
+        installed(spec, root)
+        require(spec["variant"] == "system" and list(sys.version_info[:3]) == spec["native"]["pythonVersion"], "STARTUP_VERSION")
+        require(pathlib.Path(sys.executable).resolve() == at(spec, root, spec["native"]["original"]["path"]), "STARTUP_EXECUTABLE")
+        native = sys.modules.get(MODULE)
+        if native is None:
+            require(not any(name in sys.modules for name in ["socket", "ssl", "asyncio"]), "PRELOADED_CLIENT")
+            require(len(sys._current_frames()) == 1, "STARTUP_THREADS")
+            require(importlib.util.find_spec(MODULE).origin == "built-in", "BUILTIN_SELECTION")
+            old = __import__(MODULE)
+            require(api(old, []) == spec["native"]["original"]["apiSha256"], "BUILTIN_API")
+            location = at(spec, root, spec["paths"]["target"])
+            loader = importlib.util.spec_from_file_location(MODULE, str(location))
+            native = importlib.util.module_from_spec(loader)
+            sys.modules[MODULE] = native
+            loader.loader.exec_module(native)
+        # Repeated global/venv hooks validate this exact selection. They never
+        # replace an already-loaded socket type or cached client a second time.
+        require(getattr(native, "__file__", None) == str(at(spec, root, spec["paths"]["target"])), "STARTUP_SELECTION")
+        require(api(native, spec["native"]["apiMetadataAdditions"]) == spec["native"]["original"]["apiSha256"], "STARTUP_API")
+        if "socket" in sys.modules:
+            require(issubclass(sys.modules["socket"].socket, native.socket), "CACHED_SOCKET_TYPE")
+        try:
+            native.getaddrinfo("127.0.0.1" + chr(0) + ".invalid", 80)
+        except ValueError:
+            pass
+        else:
+            require(False, "STARTUP_NUL_ACCEPTED")
+
+    def runtime(spec, root):
+        manifest = installed(spec, root)
+        require(list(sys.version_info[:3]) == spec["native"]["pythonVersion"], "RUNTIME_VERSION")
+        native = __import__(MODULE)
+        require(importlib.util.find_spec(MODULE).origin == str(at(spec, root, spec["paths"]["target"])), "RUNTIME_SELECTION")
+        fingerprint = api(native, spec["native"]["apiMetadataAdditions"])
+        require(fingerprint == spec["native"]["original"]["apiSha256"], "RUNTIME_API")
+        import socket
+        hosts = ["127.0.0.1" + chr(0) + ".invalid", b"127.0.0.1\x00.invalid", "127.0.0.1" + chr(0), b"127.0.0.1\x00"]
+        ports = ["80" + chr(0) + "x", b"80\x00x", "80" + chr(0), b"80\x00"]
+        for factory in [native.getaddrinfo, socket.getaddrinfo]:
+            for host, port in [(p, 80) for p in hosts] + [("127.0.0.1", p) for p in ports]:
+                try:
+                    factory(host, port, 0, socket.SOCK_STREAM, 0, socket.AI_NUMERICHOST | socket.AI_NUMERICSERV)
+                except ValueError:
+                    pass
+                else:
+                    require(False, "RUNTIME_NUL_ACCEPTED")
+        for host, port in [("127.0.0.1", 80), ("::1", 80), ("127.0.0.1", None)]:
+            require(socket.getaddrinfo(host, port, type=socket.SOCK_STREAM, flags=socket.AI_NUMERICHOST | socket.AI_NUMERICSERV), "NORMAL_RESOLVER")
+        return dict(moduleSha256=manifest["file"]["sha256"], apiSha256=fingerprint, rejectedInputs=16, normalControls=3)
+
+    if __name__ == "__main__":
+        mode, spec_file, *arguments = sys.argv[1:]
+        spec = json.loads(read(pathlib.Path(spec_file), 16384))
+        require(mode in COMMANDS.values() and mode != COMMANDS["startup"], "COMMAND")
+        if mode == COMMANDS["install"]:
+            require(len(arguments) == 2, "INSTALL_ARGUMENTS")
+            directory, root = map(pathlib.Path, arguments)
+            install(spec, directory, root, pathlib.Path(__file__))
+        else:
+            require(len(arguments) == 1, "VERIFY_ARGUMENTS")
+            root = pathlib.Path(arguments[0])
+            result = installed(spec, root) if mode == COMMANDS["installed"] else runtime(spec, root)
+            print(json.dumps(result, sort_keys=True))
+  '';
+  socketRuntimeDescriptors = lib.mapAttrs (variant: native: {
+    schemaVersion = 1;
+    inherit variant native;
+    paths = socketRuntimePaths.${variant};
+    owner = { uid = 0; gid = 0; };
+    limits = socketRuntimeLimits;
+    guardSha256 = builtins.hashString "sha256" socketRuntimeGuard.text;
+  }) socketDescriptors;
+  socketRuntimeSpecs = lib.mapAttrs (variant: value:
+    pkgs.writeText "calibre-${variant}-socket-runtime.json" (builtins.toJSON value)) socketRuntimeDescriptors;
+  socketInputHash = builtins.hashString "sha256" (socketRuntimeGuard.text
+    + lib.concatMapStringsSep "\n" (variant: socketRuntimeSpecs.${variant}.text + toString socketPackages.${variant})
+      (builtins.attrNames socketDescriptors));
+  socketContext = pkgs.runCommand "calibre-native-socket-context" {} ''
+    mkdir -p "$out"
+    ${lib.concatMapStringsSep "\n" (variant: ''
+      mkdir -p "$out/${variant}"
+      cp ${socketRuntimeGuard} "$out/${variant}/guard.py"
+      cp ${socketRuntimeSpecs.${variant}} "$out/${variant}/spec.json"
+      cp -r ${socketPackages.${variant}}/lib ${socketPackages.${variant}}/manifest.json "$out/${variant}/"
+    '') (builtins.attrNames socketDescriptors)}
+  '';
+  socketStaging = "/tmp/hwc-native-socket";
+  socketRecipe = variant: let spec = socketRuntimeDescriptors.${variant}; in ''
+    # Native socket inputs ${socketInputHash}
+    COPY ${if variant == "frozen" then "native-socket" else "system-python/socket"} ${socketStaging}/${variant}
+    RUN /lsiopy/bin/python3 -I -B ${socketStaging}/${variant}/guard.py ${socketCommands.install} ${socketStaging}/${variant}/spec.json ${socketStaging}/${variant} ${spec.paths.root}
+    RUN /lsiopy/bin/python3 -I -B ${socketStaging}/${variant}/guard.py ${socketCommands.installed} ${socketStaging}/${variant}/spec.json ${spec.paths.root}
+  '' + lib.optionalString (variant == "system") ''
+    RUN /lsiopy/bin/python3 -I -B ${socketStaging}/${variant}/guard.py ${socketCommands.runtime} ${socketStaging}/${variant}/spec.json ${spec.paths.root}
+  '';
+  socketFrozenRuntimeProof = ''
+    def native_socket_proof():
+        import hashlib, json
+        from pathlib import Path
+        spec = json.loads(${builtins.toJSON (builtins.toJSON socketRuntimeDescriptors.frozen)})
+        guard = Path(spec["paths"]["proof"]) / "guard.py"
+        assert hashlib.sha256(guard.read_bytes()).hexdigest() == spec["guardSha256"], "CALIBRE_SOCKET_RUNTIME_GUARD"
+        namespace = {"__name__": "calibre_socket_runtime"}
+        exec(compile(guard.read_bytes(), str(guard), "exec", optimize=0), namespace)
+        return namespace[${builtins.toJSON socketCommands.runtime}](spec, Path(spec["paths"]["root"]))
+  '';
+  distroFullRecipe = distroRecipe + socketRecipe "system" + "RUN rm -rf ${socketStaging}\n";
   # Upstream7.1 maintenance keeps RELEASE7.1.5; bind its exact revision
   # and complete post-patch source separately from the library version.
   nativeSourceFacts = builtins.fromJSON ''
@@ -1507,7 +1803,7 @@ let
       + nativeCommand nativeDescriptor.commands.apply
       + nativeCommand nativeDescriptor.commands.installed
       + "RUN python3 -I -B ${sslStaging}/guard.py ${sslStaging}/spec.json ${sslStaging} ${sslRuntimeDescriptor.rootPath}\n"
-      + distroRecipe + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache /tmp/hwc-calibre-stdlib ${nativeStaging} ${sslStaging}\n";
+      + socketRecipe "frozen" + distroFullRecipe + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache /tmp/hwc-calibre-stdlib ${nativeStaging} ${sslStaging}\n";
   };
   runtimeManifest = pkgs.writeText "calibre-http-framing.json" (builtins.toJSON httpBackport.manifest);
   # Pure asset API: Books can reuse this qualified distribution without enabling
@@ -1523,6 +1819,7 @@ let
       schemaVersion = 1;
       sources = distroFacts;
       nativeSsl = distroSslRuntimeDescriptor;
+      nativeSocket = socketRuntimeDescriptors.system;
       inputHash = distroInputHash;
     };
     native = {
@@ -1537,6 +1834,12 @@ let
       inputHash = sslInputHash;
       bundleInput = builtins.unsafeDiscardStringContext (toString sslPackage);
     };
+    nativeSocket = {
+      schemaVersion = 1;
+      spec = socketRuntimeDescriptors.frozen;
+      inputHash = socketInputHash;
+      bundleInput = builtins.unsafeDiscardStringContext (toString socketPackages.frozen);
+    };
   });
   runtimeContext = pkgs.runCommand "calibre-runtime-context" {} ''
     mkdir -p "$out"
@@ -1545,6 +1848,7 @@ let
     cp ${runtimeManifest} "$out/manifest.json"
     cp -r ${stdlibPackage} "$out/stdlib"
     cp -r ${distroContext} "$out/system-python"
+    cp -r ${socketContext}/frozen "$out/native-socket"
     mkdir -p "$out/native"
     cp ${nativeSpec} "$out/native/spec.json"
     cp ${nativeGuard} "$out/native/guard.py"
@@ -1563,7 +1867,7 @@ in
     enable = lib.mkEnableOption "Calibre ebook management container";
     # Critical library state: upgrade this immutable vendor image only after
     # current-data startup and compatible-code recovery checks pass.
-    image = lib.mkOption { type = lib.types.str; default = runtime.image; description = "Qualified Calibre 9.17.0 with HTTP framing, native SSL and same-ABI FFmpeg repairs"; };
+    image = lib.mkOption { type = lib.types.str; default = runtime.image; description = "Qualified Calibre 9.17.0 with HTTP framing, native socket/SSL and same-ABI FFmpeg repairs"; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; description = "Network mode"; };
     gpu.enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable GPU support for Calibre"; };
     ports = {
@@ -1596,7 +1900,7 @@ in
       calibreRuntimeSslRuntimeSpec = sslRuntimeSpec;
       calibreRuntimeSslGuard = sslGuard;
       calibreRuntimeSystemPythonContext = distroContext;
-      calibreRuntimeSystemPythonRecipe = pkgs.writeText "calibre-system-python-recipe" distroRecipe;
+      calibreRuntimeSystemPythonRecipe = pkgs.writeText "calibre-system-python-recipe" distroFullRecipe;
       calibreRuntimeSystemPythonSpec = distroSpec;
       calibreRuntimeSystemPythonSources = distroSources;
       calibreRuntimeSystemPythonSslPackage = distroSslPackage;
@@ -1608,6 +1912,10 @@ in
       calibreRuntimeSocketSourceSpec = socketSourceManifest;
       calibreRuntimeFrozenSocketPackage = socketPackages.frozen;
       calibreRuntimeSystemSocketPackage = socketPackages.system;
+      calibreRuntimeSocketGuard = socketRuntimeGuard;
+      calibreRuntimeSocketContext = socketContext;
+      calibreRuntimeFrozenSocketRuntimeSpec = socketRuntimeSpecs.frozen;
+      calibreRuntimeSystemSocketRuntimeSpec = socketRuntimeSpecs.system;
     }; }
     (lib.mkIf cfg.enable {
       system.build.calibreRuntimeImageRecipe = runtime.dockerfile;

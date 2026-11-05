@@ -236,6 +236,14 @@ let
         namespace = {'__name__': 'books_calibre_ssl'}
         exec(compile(guard.read_bytes(), str(guard), 'exec', optimize=0), namespace)
         namespace['installed'](native_ssl['spec'], calibre)
+        native_socket = provider['nativeSocket']
+        assert native_socket['schemaVersion'] == 1 and native_socket['spec']['paths']['root'] == provider['rootPath'], 'BOOKS_CALIBRE_SOCKET_API'
+        socket_spec = native_socket['spec']
+        guard = calibre / Path(socket_spec['paths']['proof']).relative_to(provider['rootPath']) / 'guard.py'
+        assert read_hash(guard, socket_spec['limits']['guardBytes']) == socket_spec['guardSha256'], 'BOOKS_CALIBRE_SOCKET_GUARD'
+        namespace = {'__name__': 'books_calibre_socket'}
+        exec(compile(guard.read_bytes(), str(guard), 'exec', optimize=0), namespace)
+        namespace['installed'](socket_spec, calibre)
 
     def apply_request_options(spec, app):
         files = app_files(app)
