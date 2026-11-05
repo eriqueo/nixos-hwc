@@ -41,5 +41,12 @@
       "        line = line.split(b\";\", 1)[0]\n        try:\n            self.chunk_left = int(line, 16)",
       "        line = line.split(b\";\", 1)[0].rstrip()\n        try:\n            if not _is_legal_chunk_size(line):\n                raise ValueError(\"invalid chunk size\")\n            self.chunk_left = int(line, 16)"
     ]
-  ]
+  ],
+  "distroSources": {
+    "ubuntu-3.14.4-1ubuntu0.2": {
+      "sourceSha256": "3fb2bf964bf8553a404bffdc47d2483832fb402128021bab650c452fc5b41bbb",
+      "patchedSha256": "ef5f8f91c6251955735aeddaf5aa1cdd2efceff5f74eb78508e4b8885bef98a0",
+      "sourceBytes": 58615
+    }
+  }
 }

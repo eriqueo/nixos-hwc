@@ -113,17 +113,22 @@ let
   stdlibSpec = pkgs.writeText "calibre-stdlib-source.json" (builtins.toJSON stdlibFacts);
   stdlibPatches = map (entry: pkgs.fetchpatch { inherit (entry) url includes hash; }) stdlibFacts.patches;
   stdlibSourceGuard = pkgs.writeText "calibre-stdlib-source-guard.py" ''
-    import hashlib, json, pathlib, re, stat, sys, tarfile
+    import hashlib, itertools, json, pathlib, re, stat, sys, tarfile
 
     if not __debug__:
         raise AssertionError("CALIBRE_STDLIB_OPTIMIZED_GUARD")
 
-    def metadata(spec):
-        assert spec["schemaVersion"] == 1 and list(sys.version_info[:3]) == spec["pythonVersion"], "CALIBRE_STDLIB_VERSION"
-        assert len(spec["modules"]) == spec["limits"]["modules"] == 4, "CALIBRE_STDLIB_MODULE_BOUND"
-        assert len(spec["patches"]) == 4 and len({p["advisory"] for p in spec["patches"]}) == 4, "CALIBRE_STDLIB_PATCH_SET"
+    def metadata(spec, runtime=False):
+        version = spec["pythonVersion"] if runtime else spec.get("compilerPythonVersion", spec["pythonVersion"])
+        assert spec["schemaVersion"] == 1 and list(sys.version_info[:3]) == version, "CALIBRE_STDLIB_VERSION"
+        assert len(spec["modules"]) == spec["limits"]["modules"] and 1 <= len(spec["modules"]) <= 5, "CALIBRE_STDLIB_MODULE_BOUND"
+        assert len(spec["patches"]) == spec["limits"].get("patches", 4) and len({p["advisory"] for p in spec["patches"]}) == len(spec["patches"]), "CALIBRE_STDLIB_PATCH_SET"
+        assert 1 <= len(spec["patches"]) <= 8, "CALIBRE_STDLIB_PATCH_BOUND"
+        if "runtimeRoot" in spec:
+            assert pathlib.Path(spec["runtimeRoot"]).is_absolute() and pathlib.Path(spec["proofFile"]).name == spec["proofFile"], "SYSTEM_PYTHON_METADATA_PATH"
+            assert spec["runtimeMode"] == 0o644, "SYSTEM_PYTHON_METADATA_MODE"
         for name, entry in spec["modules"].items():
-            assert re.fullmatch(r"[a-z][a-z0-9_]*", name) and entry["file"] == name + ".py", "CALIBRE_STDLIB_PATH"
+            assert re.fullmatch(r"[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)?", name) and entry["file"] == name.replace(".", "/") + ".py", "CALIBRE_STDLIB_PATH"
             assert 0 < entry["bytes"] <= spec["limits"]["fileBytes"] and 0 < entry["originalBytes"] <= spec["limits"]["fileBytes"], "CALIBRE_STDLIB_SOURCE_BOUND"
 
     def content(spec, entry, raw, original):
@@ -148,7 +153,9 @@ let
         for folder in ["Lib", "original"]:
             (root / folder).mkdir(parents=True)
             for name, raw in files.items():
-                (root / folder / name).write_bytes(raw)
+                path = root / folder / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(raw)
 
     def finish(spec, root, output):
         metadata(spec)
@@ -157,11 +164,19 @@ let
         for folder, original in [("original", True), ("Lib", False)]:
             directory = root / folder
             assert directory.is_dir() and not directory.is_symlink(), "CALIBRE_STDLIB_INPUT_ROOT"
-            assert {p.name for p in directory.iterdir()} == {v["file"] for v in spec["modules"].values()}, "CALIBRE_STDLIB_INPUT_SET"
+            assert {str(p.relative_to(directory)) for p in directory.rglob("*") if p.is_file()} == {v["file"] for v in spec["modules"].values()}, "CALIBRE_STDLIB_INPUT_SET"
             for name, entry in spec["modules"].items():
                 path = directory / entry["file"]
                 assert stat.S_ISREG(path.lstat().st_mode) and path.stat().st_size <= spec["limits"]["fileBytes"], "CALIBRE_STDLIB_FILE_TYPE_BOUND"
-                raw = path.read_bytes();used += len(raw)
+                raw = path.read_bytes()
+                if not original and entry.get("replacements"):
+                    content(spec, entry, raw, True)
+                    text = raw.decode()
+                    for old, new in entry["replacements"]:
+                        assert old and text.count(old) == 1, "CALIBRE_STDLIB_HUNK_DRIFT"
+                        text = text.replace(old, new)
+                    raw = text.encode()
+                used += len(raw)
                 assert used <= spec["limits"]["groupBytes"], "CALIBRE_STDLIB_GROUP_BOUND"
                 content(spec, entry, raw, original)
                 compile(raw, "<frozen/" + entry["file"] + ">", "exec", dont_inherit=True, optimize=2)
@@ -171,8 +186,62 @@ let
         # Every original and patched file passes before output publication.
         for (folder, name), raw in files.items():
             directory = output / folder;directory.mkdir(parents=True, exist_ok=True)
-            path = directory / name;path.write_bytes(raw);path.chmod(0o444)
+            path = directory / name;path.parent.mkdir(parents=True, exist_ok=True);path.write_bytes(raw);path.chmod(0o444)
         (output / "manifest.json").write_bytes(manifest)
+
+    def installed(spec, root):
+        metadata(spec, runtime=True)
+        assert str(root) == spec["runtimeRoot"] and root.is_dir() and not root.is_symlink(), "SYSTEM_PYTHON_ROOT"
+        proof = root / spec["proofFile"]
+        assert stat.S_ISREG(proof.lstat().st_mode) and proof.stat().st_size <= spec["limits"]["manifestBytes"], "SYSTEM_PYTHON_PROOF_BOUND"
+        assert json.loads(proof.read_text()) == spec, "SYSTEM_PYTHON_PROOF"
+        for entry in spec["modules"].values():
+            path = root / entry["file"]
+            assert stat.S_ISREG(path.lstat().st_mode) and stat.S_IMODE(path.stat().st_mode) == spec["runtimeMode"], "SYSTEM_PYTHON_MODE"
+            content(spec, entry, path.read_bytes(), False)
+
+    def install(spec, source, root):
+        # Non-retriable private image-layer effect: check the entire group,
+        # target ownership, allowed preimages and caches before any write.
+        metadata(spec, runtime=True)
+        assert str(root) == spec["runtimeRoot"] and root.is_dir() and not root.is_symlink(), "SYSTEM_PYTHON_ROOT"
+        manifest = source / "manifest.json"
+        assert stat.S_ISREG(manifest.lstat().st_mode) and manifest.stat().st_size <= spec["limits"]["manifestBytes"], "SYSTEM_PYTHON_MANIFEST_BOUND"
+        assert json.loads(manifest.read_text()) == spec, "SYSTEM_PYTHON_MANIFEST"
+        proof = root / spec["proofFile"]
+        assert not proof.exists() and not proof.is_symlink(), "SYSTEM_PYTHON_EXISTING_PROOF"
+        prepared, caches = [], []
+        for entry in spec["modules"].values():
+            path, replacement = root / entry["file"], source / "lib" / entry["file"]
+            assert all(not p.is_symlink() for p in path.parents if p.is_relative_to(root)), "SYSTEM_PYTHON_PARENT"
+            identity = path.lstat()
+            assert stat.S_ISREG(identity.st_mode) and stat.S_IMODE(identity.st_mode) == spec["runtimeMode"], "SYSTEM_PYTHON_ORIGINAL_MODE"
+            assert path.stat().st_size <= spec["limits"]["fileBytes"], "SYSTEM_PYTHON_ORIGINAL_BOUND"
+            raw = path.read_bytes()
+            already_patched = entry.get("allowPatchedInput", False) and len(raw) == entry["bytes"] and hashlib.sha256(raw).hexdigest() == entry["sha256"]
+            if not already_patched:
+                content(spec, entry, raw, True)
+            assert stat.S_ISREG(replacement.lstat().st_mode) and replacement.stat().st_size <= spec["limits"]["fileBytes"], "SYSTEM_PYTHON_REPLACEMENT_BOUND"
+            output = replacement.read_bytes()
+            content(spec, entry, output, False)
+            compile(output, str(path), "exec", dont_inherit=True, optimize=2)
+            cache_root = path.parent / "__pycache__"
+            assert not cache_root.is_symlink(), "SYSTEM_PYTHON_CACHE_ROOT"
+            cache = list(itertools.islice(cache_root.glob(path.stem + ".*.pyc"), 9))
+            assert len(cache) <= 8 and all(stat.S_ISREG(p.lstat().st_mode) for p in cache), "SYSTEM_PYTHON_CACHE_BOUND"
+            caches.extend(cache)
+            prepared.append((path, output, identity, already_patched))
+        assert sum(len(output) for _, output, _, _ in prepared) <= spec["limits"]["groupBytes"], "SYSTEM_PYTHON_GROUP_BOUND"
+        for path, output, identity, already_patched in prepared:
+            if not already_patched:
+                path.write_bytes(output)
+            actual = path.stat()
+            assert (actual.st_uid, actual.st_gid, actual.st_mode) == (identity.st_uid, identity.st_gid, identity.st_mode), "SYSTEM_PYTHON_OWNER_MODE"
+        for path in caches:
+            path.unlink()
+        proof.write_text(json.dumps(spec, sort_keys=True))
+        proof.chmod(0o444)
+        installed(spec, root)
 
     if __name__ == "__main__":
         mode, spec_file, source, destination = sys.argv[1:]
@@ -181,9 +250,13 @@ let
         spec = json.loads(spec_file.read_text())
         if mode == spec["commands"]["extract"]:
             extract(spec, source, destination)
-        else:
-            assert mode == spec["commands"]["finish"], "CALIBRE_STDLIB_COMMAND"
+        elif mode == spec["commands"]["finish"]:
             finish(spec, source, destination)
+        elif mode == spec["commands"].get("install"):
+            install(spec, source, destination)
+        else:
+            assert mode == spec["commands"].get("verify"), "CALIBRE_STDLIB_COMMAND"
+            installed(spec, destination)
   '';
   # REPLACEABLE: extract only the four regular source members, retain their
   # original bytes for the full frozen-code parity check, then patch/compile.
@@ -278,32 +351,25 @@ let
   '';
   # REPLACEABLE: one native module rebuilt from the pinned source and SDK.
   # Do not run Python's full configure/build or link a second libpython.
-  sslPackage = assert lib.assertMsg
-    (pkgs.python314.version == lib.concatMapStringsSep "." toString sslDescriptor.pythonVersion
-      && pkgs.openssl_3_5.version == sslDescriptor.opensslVersion)
-    "Calibre SSL requires the measured Python and OpenSSL SDK versions";
+  mkSslPackage = { pname, src, descriptor, spec, pythonHeader, opensslHeader,
+    includeDirs, linkArgs, buildInputs }:
     pkgs.stdenv.mkDerivation {
-      pname = "calibre-native-ssl";
-      version = pkgs.python314.version;
-      src = pkgs.python314.src;
-      patches = [ (pkgs.fetchpatch sslDescriptor.patch) ];
+      inherit pname src buildInputs;
+      version = lib.concatMapStringsSep "." toString descriptor.pythonVersion;
+      patches = [ (pkgs.fetchpatch descriptor.patch) ];
       patchFlags = [ "-p1" "--fuzz=0" ];
       nativeBuildInputs = [ pkgs.python3 pkgs.patchelf ];
-      buildInputs = [ pkgs.openssl_3_5 ];
       dontConfigure = true;
       postPatch = ''
-        python3 -I -B ${sslSourceGuard} ${sslSpec} . \
-          ${pkgs.python314}/include/python3.14/pyconfig.h \
-          ${lib.getDev pkgs.openssl_3_5}/include/openssl/opensslv.h
+        python3 -I -B ${sslSourceGuard} ${spec} . \
+          ${pythonHeader} \
+          ${opensslHeader}
       '';
       buildPhase = ''
         runHook preBuild
         $CC -shared -fPIC -O2 -DNDEBUG -fno-strict-aliasing \
-          -I${pkgs.python314}/include/python3.14 \
-          -I${pkgs.python314}/include/python3.14/internal \
-          -I${lib.getDev pkgs.openssl_3_5}/include \
-          -I${lib.getDev pkgs.bluez}/include \
-          Modules/_ssl.c -L${lib.getLib pkgs.openssl_3_5}/lib -lssl -lcrypto -o _ssl.so
+          ${lib.concatMapStringsSep " " (path: "-I${path}") includeDirs} \
+          Modules/_ssl.c ${lib.concatStringsSep " " linkArgs} -o _ssl.so
         runHook postBuild
       '';
       installPhase = ''
@@ -315,8 +381,8 @@ let
       # Run after Nix's strip/RPATH fixups: the output loads vendor libraries
       # beside the original target, not the Nix build SDK's runtime closure.
       postFixup = ''
-        patchelf --set-rpath ${lib.escapeShellArg sslDescriptor.rpath} "$out/lib/_ssl.so"
-        python3 -I -B - ${sslSpec} "$out" <<'PYSSL'
+        patchelf --set-rpath ${lib.escapeShellArg descriptor.rpath} "$out/lib/_ssl.so"
+        python3 -I -B - ${spec} "$out" <<'PYSSL'
         import hashlib, json, pathlib, subprocess, sys
         spec_file, output = map(pathlib.Path, sys.argv[1:])
         spec = json.loads(spec_file.read_text())
@@ -334,6 +400,23 @@ let
         (output / "manifest.json").write_bytes(raw)
         PYSSL
       '';
+    };
+  sslPackage = assert lib.assertMsg
+    (pkgs.python314.version == lib.concatMapStringsSep "." toString sslDescriptor.pythonVersion
+      && pkgs.openssl_3_5.version == sslDescriptor.opensslVersion)
+    "Calibre SSL requires the measured Python and OpenSSL SDK versions";
+    mkSslPackage {
+      pname = "calibre-native-ssl";
+      src = pkgs.python314.src;
+      descriptor = sslDescriptor;
+      spec = sslSpec;
+      pythonHeader = "${pkgs.python314}/include/python3.14/pyconfig.h";
+      opensslHeader = "${lib.getDev pkgs.openssl_3_5}/include/openssl/opensslv.h";
+      includeDirs = [ "${pkgs.python314}/include/python3.14"
+        "${pkgs.python314}/include/python3.14/internal"
+        "${lib.getDev pkgs.openssl_3_5}/include" "${lib.getDev pkgs.bluez}/include" ];
+      linkArgs = [ "-L${lib.getLib pkgs.openssl_3_5}/lib" "-lssl" "-lcrypto" ];
+      buildInputs = [ pkgs.openssl_3_5 ];
     };
   sslGuard = pkgs.writeText "calibre-native-ssl-guard.py" ''
     import hashlib, importlib.util, json, os, pathlib, shutil, stat, sys
@@ -378,6 +461,11 @@ let
         assert len(raw) == manifest["file"]["bytes"] and sha(raw) == manifest["file"]["sha256"], "CALIBRE_SSL_PACKAGE_HASH"
         return manifest
 
+    def check_private_ca(spec, root):
+        if "privateCa" in spec:
+            cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
+            assert sha(read(cert, 65536)) == spec["privateCa"]["sha256"], "CALIBRE_SSL_PRIVATE_CA_HASH"
+
     def installed(spec, root):
         proof = root / spec["proofDirectory"]
         assert proof.is_dir() and not proof.is_symlink() and stat.S_IMODE(proof.stat().st_mode) == 0o555, "CALIBRE_SSL_PROOF_ROOT"
@@ -392,8 +480,7 @@ let
         raw = read(path, spec["native"]["limits"]["fileBytes"])
         assert len(raw) == manifest["file"]["bytes"] and sha(raw) == manifest["file"]["sha256"], "CALIBRE_SSL_INSTALLED_HASH"
         assert stat.S_IMODE(path.stat().st_mode) == spec["native"]["original"]["mode"], "CALIBRE_SSL_INSTALLED_MODE"
-        cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
-        assert sha(read(cert, 65536)) == spec["privateCa"]["sha256"], "CALIBRE_SSL_PRIVATE_CA_HASH"
+        check_private_ca(spec, root)
         return manifest
 
     def install(spec, directory, root, guard_file):
@@ -407,8 +494,7 @@ let
         assert stat.S_IMODE(identity.st_mode) == original["mode"], "CALIBRE_SSL_ORIGINAL_MODE"
         guard = read(guard_file, spec["native"]["limits"]["manifestBytes"])
         assert sha(guard) == spec["guardSha256"], "CALIBRE_SSL_GUARD_HASH"
-        cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
-        assert sha(read(cert, 65536)) == spec["privateCa"]["sha256"], "CALIBRE_SSL_PRIVATE_CA_HASH"
+        check_private_ca(spec, root)
         proof = root / spec["proofDirectory"]
         assert not proof.exists() and not proof.is_symlink(), "CALIBRE_SSL_EXISTING_PROOF"
         shutil.copyfile(directory / "lib/_ssl.so", path)
@@ -440,14 +526,19 @@ let
             assert original["nativeModuleConstants"][name] == change["rebuilt"], "CALIBRE_SSL_DECLARED_API_CHANGE"
             original["nativeModuleConstants"][name] = change["original"]
         assert sha(canonical(original)) == spec["native"]["original"]["apiSha256"], "CALIBRE_SSL_OTHER_API_DRIFT"
-        from calibre.utils.https import HTTPSConnection
-        cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
-        connection = HTTPSConnection("localhost", cert_file=str(cert), disable_x509_strict_checking=True)
-        try:
-            roots = sorted(sha(value) for value in connection._context.get_ca_certs(binary_form=True))
-            assert roots == spec["privateCa"]["derSha256"] and connection._context.verify_mode == ssl.CERT_REQUIRED and connection._context.check_hostname, "CALIBRE_SSL_PRIVATE_CA_CONTEXT"
-        finally:
-            connection.close()
+        roots = []
+        if "privateCa" in spec:
+            from calibre.utils.https import HTTPSConnection
+            cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
+            connection = HTTPSConnection("localhost", cert_file=str(cert), disable_x509_strict_checking=True)
+            try:
+                roots = sorted(sha(value) for value in connection._context.get_ca_certs(binary_form=True))
+                assert roots == spec["privateCa"]["derSha256"] and connection._context.verify_mode == ssl.CERT_REQUIRED and connection._context.check_hostname, "CALIBRE_SSL_PRIVATE_CA_CONTEXT"
+            finally:
+                connection.close()
+        else:
+            context = ssl.create_default_context()
+            assert context.verify_mode == ssl.CERT_REQUIRED and context.check_hostname and context.get_ca_certs(), "SYSTEM_SSL_DEFAULT_TRUST"
         return dict(moduleSha256=manifest["file"]["sha256"], apiSha256=api_sha, privateCaDerSha256=roots)
 
     if __name__ == "__main__":
@@ -485,6 +576,213 @@ let
   '';
   sslStaging = "/tmp/hwc-calibre-native-ssl";
   sslInputHash = builtins.hashString "sha256" (sslRuntimeSpec.text + sslGuard.text + toString sslPackage);
+  # Temporary: both the Selkies and Books distro interpreter lack these
+  # repairs. Keep their interpreter, extension ABI and installed packages.
+  # Retire only when unmodified distro inputs pass the same consumer contract.
+  distroPackageVersions = { python = "3.14.4-1ubuntu0.2"; openssl = "3.5.5-1ubuntu3.7"; };
+  distroPythonVersion = map lib.toInt (lib.splitString "." (builtins.head (lib.splitString "-" distroPackageVersions.python)));
+  distroOpenSslVersion = builtins.head (lib.splitString "-" distroPackageVersions.openssl);
+  distroDebInputs = map (entry: let
+    python = lib.hasPrefix "libpython" entry.name;
+    version = if python then distroPackageVersions.python else distroPackageVersions.openssl;
+    folder = if python then "p/python3.14" else "o/openssl";
+    filename = "${entry.name}_${version}_amd64.deb";
+  in entry // { inherit version filename;
+    package = pkgs.fetchurl { inherit (entry) sha256; name = filename;
+      url = "https://archive.ubuntu.com/ubuntu/pool/main/${folder}/${filename}"; };
+  }) (builtins.fromJSON ''
+[
+  {
+    "name": "libpython3.14-minimal",
+    "sha256": "fac6f0728cf9490a7a698e6b343e4140283e92355b060193c04f5770a666df8a"
+  },
+  {
+    "name": "libpython3.14-stdlib",
+    "sha256": "3c267ef0f902f763c3615cbf28dd6fe91d2e4f603075d7f03db99f8d4eb66f46"
+  },
+  {
+    "name": "libssl3t64",
+    "sha256": "3ff73e121f6cd4f19e80ab4329dfd914108b3936c9db3708200203a9b245b34d"
+  },
+  {
+    "name": "libpython3.14-dev",
+    "sha256": "6f2e99c80311934d0a031bb12fe2faca684b05e5b6bb225fe9a07a5c05fdb3da"
+  },
+  {
+    "name": "libssl-dev",
+    "sha256": "d1cf6cafb141490b7020e392964b1f901835d60cb88c3a68ef0f95ef5e930de4"
+  }
+]
+  '');
+  # REPLACEABLE SDK/source inputs only; no package scripts run in an app image.
+  distroSdk = pkgs.runCommand "calibre-system-python-sdk" { nativeBuildInputs = [ pkgs.dpkg ]; } ''
+    mkdir -p "$out"
+    ${lib.concatMapStringsSep "\n" (entry:
+      ''test "$(dpkg-deb -f ${entry.package} Version)" = ${lib.escapeShellArg entry.version} && dpkg-deb -x ${entry.package} "$out"'') distroDebInputs}
+  '';
+  distroHttp = pkgs.pythonHttpFramingBackport.distroSources."ubuntu-${distroPackageVersions.python}";
+  distroFacts = stdlibFacts // {
+    pythonVersion = distroPythonVersion;
+    compilerPythonVersion = calibrePythonVersion;
+    runtimeRoot = "/usr/lib/python3.14";
+    runtimeMode = 420;
+    proofFile = ".hwc-system-python.json";
+    commands = stdlibFacts.commands // { install = "install"; verify = "verify"; };
+    limits = stdlibFacts.limits // { modules = 5; patches = 6; };
+    modules = stdlibFacts.modules // {
+      shutil = stdlibFacts.modules.shutil // {
+        originalBytes = 60568; originalSha256 = "ab36f39f04e349020cdd13cf41b50905fc399150fb5e6a7cf73d69b22dd949cd";
+        bytes = 61017; sha256 = "8d51075886a322a7f05da0387d1eccfe329c1e5c49dc0a3df50ca6caa11eef07";
+      };
+      tarfile = stdlibFacts.modules.tarfile // {
+        originalBytes = 118582; originalSha256 = "c0db1a21e56ccf002147bffd10d97f452ad842820963ef793117f92a0cdaaad4";
+        bytes = 118817; sha256 = "c6dc547f47e2d1861b8dbc547cff9a0bee2ed679f748f56e74c38a17d254f780";
+      };
+      tempfile = stdlibFacts.modules.tempfile // {
+        originalBytes = 33009; originalSha256 = "acaf59a740e42efb9f7e612ef3a9aa5c8134250c5a450714eb4af659491c8805";
+      };
+      "http.client" = {
+        file = "http/client.py";
+        originalBytes = distroHttp.sourceBytes;
+        bytes = distroHttp.sourceBytes + lib.foldl' (total: pair:
+          total + builtins.stringLength (builtins.elemAt pair 1) - builtins.stringLength (builtins.elemAt pair 0)) 0 pkgs.pythonHttpFramingBackport.replacements;
+        originalSha256 = distroHttp.sourceSha256;
+        sha256 = distroHttp.patchedSha256;
+        replacements = pkgs.pythonHttpFramingBackport.replacements;
+        # Books' paired HTTP/urllib3 guard has already validated and patched
+        # this member. Accept that exact postimage, never an unknown preimage.
+        allowPatchedInput = true;
+      };
+    };
+    patches = (builtins.fromJSON ''
+[
+  {
+    "advisory": "CVE-2026-87910-prerequisite",
+    "url": "https://github.com/python/cpython/commit/79c06bd5c6afa3c440d50faf7ee1b147c8832b4c.patch",
+    "includes": [
+      "Lib/tarfile.py"
+    ],
+    "hash": "sha256-tWIvD+nrCu57bwGJY/jHAtcNyAPjyKDzQvbuXuupxkI=",
+    "raw": true
+  },
+  {
+    "advisory": "CVE-2026-12345-prerequisite",
+    "url": "https://github.com/python/cpython/commit/856c8119ea9d8f574dd56cf64afe19ee2e460c8b.patch",
+    "includes": [
+      "Lib/tempfile.py"
+    ],
+    "hash": "sha256-cC9y45P4dQHnnnjgjEJC5nssbdX+0n20PeP5mBvhjNE=",
+    "raw": true
+  }
+]
+    '') ++ stdlibFacts.patches;
+  };
+  distroSpec = pkgs.writeText "calibre-system-python-sources.json" (builtins.toJSON distroFacts);
+  distroPatches = map (entry: if entry.raw or false then
+    pkgs.runCommand "python-system-prerequisite.patch" { nativeBuildInputs = [ pkgs.patchutils ]; } ''
+      filterdiff ${lib.concatMapStringsSep " " (file: "-i ${lib.escapeShellArg ("*/" + file)}") entry.includes} \
+        ${pkgs.fetchurl { inherit (entry) url hash; }} > "$out"
+      test -s "$out"
+    ''
+    else pkgs.fetchpatch { inherit (entry) url includes hash; }) distroFacts.patches;
+  distroSources = pkgs.runCommand "calibre-system-python-sources" {} (''
+    mkdir -p source/Lib source/original
+    ${lib.concatMapStringsSep "\n" (entry: ''
+      mkdir -p "source/Lib/$(dirname ${lib.escapeShellArg entry.file})" "source/original/$(dirname ${lib.escapeShellArg entry.file})"
+      cp ${distroSdk}${distroFacts.runtimeRoot}/${entry.file} source/Lib/${entry.file}
+      chmod u+w source/Lib/${entry.file}
+      cp source/Lib/${entry.file} source/original/${entry.file}
+    '') (builtins.attrValues distroFacts.modules)}
+  '' + lib.concatMapStringsSep "\n" (patch:
+    "${pkgs.patch}/bin/patch ${lib.escapeShellArgs distroFacts.patchFlags} -d source -i ${patch}") distroPatches + ''
+    ${pkgs.python314.interpreter} -I -B ${stdlibSourceGuard} ${distroFacts.commands.finish} ${distroSpec} source "$out"
+  '');
+  distroSslDescriptor = sslDescriptor // {
+    pythonVersion = distroPythonVersion;
+    opensslVersion = distroOpenSslVersion;
+    sourceFiles = sslDescriptor.sourceFiles // {
+      "Modules/_ssl.c" = "f41e23ca29c4667fb14aebd0d58499d7c83d0c0be7405d4de99897e72af70f06";
+    };
+    headers = {
+      python = "eec0c50c4157985d62d12230b4eca5bda4054a81225f2448db1da723d274c025";
+      openssl = "7acbe88993a8691183aff3277743d8090c6bbba24b6e218919cf8afdbde42de6";
+    };
+    original = sslDescriptor.original // {
+      path = "/usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so";
+      sha256 = "53789b72a5011867c45036d115ef10f452282751b8735691d1eaf22bf8fe5587";
+      bytes = 236736;
+      apiSha256 = distroSslDescriptor.apiSha256;
+    };
+    apiConstantChanges."_OPENSSL_API_VERSION" = let
+      v = map lib.toInt (lib.splitString "." distroOpenSslVersion);
+      value = [ (builtins.elemAt v 0) (builtins.elemAt v 1) 0 (builtins.elemAt v 2) 0 ];
+    in { original = value; rebuilt = value; };
+    apiSha256 = "792a3e6f59f937f376f7b4019e70a6849618bc0a1b887afaaa6104de30d79a9f";
+    rpath = "";
+  };
+  distroSslSpec = pkgs.writeText "calibre-system-python-ssl.json" (builtins.toJSON distroSslDescriptor);
+  distroSslPackage = mkSslPackage {
+    pname = "calibre-system-python-ssl";
+    src = pkgs.fetchurl {
+      url = "https://archive.ubuntu.com/ubuntu/pool/main/p/python3.14/python3.14_3.14.4.orig.tar.xz";
+      sha256 = "d923c51303e38e249136fc1bdf3568d56ecb03214efdef48516176d3d7faaef8";
+    };
+    descriptor = distroSslDescriptor;
+    spec = distroSslSpec;
+    pythonHeader = "${distroSdk}/usr/include/x86_64-linux-gnu/python3.14/pyconfig.h";
+    opensslHeader = "${distroSdk}/usr/include/openssl/opensslv.h";
+    includeDirs = map (path: "${distroSdk}/${path}") [ "usr/include/python3.14"
+      "usr/include/python3.14/internal" "usr/include/x86_64-linux-gnu/python3.14"
+      "usr/include" "usr/include/x86_64-linux-gnu" ] ++ [ "${lib.getDev pkgs.bluez}/include" ];
+    linkArgs = map (name: "${distroSdk}/usr/lib/x86_64-linux-gnu/${name}") [ "libssl.so.3" "libcrypto.so.3" ];
+    buildInputs = [];
+  };
+  distroSslRuntimeDescriptor = {
+    schemaVersion = 1;
+    native = distroSslDescriptor;
+    rootPath = "/";
+    proofDirectory = ".hwc-system-python-ssl";
+    guardSha256 = builtins.hashString "sha256" sslGuard.text;
+  };
+  distroSslRuntimeSpec = pkgs.writeText "calibre-system-python-ssl-runtime.json" (builtins.toJSON distroSslRuntimeDescriptor);
+  distroStaging = "/tmp/hwc-system-python";
+  distroInputHash = builtins.hashString "sha256"
+    (distroSpec.text + stdlibSourceGuard.text + distroSslRuntimeSpec.text + sslGuard.text + toString distroSources + toString distroSslPackage);
+  distroRuntimeProof = ''
+    import hashlib, importlib, importlib.metadata, json
+    from pathlib import Path
+    spec = json.loads(${builtins.toJSON (builtins.toJSON distroFacts)})
+    for name, entry in spec["modules"].items():
+        module = importlib.import_module(name)
+        path = Path(spec["runtimeRoot"]) / entry["file"]
+        assert module.__file__ == str(path) and hashlib.sha256(path.read_bytes()).hexdigest() == entry["sha256"], "SYSTEM_PYTHON_RUNTIME_SELECTION"
+    native = json.loads(${builtins.toJSON (builtins.toJSON distroSslRuntimeDescriptor)})
+    guard = Path(native["rootPath"]) / native["proofDirectory"] / "guard.py"
+    assert hashlib.sha256(guard.read_bytes()).hexdigest() == native["guardSha256"], "SYSTEM_PYTHON_SSL_GUARD"
+    namespace = {"__name__": "system_python_native_ssl"}
+    exec(compile(guard.read_bytes(), str(guard), "exec", optimize=0), namespace)
+    namespace["runtime"](native, Path(native["rootPath"]))
+    import http.client
+    assert http.client._is_legal_chunk_size(b"a") and not http.client._is_legal_chunk_size(b"+a"), "SYSTEM_PYTHON_HTTP"
+  '';
+  distroRecipe = ''
+    # System Python inputs ${distroInputHash}
+    COPY system-python ${distroStaging}
+    RUN /lsiopy/bin/python3 -I -B ${distroStaging}/guard.py ${distroFacts.commands.install} ${distroStaging}/spec.json ${distroStaging}/sources ${distroFacts.runtimeRoot}
+    RUN /lsiopy/bin/python3 -I -B ${distroStaging}/guard.py ${distroFacts.commands.verify} ${distroStaging}/spec.json ${distroStaging}/sources ${distroFacts.runtimeRoot}
+    RUN /lsiopy/bin/python3 -I -B ${distroStaging}/ssl/guard.py ${distroStaging}/ssl/spec.json ${distroStaging}/ssl ${distroSslRuntimeDescriptor.rootPath}
+    RUN /lsiopy/bin/python3 -I -B -c ${lib.escapeShellArg distroRuntimeProof}
+    RUN rm -rf ${distroStaging}
+  '';
+  distroContext = pkgs.runCommand "calibre-system-python-context" {} ''
+    mkdir -p "$out/ssl"
+    cp ${distroSpec} "$out/spec.json"
+    cp ${stdlibSourceGuard} "$out/guard.py"
+    cp -r ${distroSources} "$out/sources"
+    cp ${distroSslRuntimeSpec} "$out/ssl/spec.json"
+    cp ${sslGuard} "$out/ssl/guard.py"
+    cp -r ${distroSslPackage}/lib ${distroSslPackage}/manifest.json "$out/ssl/"
+  '';
   # Upstream7.1 maintenance keeps RELEASE7.1.5; bind its exact revision
   # and complete post-patch source separately from the library version.
   nativeSourceFacts = builtins.fromJSON ''
@@ -1051,7 +1349,7 @@ let
       + nativeCommand nativeDescriptor.commands.apply
       + nativeCommand nativeDescriptor.commands.installed
       + "RUN python3 -I -B ${sslStaging}/guard.py ${sslStaging}/spec.json ${sslStaging} ${sslRuntimeDescriptor.rootPath}\n"
-      + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache /tmp/hwc-calibre-stdlib ${nativeStaging} ${sslStaging}\n";
+      + distroRecipe + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache /tmp/hwc-calibre-stdlib ${nativeStaging} ${sslStaging}\n";
   };
   runtimeManifest = pkgs.writeText "calibre-http-framing.json" (builtins.toJSON httpBackport.manifest);
   # Pure asset API: Books can reuse this qualified distribution without enabling
@@ -1063,6 +1361,12 @@ let
     rootPath = builtins.dirOf calibrePython;
     http = httpBackport.manifest;
     stdlib = stdlibFacts;
+    systemPython = {
+      schemaVersion = 1;
+      sources = distroFacts;
+      nativeSsl = distroSslRuntimeDescriptor;
+      inputHash = distroInputHash;
+    };
     native = {
       schemaVersion = 1;
       descriptor = nativeDescriptor;
@@ -1082,6 +1386,7 @@ let
     cp ${httpSource} "$out/client.py"
     cp ${runtimeManifest} "$out/manifest.json"
     cp -r ${stdlibPackage} "$out/stdlib"
+    cp -r ${distroContext} "$out/system-python"
     mkdir -p "$out/native"
     cp ${nativeSpec} "$out/native/spec.json"
     cp ${nativeGuard} "$out/native/guard.py"
@@ -1132,6 +1437,12 @@ in
       calibreRuntimeSslPackage = sslPackage;
       calibreRuntimeSslRuntimeSpec = sslRuntimeSpec;
       calibreRuntimeSslGuard = sslGuard;
+      calibreRuntimeSystemPythonContext = distroContext;
+      calibreRuntimeSystemPythonRecipe = pkgs.writeText "calibre-system-python-recipe" distroRecipe;
+      calibreRuntimeSystemPythonSpec = distroSpec;
+      calibreRuntimeSystemPythonSources = distroSources;
+      calibreRuntimeSystemPythonSslPackage = distroSslPackage;
+      calibreRuntimeSystemPythonSslSpec = distroSslSpec;
       calibreRuntimeStdlibSpec = stdlibSpec;
       calibreRuntimeStdlibSourceGuard = stdlibSourceGuard;
       calibreRuntimeStdlibPackage = stdlibPackage;

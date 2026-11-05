@@ -48,7 +48,17 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
   assert all(binding['environment'][name] == value for name, value in spec['environment'].items())
   assert binding['environment']['DOCKER_MODS'] == ""
   assert binding['environment'][provider['http']['selectionVariable']] == provider['http']['rootPath']
+  system_spec=provider['systemPython']['sources']
+  assert json.loads((context/'system-python/spec.json').read_text())==system_spec
+  assert (context/'system-python/spec.json').read_bytes()==(calibre_context/'system-python/spec.json').read_bytes()
   def wiring(text):
+      assert '# System Python inputs '+provider['systemPython']['inputHash'] in text
+      assert 'COPY system-python /tmp/hwc-system-python' in text
+      assert '/guard.py '+system_spec['commands']['install']+' ' in text
+      assert '/guard.py '+system_spec['commands']['verify']+' ' in text
+      assert '/ssl/guard.py /tmp/hwc-system-python/ssl/spec.json' in text
+      assert 'SYSTEM_PYTHON_RUNTIME_SELECTION' in text
+      assert text.index('HTTP_BACKPORT_PAIR') < text.index('/guard.py '+system_spec['commands']['install']+' ')
       assert input_marker in text
       assert 'FROM ' + spec['sourceImage'] + ' AS app-source' in text
       assert 'FROM ' + provider['image'] + ' AS calibre-source' in text
@@ -71,7 +81,11 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       assert 'linuxserver/mods' not in text and 'apt-get update' not in text
       assert 'ENTRYPOINT' not in text and 'CMD [' not in text and 'EXPOSE' not in text
   wiring(recipe)
-  for token in [input_marker, hook_modes, version_copy, version_guard, 'COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/',
+  for token in ['COPY system-python /tmp/hwc-system-python',
+                '/guard.py '+system_spec['commands']['install']+' ',
+                '/guard.py '+system_spec['commands']['verify']+' ',
+                '/ssl/guard.py /tmp/hwc-system-python/ssl/spec.json',
+                'SYSTEM_PYTHON_RUNTIME_SELECTION', input_marker, hook_modes, version_copy, version_guard, 'COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/',
                 'COPY --from=calibre-source ' + provider['http']['rootPath'] + '/ ' + provider['http']['rootPath'] + '/',
                 '/guard.py ' + spec['commands']['verify'] + ' ',
                 '/guard.py ' + spec['commands']['apply'] + ' ',
@@ -1076,6 +1090,14 @@ calibre-security-wiring = let
       command = c.system.build.calibreRuntimeStdlibPackage.buildCommand;
       package = toString c.system.build.calibreRuntimeStdlibPackage;
     };
+    systemPython = {
+      context = toString c.system.build.calibreRuntimeSystemPythonContext;
+      recipe = c.system.build.calibreRuntimeSystemPythonRecipe.text;
+      spec = toString c.system.build.calibreRuntimeSystemPythonSpec;
+      sources = toString c.system.build.calibreRuntimeSystemPythonSources;
+      sslSpec = toString c.system.build.calibreRuntimeSystemPythonSslSpec;
+      sslPackage = toString c.system.build.calibreRuntimeSystemPythonSslPackage;
+    };
     ssl = {
       spec = toString c.system.build.calibreRuntimeSslSpec;
       guard = toString c.system.build.calibreRuntimeSslSourceGuard;
@@ -1236,6 +1258,61 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
               try:ssl_api['installed'](value,distribution)
               except AssertionError:pass
               else:raise AssertionError('SSL_INSTALLED_HASH_SEED')
+  system=v['systemPython'];system_context=pathlib.Path(system['context'])
+  system_spec=json.loads(pathlib.Path(system['spec']).read_text())
+  assert system_spec['pythonVersion']==[3,14,4] and system_spec['compilerPythonVersion']==[3,14,8]
+  assert len(system_spec['patches'])==6 and set(system_spec['modules'])=={'http.client','poplib','tarfile','tempfile','shutil'}
+  assert json.loads((system_context/'spec.json').read_text())==system_spec
+  assert json.loads((system_context/'sources/manifest.json').read_text())==system_spec
+  system_ssl=json.loads((system_context/'ssl/spec.json').read_text())
+  assert system_ssl['native']==json.loads(pathlib.Path(system['sslSpec']).read_text())
+  assert system_ssl['native']['apiSha256']==system_ssl['native']['original']['apiSha256']
+  assert system_ssl['native']['pythonVersion']==system_spec['pythonVersion']
+  assert system_ssl['native']['opensslVersion']=='3.5.5'
+  assert 'privateCa' not in system_ssl and system_ssl['rootPath']=='/'
+  assert (context/'system-python/ssl/lib/_ssl.so').read_bytes()==(system_context/'ssl/lib/_ssl.so').read_bytes()
+  source_api={'__name__':'test_system_python'}
+  source_guard=(system_context/'guard.py').read_text()
+  exec(compile(source_guard,'<actual-system-python-guard>','exec',optimize=0),source_api)
+  import shutil
+  for kind in ['original','already-http','bad-source','bad-result','bad-manifest','cache-symlink']:
+      with tempfile.TemporaryDirectory() as directory:
+          root=pathlib.Path(directory);target=root/'runtime';target.mkdir()
+          staging=root/'sources';shutil.copytree(system_context/'sources',staging)
+          for folder in [staging,*[p for p in staging.rglob('*') if p.is_dir()]]:folder.chmod(0o755)
+          value=copy.deepcopy(system_spec);value['pythonVersion']=list(sys.version_info[:3]);value['runtimeRoot']=str(target)
+          for name,entry in value['modules'].items():
+              path=target/entry['file'];path.parent.mkdir(parents=True,exist_ok=True)
+              folder='lib' if kind=='already-http' and name=='http.client' else 'original'
+              path.write_bytes((staging/folder/entry['file']).read_bytes());path.chmod(value['runtimeMode'])
+          (staging/'manifest.json').chmod(0o644);(staging/'manifest.json').write_text(json.dumps(value))
+          if kind=='bad-source':(target/'tempfile.py').write_text('corrupt source')
+          if kind=='bad-result':
+              changed=staging/'lib/tempfile.py';changed.chmod(0o644);changed.write_text('corrupt result')
+          if kind=='bad-manifest':(staging/'manifest.json').write_text('{}')
+          if kind=='cache-symlink':(target/'__pycache__').symlink_to(root/'outside')
+          before={str(p.relative_to(target)):p.read_bytes() for p in target.rglob('*') if p.is_file()}
+          try:source_api['install'](value,staging,target)
+          except AssertionError:
+              assert kind not in ['original','already-http'],kind
+              assert not (target/value['proofFile']).exists()
+              assert before=={str(p.relative_to(target)):p.read_bytes() for p in target.rglob('*') if p.is_file()},'PARTIAL_SYSTEM_PYTHON_WRITE:'+kind
+          else:
+              assert kind in ['original','already-http'],kind
+              source_api['installed'](value,target)
+              path=target/'tempfile.py';path.write_text('corrupt installed')
+              try:source_api['installed'](value,target)
+              except AssertionError:pass
+              else:raise AssertionError('SYSTEM_PYTHON_INSTALLED_CORRUPTION_ACCEPTED')
+  def system_wired(text):
+      return system['recipe'] in text and 'COPY system-python /tmp/hwc-system-python' in text and 'SYSTEM_PYTHON_RUNTIME_SELECTION' in text
+  assert system_wired(recipe)
+  for omitted in ['COPY system-python /tmp/hwc-system-python',
+      '/guard.py '+system_spec['commands']['install']+' ',
+      '/guard.py '+system_spec['commands']['verify']+' ',
+      '/ssl/guard.py /tmp/hwc-system-python/ssl/spec.json',
+      'SYSTEM_PYTHON_RUNTIME_SELECTION']:
+      assert omitted in recipe and not system_wired(recipe.replace(omitted,'omitted-system-python'))
   assert manifest['schemaVersion']==1 and manifest['pythonVersion']==[3,14,8]
   assert manifest['frozenBundle']=='/opt/calibre/lib/calibre-extensions/python-lib.bypy.frozen'
   assert manifest['frozenBundleSha256']=='558037f93bef7df037ff1c38519680ed1083263b9e86b38407c4e819a2acffb2'
