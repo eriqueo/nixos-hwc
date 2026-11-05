@@ -145,6 +145,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-05: Make only the disposable copied library directory writable before seeding the SSL symlink rejection test; retain read-only source inputs and installed proof modes.
+
 - 2026-11-05: Wire the qualified native SSL artifact into Calibre's shared distribution. Preserve its file mode and owner; share one installed guard with Books and exercise the frozen parent/worker API and private CA. Add failed-input and missing-wiring controls; deployment and current-data acceptance remain separate.
 
 - 2026-11-05: Bind the native SSL API to the measured build-header metadata difference. The vendor used3.5.8 headers with3.5.9 libraries; the rebuild reports3.5.9 and preserves every other member and constant.
