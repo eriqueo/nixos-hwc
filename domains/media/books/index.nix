@@ -282,6 +282,9 @@ let
       COPY --from=calibre-source ${assets.rootPath}/ ${assets.rootPath}/
       COPY --from=calibre-source ${assets.http.rootPath}/ ${assets.http.rootPath}/
       COPY inputs/ /tmp/hwc-books/
+      # COPY creates the destination root as 0755; restore the donor hook's
+      # immutable directory modes before its input guard validates them.
+      RUN chmod 0555 ${assets.http.rootPath} ${assets.http.rootPath}/http
       RUN python3 -B /tmp/hwc-books/guard.py ${spec.commands.verify} /tmp/hwc-books/manifest.json /tmp/hwc-books-app /tmp/hwc-books/native ${assets.rootPath} ${assets.http.rootPath}
       RUN dpkg --unpack ${debPaths} && dpkg --configure --pending && test -z "$(dpkg --audit)" && mkdir /tmp/hwc-books-empty-sources && touch /tmp/hwc-books-empty.list && apt-get -o Dir::Etc::sourcelist=/tmp/hwc-books-empty.list -o Dir::Etc::sourceparts=/tmp/hwc-books-empty-sources check
       RUN rm -rf /app/lazylibrarian && mv /tmp/hwc-books-app /app/lazylibrarian && ln -s ${assets.rootPath} /app/calibre
