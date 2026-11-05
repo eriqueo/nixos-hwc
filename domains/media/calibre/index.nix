@@ -4,13 +4,14 @@ let
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   cfg = config.hwc.media.calibre;
   paths = config.hwc.paths;
+  calibrePython = "/opt/calibre/calibre-debug";
   httpSourceSha256 = "016aa7664201a82f0f37ddfb11ed662dd1f07aa23c9470c6a3cb3278aa479230";
   httpSource = pkgs.fetchurl {
     url = "https://raw.githubusercontent.com/python/cpython/v3.14.8/Lib/http/client.py";
     sha256 = httpSourceSha256;
   };
   httpBackport = helpers.mkFrozenPythonHttpFramingBackport {
-    python = "/opt/calibre/calibre-debug";
+    python = calibrePython;
     pythonVersion = [ 3 14 8 ];
     frozenBundle = "/opt/calibre/lib/calibre-extensions/python-lib.bypy.frozen";
     frozenBundleSha256 = "558037f93bef7df037ff1c38519680ed1083263b9e86b38407c4e819a2acffb2";
@@ -43,6 +44,15 @@ let
     '' + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache\n";
   };
   runtimeManifest = pkgs.writeText "calibre-http-framing.json" (builtins.toJSON httpBackport.manifest);
+  # Pure asset API: Books can reuse this qualified distribution without enabling
+  # the desktop service or copying its frozen-loader facts and implementation.
+  runtimeAssets = pkgs.writeText "calibre-runtime-assets.json" (builtins.toJSON {
+    schemaVersion = 1;
+    image = runtime.image;
+    python = calibrePython;
+    rootPath = builtins.dirOf calibrePython;
+    http = httpBackport.manifest;
+  });
   runtimeContext = pkgs.runCommand "calibre-runtime-context" {} ''
     mkdir -p "$out"
     cp ${runtime.dockerfile} "$out/Dockerfile"
@@ -76,34 +86,37 @@ in
   #==========================================================================
   # IMPLEMENTATION
   #==========================================================================
-  config = lib.mkIf cfg.enable {
-    system.build.calibreRuntimeImageRecipe = runtime.dockerfile;
-    system.build.calibreRuntimeImageContext = runtimeContext;
-    systemd.services.podman-calibre.preStart = lib.mkIf (cfg.image == runtime.image) (lib.mkBefore ''
-      ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg runtime.image} || {
-        echo "Prebuild Calibre from ${runtime.dockerfile} before activation" >&2
-        exit 1
-      }
-    '');
-    # Container definition is in sys.nix
-    # Service dependencies are in parts/config.nix
+  config = lib.mkMerge [
+    { system.build.calibreRuntimeAssets = runtimeAssets; }
+    (lib.mkIf cfg.enable {
+      system.build.calibreRuntimeImageRecipe = runtime.dockerfile;
+      system.build.calibreRuntimeImageContext = runtimeContext;
+      systemd.services.podman-calibre.preStart = lib.mkIf (cfg.image == runtime.image) (lib.mkBefore ''
+        ${pkgs.podman}/bin/podman image exists ${lib.escapeShellArg runtime.image} || {
+          echo "Prebuild Calibre from ${runtime.dockerfile} before activation" >&2
+          exit 1
+        }
+      '');
+      # Container definition is in sys.nix
+      # Service dependencies are in parts/config.nix
 
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
-    assertions = helpers.mkVpnAssertions {
-      name = "calibre";
-      networkMode = cfg.network.mode;
-      gluetunInstances = config.hwc.networking.gluetun.instances;
-    } ++ [
-      {
-        assertion = config.hwc.paths.hot.root != null;
-        message = "calibre container requires hwc.paths.hot.root to be defined (for downloads)";
-      }
-      {
-        assertion = config.hwc.paths.media.root != null;
-        message = "calibre container requires hwc.paths.media.root to be defined (for book libraries)";
-      }
-    ];
-  };
+      #==========================================================================
+      # VALIDATION
+      #==========================================================================
+      assertions = helpers.mkVpnAssertions {
+        name = "calibre";
+        networkMode = cfg.network.mode;
+        gluetunInstances = config.hwc.networking.gluetun.instances;
+      } ++ [
+        {
+          assertion = config.hwc.paths.hot.root != null;
+          message = "calibre container requires hwc.paths.hot.root to be defined (for downloads)";
+        }
+        {
+          assertion = config.hwc.paths.media.root != null;
+          message = "calibre container requires hwc.paths.media.root to be defined (for book libraries)";
+        }
+      ];
+    })
+  ];
 }

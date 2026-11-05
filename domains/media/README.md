@@ -93,8 +93,8 @@ media/
 ├── recyclarr/               # *arr quality profile sync; preserves Radarr executable rejection
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
-├── calibre/                 # Calibre 9.17 frozen HTTP source repair; existing library/config paths
-├── books/                   # LazyLibrarian; private config parent in directories.nix
+├── calibre/                 # Frozen HTTP repair and pure shared asset API; existing library/config paths
+├── books/                   # Same-schema runtime, offline native/Calibre inputs, HTTP adapters; private parent in directories.nix
 │
 ├── immich-container/        # Photo management, pinned runtime/library contexts
 ├── immich-native/           # Photo management (native NixOS)
@@ -120,6 +120,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Emit a same-schema Books runtime with pinned native/Python inputs, shared response framing and a guarded request-options correction. Bake Calibre from its canonical pure asset API instead of downloading a mod at startup. Check input, source and frozen-hook guards plus omitted wiring; image adoption still requires native and current-data qualification.
 
 - 2026-11-05: Protect Books credentials, user hashes and saved backups with the existing private-parent descriptor. Preserve file contents, app writer identity and container startup; include Books in composed private-rule checks.
 
