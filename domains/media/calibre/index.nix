@@ -725,6 +725,7 @@ let
       path = "/usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so";
       sha256 = "53789b72a5011867c45036d115ef10f452282751b8735691d1eaf22bf8fe5587";
       bytes = 236736;
+      mode = 420; # Both Ubuntu image preimages are root-owned 0644.
       apiSha256 = distroSslDescriptor.apiSha256;
     };
     apiConstantChanges."_OPENSSL_API_VERSION" = let

@@ -19,6 +19,8 @@ source preimages before writing a private image layer. Books retains its paired
 HTTP/urllib3 guard; the shared installer accepts its exact fixed HTTP postimage.
 Both images verify the resulting modules in fresh processes. Current-data and
 live release qualification remain separate gates.
+The distro SSL guard preserves its measured 0644 mode; the frozen extension
+retains its separate 0755 contract.
 
 Calibre stages its four-library source bundle into the existing early frozen loader. Parent and fork-worker probes check the selected modules and POP command controls. Books verifies the shared manifest, source sizes, hashes and file modes. Image and current-data qualification remain separate release gates.
 
@@ -160,6 +162,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Preserve the measured Ubuntu SSL preimage mode0644 in both shared consumers; keep the frozen extension's mode0755 contract separate.
 
 - 2026-11-05: Compile the shared Python consumer probe through the single-line Docker recipe port and reject multiline quoting regressions.
 
