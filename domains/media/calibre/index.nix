@@ -445,6 +445,11 @@ let
 
     def metadata(spec, manifest):
         native = spec["native"]
+        # Schema1 private-CA descriptors originally omitted this tag. Remove
+        # the read fallback when no release/recovery image uses that format.
+        kind = spec.get("trustKind", "calibre-private")
+        assert kind in {"calibre-private", "system-default"}, "PYTHON_SSL_TRUST_KIND"
+        assert ("privateCa" in spec) == (kind == "calibre-private"), "PYTHON_SSL_TRUST_SHAPE"
         assert spec["schemaVersion"] == manifest["schemaVersion"] == native["schemaVersion"] == 1, "CALIBRE_SSL_SCHEMA"
         assert manifest["descriptor"] == native, "CALIBRE_SSL_DESCRIPTOR"
         file = manifest["file"]
@@ -462,7 +467,7 @@ let
         return manifest
 
     def check_private_ca(spec, root):
-        if "privateCa" in spec:
+        if spec.get("trustKind", "calibre-private") == "calibre-private":
             cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
             assert sha(read(cert, 65536)) == spec["privateCa"]["sha256"], "CALIBRE_SSL_PRIVATE_CA_HASH"
 
@@ -527,7 +532,7 @@ let
             original["nativeModuleConstants"][name] = change["original"]
         assert sha(canonical(original)) == spec["native"]["original"]["apiSha256"], "CALIBRE_SSL_OTHER_API_DRIFT"
         roots = []
-        if "privateCa" in spec:
+        if spec.get("trustKind", "calibre-private") == "calibre-private":
             from calibre.utils.https import HTTPSConnection
             cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
             connection = HTTPSConnection("localhost", cert_file=str(cert), disable_x509_strict_checking=True)
@@ -550,6 +555,7 @@ let
     schemaVersion = 1;
     native = sslDescriptor;
     rootPath = builtins.dirOf calibrePython;
+    trustKind = "calibre-private";
     proofDirectory = ".hwc-native-ssl";
     guardSha256 = builtins.hashString "sha256" sslGuard.text;
     privateCa = {
@@ -743,6 +749,7 @@ let
     schemaVersion = 1;
     native = distroSslDescriptor;
     rootPath = "/";
+    trustKind = "system-default";
     proofDirectory = ".hwc-system-python-ssl";
     guardSha256 = builtins.hashString "sha256" sslGuard.text;
   };
