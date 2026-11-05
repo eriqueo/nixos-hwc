@@ -29,21 +29,29 @@ in
     # Service dependencies and wait script
     {
       systemd.services."podman-soularr" = {
-        after = [ "init-media-network.service" "podman-lidarr.service" "podman-slskd.service" ];
-        requires = [ "podman-lidarr.service" ];
+        after = [ "init-media-network.service" "podman-lidarr.service" "podman-slskd.service" "soularr-config.service" ];
+        requires = [ "podman-lidarr.service" "soularr-config.service" ];
+        restartTriggers = [ config.systemd.services.soularr-config.serviceConfig.ExecStart ]
+          ++ config.systemd.services.soularr-config.restartTriggers;
         serviceConfig.ExecStartPre = pkgs.writeShellScript "wait-for-lidarr" ''
-          for i in 1 1 2 3 5 8; do
-            if ${pkgs.curl}/bin/curl -sf -H "X-Api-Key: $(cat ${config.age.secrets.lidarr-api-key.path})" \
+          set -euo pipefail
+          # Six attempts, each GET at most two seconds; jitter below one second.
+          # An anonymous FD keeps the key out of argv and persistent header files.
+          for ((attempt = 1; attempt <= 6; attempt++)); do
+            if ${pkgs.curl}/bin/curl --fail --silent --connect-timeout 1 --max-time 2 \
+              --header @<(printf 'X-Api-Key: '; ${pkgs.coreutils}/bin/cat ${lib.escapeShellArg config.age.secrets.lidarr-api-key.path}; printf '\n') \
               "http://localhost:8686/api/v1/system/status" >/dev/null 2>&1; then
               echo "Lidarr is ready"
               exit 0
             fi
-            echo "Waiting for Lidarr... ($i)"
-            sleep $i
+            if ((attempt < 6)); then
+              ${pkgs.coreutils}/bin/sleep "0.$((500 + RANDOM % 500))"
+            fi
           done
           echo "Lidarr failed to become ready"
           exit 1
         '';
+        serviceConfig.TimeoutStartSec = "30s";
       };
     }
   ]);

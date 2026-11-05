@@ -2,6 +2,149 @@
 { lib, pkgs, repoRoot, self }:
 {
 
+soularr-config-security = let
+  c = self.nixosConfigurations.hwc-home.config;
+  service = c.systemd.services.soularr-config;
+  containerService = c.systemd.services.podman-soularr;
+  updater = c.system.build.soularrConfigUpdater;
+  fixture = pkgs.writeText "soularr-config-security.json" (builtins.toJSON {
+    command = service.serviceConfig.ExecStart;
+    readiness = toString containerService.serviceConfig.ExecStartPre;
+    keyFile = c.age.secrets.lidarr-api-key.path;
+  });
+in
+assert service.serviceConfig.User == "eric" && service.serviceConfig.Group == "users";
+assert service.serviceConfig.SupplementaryGroups == [ "secrets" ];
+assert service.serviceConfig.UMask == "0077" && service.serviceConfig.TimeoutStartSec == "30s";
+assert lib.elem c.age.secrets.lidarr-api-key.file service.restartTriggers;
+assert lib.elem c.age.secrets.slskd-api-key.file service.restartTriggers;
+assert lib.elem "soularr-config.service" containerService.after;
+assert lib.elem "soularr-config.service" containerService.requires;
+assert lib.elem service.serviceConfig.ExecStart containerService.restartTriggers;
+assert c.virtualisation.oci-containers.containers.soularr.image == c.hwc.media.soularr.image;
+pkgs.runCommand "soularr-config-security" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${updater} ${pkgs.bash}/bin/bash <<'PY'
+  import configparser, grp, http.server, json, os, pathlib, re, runpy, subprocess, sys, tempfile, threading
+  from unittest.mock import patch
+  fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  updater, bash = sys.argv[2:]
+  def wiring(command):
+      assert updater in command.split(), 'production must invoke the tested updater'
+  wiring(fixture['command'])
+  try:
+      wiring(fixture['command'].replace(updater, '/omitted-integration'))
+  except AssertionError:
+      pass
+  else:
+      raise AssertionError('omitted updater integration passed')
+  api = runpy.run_path(updater)
+  with tempfile.TemporaryDirectory() as directory:
+      root = pathlib.Path(directory)
+      config = root / 'config.ini'
+      lidarr, slskd = root / 'lidarr-key', root / 'slskd-key'
+      lidarr.write_text('private-dummy-lidarr\n'); slskd.write_text('private-dummy-slskd\n')
+      spec = {'path': str(config), 'group': grp.getgrgid(os.getgid()).gr_name,
+              'services': {'Lidarr': {'url': 'http://lidarr:8686', 'keyFile': str(lidarr)},
+                           'Slskd': {'url': 'http://gluetun:5030', 'keyFile': str(slskd)}}}
+      specpath = root / 'inputs.json'; specpath.write_text(json.dumps(spec))
+      original = ('; saved comment\n[Lidarr]\nhost_url : http://old\napi_key = old\n'
+                  'download_dir = /saved/music\n\n[Slskd]\napi_key = old\n'
+                  '\n[General]\ninterval = 901\n\n[SavedChoice]\ncustom_option = preserve-this\n')
+      def invoke():
+          return subprocess.run([sys.executable, updater, str(specpath)], capture_output=True, timeout=10)
+      config.write_text(original); config.chmod(0o644)
+      result = invoke(); assert result.returncode == 0, result.stderr
+      output = config.read_text(); parser = configparser.RawConfigParser(); parser.read_string(output)
+      assert '; saved comment\n' in output and 'host_url : http://lidarr:8686' in output
+      assert parser['General']['interval'] == '901' and parser['SavedChoice']['custom_option'] == 'preserve-this'
+      assert parser['Lidarr']['download_dir'] == '/saved/music'
+      assert parser['Slskd']['download_dir'] == '/downloads/music'
+      assert parser['Slskd']['api_key'] == 'private-dummy-slskd'
+      assert config.stat().st_mode & 0o777 == 0o440
+      inode = config.stat().st_ino
+      assert invoke().returncode == 0 and config.read_text() == output and config.stat().st_ino == inode
+      # Missing/invalid SECOND key, invalid INI, oversized file and symlink all
+      # fail through the real CLI before changing the original or leaking input.
+      for bad in ['missing', 'newline', 'ini', 'size', 'link', 'multiline']:
+          config.chmod(0o600); config.write_text(original)
+          slskd.write_text('private-dummy-slskd\n')
+          if bad == 'missing': slskd.unlink()
+          if bad == 'newline': slskd.write_text('sensitive-value\nInjected: value\n')
+          if bad == 'ini': config.write_text('[Bad]\nsensitive-value\n')
+          if bad == 'size': config.write_text('x' * (1024 * 1024 + 1))
+          if bad == 'multiline': config.write_text(original.replace('api_key = old', 'api_key = old\n  sensitive-value', 1))
+          target = None
+          if bad == 'link':
+              target = root / 'untouched'; target.write_text(original)
+              config.unlink(); config.symlink_to(target)
+          before, metadata = config.read_bytes(), config.lstat()
+          result = invoke()
+          assert result.returncode != 0 and b'sensitive-value' not in result.stderr
+          assert config.read_bytes() == before and config.lstat().st_ino == metadata.st_ino
+          assert not list(root.glob('.config-*'))
+          if config.is_symlink(): config.unlink()
+      # Concurrent edit is preserved and own temporary file is removed.
+      config.write_text(original); slskd.write_text('private-dummy-slskd\n')
+      real_fsync = os.fsync
+      def concurrent_edit(fd):
+          real_fsync(fd); config.write_text(original + '; concurrent user edit\n')
+      with patch('os.fsync', side_effect=concurrent_edit):
+          try: api['update'](spec)
+          except api['ConfigError'] as error: assert str(error) == 'SOULARR_CONFIG_CHANGED'
+          else: raise AssertionError('concurrent edit overwritten')
+      assert config.read_text().endswith('; concurrent user edit\n') and not list(root.glob('.config-*'))
+      config.unlink(); assert invoke().returncode == 0
+      parser.read_string(config.read_text()); assert parser['General']['interval'] == '300'
+      assert config.stat().st_mode & 0o777 == 0o440
+
+      ready = pathlib.Path(fixture['readiness']).read_text()
+      assert '--max-time 2' in ready and 'attempt <= 6' in ready
+      assert '--header @<(' in ready and 'RANDOM % 500' in ready
+      # Hold an actual HTTP GET while inspecting only that bash's descendants.
+      observations = []
+      key = lidarr.read_text().strip()
+      class Handler(http.server.BaseHTTPRequestHandler):
+          def log_message(self, *args): pass
+          def do_GET(self):
+              try:
+                  assert self.headers.get('X-Api-Key') == key
+                  pending = [process.pid]; seen = set(); found = False
+                  while pending:
+                      pid = pending.pop()
+                      if pid in seen: continue
+                      seen.add(pid)
+                      proc = pathlib.Path('/proc') / str(pid)
+                      try:
+                          pending.extend(map(int, (proc / 'task' / str(pid) / 'children').read_text().split()))
+                          argv = (proc / 'cmdline').read_bytes().split(b'\0')
+                          if argv and pathlib.Path(os.fsdecode(argv[0])).name == 'curl':
+                              found = True
+                              observations.append(key.encode() not in b'\0'.join(argv))
+                      except FileNotFoundError: pass
+                  assert found
+                  self.send_response(200); self.end_headers()
+              except Exception:
+                  observations.append(False); self.send_response(500); self.end_headers()
+      server = http.server.HTTPServer(('127.0.0.1', 0), Handler)
+      endpoint = 'http://127.0.0.1:' + str(server.server_port) + '/api/v1/system/status'
+      ready = ready.replace('http://localhost:8686/api/v1/system/status', endpoint).replace(fixture['keyFile'], str(lidarr))
+      script = root / 'ready.sh'; script.write_text(ready)
+      process = subprocess.Popen([bash, str(script)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      server.timeout = 5; server.handle_request()
+      stdout, stderr = process.communicate(timeout=5)
+      assert process.returncode == 0 and observations == [True] and key.encode() not in stdout + stderr
+      # Reverting just the FD integration must be detected by the same observer.
+      mutant, count = re.subn(r'--header @<\([^\n]+\)', '--header "X-Api-Key: ' + key + '"', ready)
+      assert count == 1
+      observations.clear(); script.write_text(mutant)
+      process = subprocess.Popen([bash, str(script)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      server.handle_request(); process.communicate(timeout=5); server.server_close()
+      assert process.returncode == 0 and observations == [False], 'inline argv regression escaped observer'
+  print('Actual seeder preserves settings, fails closed and stays private; actual curl FD wiring and argv regression proved')
+  PY
+  touch "$out"
+'';
+
 transcripts-deepgram = let
   c = self.nixosConfigurations.hwc-home.config;
   service = c.systemd.services.transcripts;
