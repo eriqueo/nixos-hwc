@@ -94,7 +94,7 @@ media/
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
 ├── calibre/                 # Calibre 9.17 frozen HTTP source repair; existing library/config paths
-├── books/                   # LazyLibrarian
+├── books/                   # LazyLibrarian; private config parent in directories.nix
 │
 ├── immich-container/        # Photo management, pinned runtime/library contexts
 ├── immich-native/           # Photo management (native NixOS)
@@ -120,6 +120,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Protect Books credentials, user hashes and saved backups with the existing private-parent descriptor. Preserve file contents, app writer identity and container startup; include Books in composed private-rule checks.
 
 - 2026-11-05: Preserve Soularr's inherited container-mode and unbuffered-output flags in the minimal image; reject their removal in the emitted-recipe and input-guard checks.
 

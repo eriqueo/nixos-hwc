@@ -103,7 +103,7 @@ in
       (lib.optionals (appsRoot != null) ([ (mkRootDir appsRoot) ] ++ mkConfigDirs {
         audiobookshelf = false;
         beets = false;
-        books = false;
+        books = true;
         calibre = false;
         mousehole = false;
         jellyfin = false;

@@ -85,7 +85,7 @@ soularr-config-security = let
   containerService = c.systemd.services.podman-soularr;
   updater = c.system.build.soularrConfigUpdater;
   privatePaths = map (name: "${c.hwc.paths.apps.root}/${name}") [
-    "lidarr" "radarr" "sonarr" "prowlarr" "readarr" "soularr"
+    "books" "lidarr" "radarr" "sonarr" "prowlarr" "readarr" "soularr"
   ] ++ [ "${c.hwc.paths.apps.root}/soularr/data" ];
   fixture = pkgs.writeText "soularr-config-security.json" (builtins.toJSON {
     command = service.serviceConfig.ExecStart;
