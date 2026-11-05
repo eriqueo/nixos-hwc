@@ -2,6 +2,78 @@
 { lib, pkgs, repoRoot, self }:
 {
 
+soularr-runtime-security = let
+  c = self.nixosConfigurations.hwc-home.config;
+  container = c.virtualisation.oci-containers.containers.soularr;
+  fixture = pkgs.writeText "soularr-runtime-binding.json" (builtins.toJSON {
+    selected = container.image;
+    configured = c.hwc.media.soularr.image;
+    preStart = c.systemd.services.podman-soularr.preStart;
+    ports = container.ports;
+  });
+in pkgs.runCommand "soularr-runtime-security" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${c.system.build.soularrRuntimeImageContext} ${c.system.build.soularrRuntimeInputGuard} <<'PY'
+  import copy, hashlib, json, pathlib, runpy, tempfile
+  from unittest.mock import patch
+  import sys
+  binding = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  context, guard = map(pathlib.Path, sys.argv[2:])
+  spec = json.loads((context / 'inputs/manifest.json').read_text())
+  recipe = (context / 'Dockerfile').read_text()
+  assert binding['selected'] == binding['configured'] and binding['selected'].startswith('localhost/soularr-runtime:')
+  assert binding['ports'] == [] and binding['selected'] in binding['preStart']
+  assert 'image exists' in binding['preStart'] and 'exit 1' in binding['preStart']
+  def wiring(text):
+      assert 'FROM ' + spec['sourceImage'] + ' AS app-source' in text
+      assert 'FROM ' + spec['baseImage'] + '\n' in text
+      assert 'COPY --from=app-source /app/soularr.py /app/run.sh /app/' in text
+      assert 'RUN python3 -B /tmp/hwc-soularr/guard.py /tmp/hwc-soularr/manifest.json' in text
+      assert '--no-index --no-deps --no-compile' in text and 'pip check' in text
+      assert 'uninstall --yes pip setuptools wheel' in text
+      assert 'ENTRYPOINT ["tini", "-g", "--"]' in text and 'CMD ["/app/run.sh"]' in text
+      assert 'WORKDIR /app' in text and 'soularr.py --help && ps aux' in text
+      assert 'WEBUI' not in text and 'EXPOSE' not in text
+      assert spec['framing']['modules']['httpClient']['sourceSha256'] in text
+      assert spec['framing']['modules']['urllib3']['patchedSha256'] in text
+  wiring(recipe)
+  for old in ['COPY --from=app-source /app/soularr.py /app/run.sh /app/',
+              'RUN python3 -B /tmp/hwc-soularr/guard.py /tmp/hwc-soularr/manifest.json',
+              '--no-index --no-deps --no-compile', 'ENTRYPOINT ["tini", "-g", "--"]',
+              spec['framing']['modules']['urllib3']['patchedSha256']]:
+      assert old in recipe
+      try: wiring(recipe.replace(old, 'omitted-integration'))
+      except AssertionError: pass
+      else: raise AssertionError('omitted runtime integration passed')
+  assert (context / 'inputs/guard.py').read_bytes() == guard.read_bytes()
+  api = runpy.run_path(str(guard))
+  with tempfile.TemporaryDirectory() as directory:
+      app = pathlib.Path(directory)
+      fixture = copy.deepcopy(spec)
+      for name in fixture['appFiles']:
+          raw = ('owned fixture ' + name).encode()
+          (app / name).write_bytes(raw)
+          fixture['appFiles'][name] = hashlib.sha256(raw).hexdigest()
+      versions = {x['name']: x['version'] for x in spec['preservedPackages']}
+      with patch('importlib.metadata.version', side_effect=versions.__getitem__):
+          api['verify'](fixture, app, context / 'inputs', spec['pythonVersion'])
+          for kind in ['schema', 'version', 'app', 'missing', 'input', 'package']:
+              bad = copy.deepcopy(fixture)
+              version = spec['pythonVersion']
+              if kind == 'schema': bad['schemaVersion'] = 0
+              if kind == 'version': version = '3.11.0'
+              if kind == 'app': bad['appFiles']['soularr.py'] = '0' * 64
+              if kind == 'missing': bad['wheels'][0]['filename'] = 'missing.whl'
+              if kind == 'input': bad['debs'][-1]['sha256'] = '0' * 64
+              if kind == 'package': bad['preservedPackages'][-1]['version'] = 'wrong'
+              try: api['verify'](bad, app, context / 'inputs', version)
+              except (AssertionError, FileNotFoundError): pass
+              else: raise AssertionError('invalid runtime input passed: ' + kind)
+      assert all((app / name).read_bytes() == ('owned fixture ' + name).encode() for name in fixture['appFiles'])
+  print('Soularr emitted runtime binding, source guards and omitted-integration negatives pass')
+  PY
+  touch "$out"
+'';
+
 soularr-config-security = let
   c = self.nixosConfigurations.hwc-home.config;
   service = c.systemd.services.soularr-config;

@@ -23,6 +23,10 @@ requires seeding; Lidarr readiness passes its header through an anonymous FD.
 The check exercises each composed startup script and resets failed-input fixtures.
 `directories.nix` owns the private parent directories for Soularr and the five arr
 apps. These preserve app writes while blocking other users from all config copies.
+Soularr's existing index also emits its immutable minimal runtime context. It keeps
+the same CLI, scheduler and runtime packages while updating Python, HTTP and trust
+inputs. Startup requires a prebuilt image; verification checks the emitted recipe
+and rejects missing wiring or altered inputs before any image build writes.
 
 Immich uses the versioned shared database-role contract and restarts with its provisioner when credentials or provisioning code change.
 
@@ -115,6 +119,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Emit a minimal same-CLI Soularr runtime with pinned Python3.11.18, HTTP/trust wheels and scheduler tools. Reuse the paired framing adapter, preserve Tini group shutdown, guard app/input hashes and check actual recipe wiring. Runtime adoption requires separate current-data qualification.
 
 - 2026-11-05: Keep private arr/Soularr app parents and Soularr's data directory in the single directory producer. Remove the duplicate Soularr data rule, declare Readarr's existing config directory, and check composed rules without changing arr startup or config files.
 
