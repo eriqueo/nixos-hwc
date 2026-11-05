@@ -1285,7 +1285,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           and any(isinstance(t,ast.Name) and t.id=='worker' for t in n.targets)]
       ssl_copy='COPY native-ssl /tmp/hwc-calibre-native-ssl'
       ssl_install='RUN python3 -I -B /tmp/hwc-calibre-native-ssl/guard.py /tmp/hwc-calibre-native-ssl/spec.json /tmp/hwc-calibre-native-ssl '+ssl_runtime_spec['rootPath']
-      stdlib_wiring=('COPY stdlib /tmp/hwc-calibre-stdlib' in text and 'FROZEN_STDLIB_SOURCE_CODE_DRIFT' in emitted[0][0] and 'CALIBRE_STDLIB_SELECTION' in emitted[1][0] and len(workers)==1 and 'CALIBRE_STDLIB_SELECTION' in workers[0])
+      stdlib_wiring=('COPY stdlib /tmp/hwc-calibre-stdlib' in text and 'FROZEN_STDLIB_SOURCE_CODE_DRIFT' in emitted[0][0] and 'module_loader = importlib.util.find_spec(name).loader' in emitted[0][0] and 'CALIBRE_STDLIB_SELECTION' in emitted[1][0] and len(workers)==1 and 'CALIBRE_STDLIB_SELECTION' in workers[0])
       ssl_wiring=(ssl_copy in text and ssl_install in text and '# Native SSL inputs '+ssl_runtime['inputHash'] in text
           and text.index(ssl_copy)<text.index(ssl_install)<text.index('def native_ssl_proof')
           and ssl_probe_wired(emitted[1][0]) and len(workers)==1 and ssl_probe_wired(workers[0]))
@@ -1297,6 +1297,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   assert wired(v,recipe)
   for before,after in [('COPY stdlib /tmp/hwc-calibre-stdlib','# omitted stdlib copy'),
       ('FROZEN_STDLIB_SOURCE_CODE_DRIFT','omitted original parity'),
+      ('module_loader = importlib.util.find_spec(name).loader','module_loader = loader'),
       ('CALIBRE_STDLIB_SELECTION','omitted stdlib consumers'),
       ('COPY native-ssl /tmp/hwc-calibre-native-ssl','# omitted SSL copy'),
       ('RUN python3 -I -B /tmp/hwc-calibre-native-ssl/guard.py','# omitted SSL installer'),
