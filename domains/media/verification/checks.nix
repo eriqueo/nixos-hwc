@@ -21,6 +21,7 @@ assert lib.elem c.age.secrets.slskd-api-key.file service.restartTriggers;
 assert lib.elem "soularr-config.service" containerService.after;
 assert lib.elem "soularr-config.service" containerService.requires;
 assert lib.elem service.serviceConfig.ExecStart containerService.restartTriggers;
+assert containerService.serviceConfig.TimeoutStartSec == "30s";
 assert c.virtualisation.oci-containers.containers.soularr.image == c.hwc.media.soularr.image;
 pkgs.runCommand "soularr-config-security" { nativeBuildInputs = [ pkgs.python3 ]; } ''
   python3 - ${fixture} ${updater} ${pkgs.bash}/bin/bash <<'PY'

@@ -51,7 +51,7 @@ in
           echo "Lidarr failed to become ready"
           exit 1
         '';
-        serviceConfig.TimeoutStartSec = "30s";
+        serviceConfig.TimeoutStartSec = lib.mkForce "30s";
       };
     }
   ]);

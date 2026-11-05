@@ -114,7 +114,7 @@ workspace/media/
 
 ## Changelog
 
-- 2026-11-05: Keep Soularr's actual composed ExecStartPre scripts distinct in its credential-argument check; initialize every failed-input fixture independently.
+- 2026-11-05: Keep Soularr's composed ExecStartPre scripts distinct in its credential-argument check, bound container startup against the OCI module's unlimited default, and initialize each failed-input fixture independently.
 
 - 2026-11-05: Preserve Soularr preferences and restrict credential files on every seed. Remove keys from readiness process arguments and test the actual seeder and curl wiring, including failed-input and reverted-integration cases.
 
