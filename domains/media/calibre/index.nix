@@ -717,6 +717,10 @@ let
       python = "eec0c50c4157985d62d12230b4eca5bda4054a81225f2448db1da723d274c025";
       openssl = "7acbe88993a8691183aff3277743d8090c6bbba24b6e218919cf8afdbde42de6";
     };
+    # Ubuntu ships the static pyconfig.h in its development package even
+    # though the running interpreter reports a shared build. Check the actual
+    # SDK header; the native API and TLS fixture qualify this Linux module.
+    abiMacros = sslDescriptor.abiMacros // { Py_ENABLE_SHARED = 0; };
     original = sslDescriptor.original // {
       path = "/usr/lib/python3.14/lib-dynload/_ssl.cpython-314-x86_64-linux-gnu.so";
       sha256 = "53789b72a5011867c45036d115ef10f452282751b8735691d1eaf22bf8fe5587";
