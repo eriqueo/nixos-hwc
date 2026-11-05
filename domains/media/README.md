@@ -153,7 +153,7 @@ workspace/media/
 
 ## Changelog
 
-- 2026-11-05: Resolve each original module’s own frozen loader before comparing its source code.
+- 2026-11-05: Resolve each original module’s own frozen loader before comparing its source code; reject reuse of the HTTP loader.
 
 - 2026-11-05: Compare nested Python 3.14 annotation code constants recursively during frozen source parity checks; verify filename parity and reject changed nested positions.
 
