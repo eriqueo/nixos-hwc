@@ -72,6 +72,12 @@ The security checks reject invalid inputs before writes and missing image wiring
 Its API contract permits only the truthful build-header version update; all
 other native members and constants must match the measured vendor API.
 
+The index also emits a source-only bundle for four frozen library repairs. It
+extracts only the four regular pinned source members, retains their original
+bytes for frozen-code parity, applies strict upstream patches and checks every
+result before publishing. The existing security check runs the emitted producer
+and removes each patch and phase in turn. Runtime selection stays separate.
+
 Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
 selection. Its image build exercises the actual GUI import and fork_job worker.
 
@@ -144,6 +150,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Add the guarded four-library source artifact for POP commands, tar filtering and coupled temporary-directory cleanup. Preserve original sources, check exact postimages and syntax, and exercise missing patch/phase failures before loader wiring.
 
 - 2026-11-05: Make only the disposable copied library directory writable before seeding the SSL symlink rejection test; retain read-only source inputs and installed proof modes.
 

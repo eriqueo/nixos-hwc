@@ -1057,6 +1057,12 @@ calibre-security-wiring = let
     nativePostPatch = nativePackage.postPatch;
     nativePatchFlags = nativePackage.patchFlags;
     nativePatchCount = builtins.length nativePackage.patches;
+    stdlib = {
+      spec = toString c.system.build.calibreRuntimeStdlibSpec;
+      guard = toString c.system.build.calibreRuntimeStdlibSourceGuard;
+      command = c.system.build.calibreRuntimeStdlibPackage.buildCommand;
+      package = toString c.system.build.calibreRuntimeStdlibPackage;
+    };
     ssl = {
       spec = toString c.system.build.calibreRuntimeSslSpec;
       guard = toString c.system.build.calibreRuntimeSslSourceGuard;
@@ -1087,8 +1093,47 @@ assert rejectContext { upstream = ""; name = "empty"; edits = []; };
 assert rejectContext { upstream = ""; name = "excess"; edits = [ [] [] [] ]; };
 pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 pkgs.patchelf ]; } ''
   python3 - ${binding} ${c.system.build.calibreRuntimeImageRecipe} ${c.system.build.calibreRuntimeImageContext} <<'PYTEST'
-  import ast, copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
+  import ast, copy, hashlib, json, os, pathlib, shlex, subprocess, sys, tempfile
   v=json.loads(pathlib.Path(sys.argv[1]).read_text())
+  stdlib=v['stdlib'];stdlib_spec=json.loads(pathlib.Path(stdlib['spec']).read_text())
+  stdlib_package=pathlib.Path(stdlib['package'])
+  assert json.loads((stdlib_package/'manifest.json').read_text())==stdlib_spec
+  assert set(stdlib_spec['modules'])=={'poplib','shutil','tarfile','tempfile'}
+  assert [p['advisory'] for p in stdlib_spec['patches']]==['CVE-2026-87910','CVE-2026-114583','CVE-2026-12345','CVE-2025-15367']
+  expected_stdlib_files={'manifest.json'}
+  for name,entry in stdlib_spec['modules'].items():
+      for folder,size_key,hash_key in [('original','originalBytes','originalSha256'),('lib','bytes','sha256')]:
+          relative=folder+'/'+entry['file'];expected_stdlib_files.add(relative)
+          raw=(stdlib_package/relative).read_bytes()
+          assert len(raw)==entry[size_key] and hashlib.sha256(raw).hexdigest()==entry[hash_key]
+  assert {str(p.relative_to(stdlib_package)) for p in stdlib_package.rglob('*') if p.is_file()}==expected_stdlib_files
+  try:exec(compile(pathlib.Path(stdlib['guard']).read_bytes(),'<optimized-stdlib-source-guard>','exec',optimize=2),{'__name__':'test_stdlib_optimized'})
+  except AssertionError as error:assert str(error)=='CALIBRE_STDLIB_OPTIMIZED_GUARD'
+  else:raise AssertionError('STDLIB_OPTIMIZED_GUARD_SEED')
+  # Replay the emitted producer itself on bounded disposable source members.
+  # Removing each patch must fail the real postimage guard before publication.
+  producer=stdlib['command'];producer_lines=producer.splitlines()
+  patch_lines=[line for line in producer_lines if shlex.split(line) and shlex.split(line)[0].endswith('/bin/patch')]
+  assert len(patch_lines)==len(stdlib_spec['patches'])==4
+  for line in patch_lines:assert shlex.split(line)[1:1+len(stdlib_spec['patchFlags'])]==stdlib_spec['patchFlags']
+  assert '--fuzz=0' in stdlib_spec['patchFlags'] and '--no-backup-if-mismatch' in stdlib_spec['patchFlags']
+  phases={mode:next(line for line in producer_lines if stdlib['guard']+' '+mode+' '+stdlib['spec'] in line)
+      for mode in stdlib_spec['commands'].values()}
+  cases=[('none',None)]+[('patch-'+str(i),line) for i,line in enumerate(patch_lines)]+list(phases.items())
+  for kind,omission in cases:
+      with tempfile.TemporaryDirectory() as directory:
+          root=pathlib.Path(directory);output=root/'published';env=os.environ|{'out':str(output)}
+          command=producer if omission is None else producer.replace(omission,'# omitted '+kind)
+          assert omission is None or command!=producer
+          run=subprocess.run(['${pkgs.bash}/bin/bash','-e','-u','-c',command],cwd=root,env=env,capture_output=True,timeout=25)
+          assert len(run.stdout)+len(run.stderr)<=65536,'STDLIB_PRODUCER_LOG_BOUND'
+          if kind=='none':
+              assert run.returncode==0,(kind,run.stderr)
+              assert json.loads((output/'manifest.json').read_text())==stdlib_spec
+          else:
+              assert not output.exists(),'STDLIB_OMITTED_STEP_PUBLISHED:'+kind
+              if kind!=stdlib_spec['commands']['finish']:assert run.returncode!=0,kind
+              if kind.startswith('patch-'):assert b'CALIBRE_STDLIB_SOURCE_HASH' in run.stderr,(kind,run.stderr)
   ssl=v['ssl'];ssl_spec=json.loads(pathlib.Path(ssl['spec']).read_text())
   def ssl_wired(value):
       return (value['patchFlags']==['-p1','--fuzz=0'] and value['patchCount']==1
