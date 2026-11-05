@@ -1162,7 +1162,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           elif kind=='guard':(inputs/'guard.py').chmod(0o644);(inputs/'guard.py').write_bytes(b'corrupt-guard')
           elif kind=='proof':(distribution/value['proofDirectory']).mkdir()
           elif kind=='ca':value['privateCa']['sha256']='0'*64
-          elif kind=='link':incoming.unlink();incoming.symlink_to(path)
+          elif kind=='link':incoming.parent.chmod(0o755);incoming.unlink();incoming.symlink_to(path)
           metadata=json.loads((inputs/'manifest.json').read_text());metadata['descriptor']=value['native']
           if kind=='needed':metadata['file']['needed'].append('libpython3.14.so')
           (inputs/'manifest.json').chmod(0o644);(inputs/'manifest.json').write_text(json.dumps(metadata))
