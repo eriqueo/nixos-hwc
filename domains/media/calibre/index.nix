@@ -316,26 +316,33 @@ let
     limits = { fileBytes = 2097152; manifestBytes = 16384; sourceBytes = 524288; };
   };
   sslSpec = pkgs.writeText "calibre-native-ssl.json" (builtins.toJSON sslDescriptor);
-  sslSourceGuard = pkgs.writeText "calibre-native-ssl-source-guard.py" ''
-    import hashlib, json, pathlib, re, sys
-
-    def check(spec, root, python_header, openssl_header):
-        assert spec["schemaVersion"] == 1, "CALIBRE_SSL_SCHEMA"
+  pythonNativeSourceChecks = ''
+    def check_python_source(spec, root, python_header, prefix):
+        assert spec["schemaVersion"] == 1, prefix + "_SCHEMA"
         for name, expected in spec["sourceFiles"].items():
             path = root / name
-            assert path.is_file() and not path.is_symlink(), "CALIBRE_SSL_SOURCE_TYPE"
+            assert path.is_file() and not path.is_symlink(), prefix + "_SOURCE_TYPE"
             raw = path.read_bytes()
-            assert 0 < len(raw) <= spec["limits"]["sourceBytes"], "CALIBRE_SSL_SOURCE_BOUND"
-            assert hashlib.sha256(raw).hexdigest() == expected, "CALIBRE_SSL_SOURCE_DRIFT"
-        for name, path in [("python", python_header), ("openssl", openssl_header)]:
-            assert path.is_file() and not path.is_symlink(), "CALIBRE_SSL_HEADER_TYPE"
-            raw = path.read_bytes()
-            assert 0 < len(raw) <= spec["limits"]["sourceBytes"], "CALIBRE_SSL_HEADER_BOUND"
-            assert hashlib.sha256(raw).hexdigest() == spec["headers"][name], "CALIBRE_SSL_HEADER_DRIFT"
+            assert 0 < len(raw) <= spec["limits"]["sourceBytes"], prefix + "_SOURCE_BOUND"
+            assert hashlib.sha256(raw).hexdigest() == expected, prefix + "_SOURCE_DRIFT"
+        assert python_header.is_file() and not python_header.is_symlink(), prefix + "_HEADER_TYPE"
+        raw = python_header.read_bytes()
+        assert 0 < len(raw) <= spec["limits"]["sourceBytes"], prefix + "_HEADER_BOUND"
+        assert hashlib.sha256(raw).hexdigest() == spec["headers"]["python"], prefix + "_HEADER_DRIFT"
         text = python_header.read_text()
         for name, expected in spec["abiMacros"].items():
             values = re.findall(r"^#define " + re.escape(name) + r"\s+(\d+)\s*$", text, re.M)
-            assert len(values) <= 1 and (int(values[0]) if values else 0) == expected, "CALIBRE_SSL_ABI_DRIFT"
+            assert len(values) <= 1 and (int(values[0]) if values else 0) == expected, prefix + "_ABI_DRIFT"
+  '';
+  sslSourceGuard = pkgs.writeText "calibre-native-ssl-source-guard.py" (''
+    import hashlib, json, pathlib, re, sys
+  '' + pythonNativeSourceChecks + ''
+    def check(spec, root, python_header, openssl_header):
+        check_python_source(spec, root, python_header, "CALIBRE_SSL")
+        assert openssl_header.is_file() and not openssl_header.is_symlink(), "CALIBRE_SSL_HEADER_TYPE"
+        raw = openssl_header.read_bytes()
+        assert 0 < len(raw) <= spec["limits"]["sourceBytes"], "CALIBRE_SSL_HEADER_BOUND"
+        assert hashlib.sha256(raw).hexdigest() == spec["headers"]["openssl"], "CALIBRE_SSL_HEADER_DRIFT"
         text = openssl_header.read_text()
         actual = [int(re.search(r"^#\s*define OPENSSL_VERSION_" + name + r"\s+(\d+)\s*$", text, re.M)[1])
                   for name in ["MAJOR", "MINOR", "PATCH"]]
@@ -348,55 +355,77 @@ let
         assert spec.stat().st_size <= 16384, "CALIBRE_SSL_SPEC_BOUND"
         check(json.loads(spec.read_text()), root, python_header, openssl_header)
         print("CALIBRE_SSL_SOURCE_FIXED")
-  '';
+  '');
   # REPLACEABLE: one native module rebuilt from the pinned source and SDK.
   # Do not run Python's full configure/build or link a second libpython.
-  mkSslPackage = { pname, src, descriptor, spec, pythonHeader, opensslHeader,
-    includeDirs, linkArgs, buildInputs }:
+  bluezSdkInclude = "${lib.getDev pkgs.bluez}/include";
+  distroPythonSource = pkgs.fetchurl {
+    url = "https://archive.ubuntu.com/ubuntu/pool/main/p/python3.14/python3.14_3.14.4.orig.tar.xz";
+    sha256 = "d923c51303e38e249136fc1bdf3568d56ecb03214efdef48516176d3d7faaef8";
+  };
+  pythonNativeSdks = {
+    frozen = {
+      src = pkgs.python314.src;
+      pythonHeader = "${pkgs.python314}/include/python3.14/pyconfig.h";
+      includeDirs = [ "${pkgs.python314}/include/python3.14"
+        "${pkgs.python314}/include/python3.14/internal" ];
+    };
+    system = {
+      src = distroPythonSource;
+      pythonHeader = "${distroSdk}/usr/include/x86_64-linux-gnu/python3.14/pyconfig.h";
+      includeDirs = map (path: "${distroSdk}/${path}") [ "usr/include/python3.14"
+        "usr/include/python3.14/internal" "usr/include/x86_64-linux-gnu/python3.14"
+        "usr/include" "usr/include/x86_64-linux-gnu" ];
+    };
+  };
+  mkPythonNativePackage = { pname, src, descriptor, spec, pythonHeader, opensslHeader ? null,
+    includeDirs, linkArgs, buildInputs, moduleName ? "_ssl", buildSource ? "Modules/_ssl.c",
+    patches ? [ (pkgs.fetchpatch descriptor.patch) ], sourcePreparation ? "",
+    sourceCheck ? "python3 -I -B ${sslSourceGuard} ${spec} . ${pythonHeader} ${opensslHeader}",
+    needed ? descriptor.original.needed }:
     pkgs.stdenv.mkDerivation {
       inherit pname src buildInputs;
       version = lib.concatMapStringsSep "." toString descriptor.pythonVersion;
-      patches = [ (pkgs.fetchpatch descriptor.patch) ];
+      inherit patches;
       patchFlags = [ "-p1" "--fuzz=0" ];
       nativeBuildInputs = [ pkgs.python3 pkgs.patchelf ];
       dontConfigure = true;
       postPatch = ''
-        python3 -I -B ${sslSourceGuard} ${spec} . \
-          ${pythonHeader} \
-          ${opensslHeader}
+        ${sourcePreparation}
+        ${sourceCheck}
       '';
       buildPhase = ''
         runHook preBuild
         $CC -shared -fPIC -O2 -DNDEBUG -fno-strict-aliasing \
           ${lib.concatMapStringsSep " " (path: "-I${path}") includeDirs} \
-          Modules/_ssl.c ${lib.concatStringsSep " " linkArgs} -o _ssl.so
+          ${buildSource} ${lib.concatStringsSep " " linkArgs} -o ${moduleName}.so
         runHook postBuild
       '';
       installPhase = ''
         runHook preInstall
         mkdir -p "$out/lib"
-        install -m755 _ssl.so "$out/lib/_ssl.so"
+        install -m755 ${moduleName}.so "$out/lib/${moduleName}.so"
         runHook postInstall
       '';
       # Run after Nix's strip/RPATH fixups: the output loads vendor libraries
       # beside the original target, not the Nix build SDK's runtime closure.
       postFixup = ''
-        patchelf --set-rpath ${lib.escapeShellArg descriptor.rpath} "$out/lib/_ssl.so"
+        patchelf --set-rpath ${lib.escapeShellArg descriptor.rpath} "$out/lib/${moduleName}.so"
         python3 -I -B - ${spec} "$out" <<'PYSSL'
         import hashlib, json, pathlib, subprocess, sys
         spec_file, output = map(pathlib.Path, sys.argv[1:])
         spec = json.loads(spec_file.read_text())
-        path = output / "lib/_ssl.so"
+        path = output / ${builtins.toJSON "lib/${moduleName}.so"}
         def elf(flag):
             return subprocess.check_output(["patchelf", flag, str(path)], text=True).strip()
         needed, rpath, soname = sorted(elf("--print-needed").splitlines()), elf("--print-rpath"), elf("--print-soname")
-        assert needed == spec["original"]["needed"] and rpath == spec["rpath"] and not soname, "CALIBRE_SSL_PORTABLE_ABI"
+        assert needed == json.loads(${builtins.toJSON (builtins.toJSON needed)}) and rpath == spec["rpath"] and not soname, "CALIBRE_NATIVE_EXTENSION_PORTABLE_ABI"
         raw = path.read_bytes()
-        assert 0 < len(raw) <= spec["limits"]["fileBytes"], "CALIBRE_SSL_BUILT_BOUND"
+        assert 0 < len(raw) <= spec["limits"]["fileBytes"], "CALIBRE_NATIVE_EXTENSION_BUILT_BOUND"
         result = dict(schemaVersion=1, descriptor=spec, file=dict(sha256=hashlib.sha256(raw).hexdigest(),
             bytes=len(raw), needed=needed, rpath=rpath, soname=soname))
         raw = json.dumps(result, sort_keys=True, separators=(",", ":")).encode()
-        assert len(raw) <= spec["limits"]["manifestBytes"], "CALIBRE_SSL_MANIFEST_BOUND"
+        assert len(raw) <= spec["limits"]["manifestBytes"], "CALIBRE_NATIVE_EXTENSION_MANIFEST_BOUND"
         (output / "manifest.json").write_bytes(raw)
         PYSSL
       '';
@@ -405,16 +434,13 @@ let
     (pkgs.python314.version == lib.concatMapStringsSep "." toString sslDescriptor.pythonVersion
       && pkgs.openssl_3_5.version == sslDescriptor.opensslVersion)
     "Calibre SSL requires the measured Python and OpenSSL SDK versions";
-    mkSslPackage {
+    mkPythonNativePackage {
       pname = "calibre-native-ssl";
-      src = pkgs.python314.src;
+      inherit (pythonNativeSdks.frozen) src pythonHeader;
       descriptor = sslDescriptor;
       spec = sslSpec;
-      pythonHeader = "${pkgs.python314}/include/python3.14/pyconfig.h";
       opensslHeader = "${lib.getDev pkgs.openssl_3_5}/include/openssl/opensslv.h";
-      includeDirs = [ "${pkgs.python314}/include/python3.14"
-        "${pkgs.python314}/include/python3.14/internal"
-        "${lib.getDev pkgs.openssl_3_5}/include" "${lib.getDev pkgs.bluez}/include" ];
+      includeDirs = pythonNativeSdks.frozen.includeDirs ++ [ "${lib.getDev pkgs.openssl_3_5}/include" bluezSdkInclude ];
       linkArgs = [ "-L${lib.getLib pkgs.openssl_3_5}/lib" "-lssl" "-lcrypto" ];
       buildInputs = [ pkgs.openssl_3_5 ];
     };
@@ -736,19 +762,13 @@ let
     rpath = "";
   };
   distroSslSpec = pkgs.writeText "calibre-system-python-ssl.json" (builtins.toJSON distroSslDescriptor);
-  distroSslPackage = mkSslPackage {
+  distroSslPackage = mkPythonNativePackage {
     pname = "calibre-system-python-ssl";
-    src = pkgs.fetchurl {
-      url = "https://archive.ubuntu.com/ubuntu/pool/main/p/python3.14/python3.14_3.14.4.orig.tar.xz";
-      sha256 = "d923c51303e38e249136fc1bdf3568d56ecb03214efdef48516176d3d7faaef8";
-    };
+    inherit (pythonNativeSdks.system) src pythonHeader;
     descriptor = distroSslDescriptor;
     spec = distroSslSpec;
-    pythonHeader = "${distroSdk}/usr/include/x86_64-linux-gnu/python3.14/pyconfig.h";
     opensslHeader = "${distroSdk}/usr/include/openssl/opensslv.h";
-    includeDirs = map (path: "${distroSdk}/${path}") [ "usr/include/python3.14"
-      "usr/include/python3.14/internal" "usr/include/x86_64-linux-gnu/python3.14"
-      "usr/include" "usr/include/x86_64-linux-gnu" ] ++ [ "${lib.getDev pkgs.bluez}/include" ];
+    includeDirs = pythonNativeSdks.system.includeDirs ++ [ bluezSdkInclude ];
     linkArgs = map (name: "${distroSdk}/usr/lib/x86_64-linux-gnu/${name}") [ "libssl.so.3" "libcrypto.so.3" ];
     buildInputs = [];
   };
@@ -799,6 +819,128 @@ let
     cp ${sslGuard} "$out/ssl/guard.py"
     cp -r ${distroSslPackage}/lib ${distroSslPackage}/manifest.json "$out/ssl/"
   '';
+  # Temporary: both selected Python runtimes truncate NUL host/port inputs.
+  # Retire when unmodified vendor modules pass the NUL/API/normal/GUI/worker
+  # contract. Ubuntu's builtin remains unchanged until the startup slice below.
+  socketUpstreamCommit = "c53e59385eda89fade1531240ef6479341a55b53";
+  socketModuleName = "_socket";
+  socketPatchFacts = {
+    url = "https://github.com/python/cpython/commit/${socketUpstreamCommit}.patch";
+    sha256 = "0b278a9e01196f51053b8d1d6e8f45cb7fffb0af84fff9ae75aa7ee671b1924a";
+  };
+  socketRawPatch = pkgs.fetchurl socketPatchFacts;
+  socketPatch = pkgs.runCommand "calibre-python-socket-3.14.patch" {
+    nativeBuildInputs = [ pkgs.patchutils ];
+  } ''
+    filterdiff --include='*/Modules/socketmodule.c' ${socketRawPatch} > "$out"
+    test -s "$out"
+  '';
+  socketFeatureMasks = { frozen = [ "HAVE_BLUETOOTH_BLUETOOTH_H" "HAVE_BLUETOOTH_H" ]; system = []; };
+  socketCompatibility = pkgs.writeText "calibre-socket-compat.c" (''
+    #define Py_BUILD_CORE_MODULE 1
+    #include "Python.h"
+  '' + lib.concatMapStringsSep "\n" (name: "#undef ${name}") socketFeatureMasks.frozen + ''
+
+    #include "socketmodule.c"
+  '');
+  socketSourceFiles = {
+    "Modules/socketmodule.h" = "54226a0bb807e9d19a39afec055bdffa96ebc3be37e367fb68b030da98a77a51";
+    "Modules/addrinfo.h" = "14f80b91404b86a33df2f6abe94df3e0b28330a8e03f956241c68d9d30350fb4";
+    "Modules/getaddrinfo.c" = "634f801d50c7affaded93f9e2ca54d358ccf4b23bf2ecf70951f9f8e856e215d";
+    "Modules/getnameinfo.c" = "6e914f540265fd5191d3fcd2482a442ac41b7b69b9e998af8a0c7c565ac6cf79";
+    "Modules/clinic/socketmodule.c.h" = "915c7428c9d1769c8eb1aec8ac74f49bab23a85f3956b78ffd2bc88b5edb7253";
+  };
+  socketDescriptors = lib.mapAttrs (variant: value: {
+    schemaVersion = 1;
+    inherit variant;
+    moduleName = socketModuleName;
+    advisory = "CVE-2026-116566";
+    upstreamCommit = socketUpstreamCommit;
+    # This is the upstream maintainer's still-open3.14 backport. The merged
+    # main patch names a different function; require exact3.14 postimages.
+    patch = socketPatchFacts;
+    needed = [ "libc.so.6" ];
+    rpath = "";
+    disabledFeatureMacros = socketFeatureMasks.${variant};
+    limits = { fileBytes = 262144; manifestBytes = 16384; sourceBytes = 524288; };
+  } // value) {
+    frozen = {
+      pythonVersion = calibrePythonVersion;
+      headers.python = sslDescriptor.headers.python;
+      abiMacros = sslDescriptor.abiMacros;
+      sourceFiles = socketSourceFiles // {
+        "Modules/socketmodule.c" = "5ca0e0b0818ff76be79bdeadeb69341ee9ca3acf6af9a2afc7c8359f692e64fb";
+        "Modules/socket-compat.c" = builtins.hashString "sha256" socketCompatibility.text;
+      };
+      original = {
+        kind = "file";
+        path = "${builtins.dirOf calibrePython}/lib/calibre-extensions/_socket.so";
+        bytes = 112608; mode = 493;
+        sha256 = "2ea435bc3abebfa8e7d757615a305d484cd5a51c2fd5d66745f2195bb7a93f30";
+        apiSha256 = "2e8fe30ecc728f5adb445ac0074bb94953e3f80c088866e33447d865d2c4bb89";
+      };
+      apiMetadataAdditions = [];
+    };
+    system = {
+      pythonVersion = distroPythonVersion;
+      headers.python = distroSslDescriptor.headers.python;
+      abiMacros = distroSslDescriptor.abiMacros;
+      sourceFiles = socketSourceFiles // {
+        "Modules/socketmodule.c" = "9f111d015a38070f6c35e3d5054cacfbe27071c3511467f7b19eadcdaed21e5f";
+      };
+      original = {
+        kind = "builtin";
+        path = "/usr/bin/python3.14";
+        bytes = 7477160; mode = 493;
+        sha256 = "52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41";
+        apiSha256 = "b2fba094e0d2f72136016dff946a34ec806f756bfc7430a43f0c22b03f67862f";
+      };
+      apiMetadataAdditions = [ "__file__" ];
+    };
+  };
+  socketSpecs = lib.mapAttrs (variant: value:
+    pkgs.writeText "calibre-${variant}-socket.json" (builtins.toJSON value)) socketDescriptors;
+  socketSourceGuard = pkgs.writeText "calibre-native-socket-source-guard.py" (''
+    import hashlib, json, pathlib, re, sys
+    FEATURE_MASKS = ${builtins.toJSON socketFeatureMasks}
+    MODULE_NAME = ${builtins.toJSON socketModuleName}
+    if not __debug__:
+        raise AssertionError("CALIBRE_SOCKET_OPTIMIZED_SOURCE_GUARD")
+  '' + pythonNativeSourceChecks + ''
+    def check(spec, root, python_header):
+        assert spec["variant"] in FEATURE_MASKS and spec["moduleName"] == MODULE_NAME, "CALIBRE_SOCKET_VARIANT"
+        assert len(spec["sourceFiles"]) in [6, 7], "CALIBRE_SOCKET_SOURCE_COUNT"
+        assert spec["disabledFeatureMacros"] == FEATURE_MASKS[spec["variant"]], "CALIBRE_SOCKET_FEATURE_MASK"
+        check_python_source(spec, root, python_header, "CALIBRE_SOCKET")
+
+    if __name__ == "__main__":
+        spec_file, root, python_header = map(pathlib.Path, sys.argv[1:])
+        assert spec_file.stat().st_size <= 16384, "CALIBRE_SOCKET_SPEC_BOUND"
+        check(json.loads(spec_file.read_text()), root, python_header)
+        print("CALIBRE_SOCKET_SOURCE_FIXED")
+  '');
+  socketPackages = assert lib.assertMsg
+    (pkgs.python314.version == lib.concatMapStringsSep "." toString socketDescriptors.frozen.pythonVersion)
+    "Calibre socket requires its measured Python SDK version";
+    lib.mapAttrs (variant: descriptor: mkPythonNativePackage {
+    pname = "calibre-${variant}-socket";
+    inherit (pythonNativeSdks.${variant}) src pythonHeader;
+    inherit descriptor;
+    spec = socketSpecs.${variant};
+    inherit (descriptor) moduleName needed;
+    patches = [ socketPatch ];
+    sourcePreparation = lib.optionalString (variant == "frozen")
+      "cp ${socketCompatibility} Modules/socket-compat.c";
+    sourceCheck = "python3 -I -B ${socketSourceGuard} ${socketSpecs.${variant}} . ${pythonNativeSdks.${variant}.pythonHeader}";
+    buildSource = if variant == "frozen" then "Modules/socket-compat.c" else "Modules/socketmodule.c";
+    includeDirs = pythonNativeSdks.${variant}.includeDirs ++ [ bluezSdkInclude ];
+    linkArgs = [];
+    buildInputs = [];
+  }) socketDescriptors;
+  socketSourceManifest = pkgs.writeText "calibre-native-socket-sources.json" (builtins.toJSON {
+    schemaVersion = 1;
+    variants = socketDescriptors;
+  });
   # Upstream7.1 maintenance keeps RELEASE7.1.5; bind its exact revision
   # and complete post-patch source separately from the library version.
   nativeSourceFacts = builtins.fromJSON ''
@@ -1462,6 +1604,10 @@ in
       calibreRuntimeStdlibSpec = stdlibSpec;
       calibreRuntimeStdlibSourceGuard = stdlibSourceGuard;
       calibreRuntimeStdlibPackage = stdlibPackage;
+      calibreRuntimeSocketSourceGuard = socketSourceGuard;
+      calibreRuntimeSocketSourceSpec = socketSourceManifest;
+      calibreRuntimeFrozenSocketPackage = socketPackages.frozen;
+      calibreRuntimeSystemSocketPackage = socketPackages.system;
     }; }
     (lib.mkIf cfg.enable {
       system.build.calibreRuntimeImageRecipe = runtime.dockerfile;

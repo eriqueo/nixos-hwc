@@ -1107,6 +1107,20 @@ calibre-security-wiring = let
       patchCount = builtins.length c.system.build.calibreRuntimeSslPackage.patches;
       runtime = (builtins.fromJSON c.system.build.calibreRuntimeAssets.text).nativeSsl;
     };
+    socket = {
+      spec = toString c.system.build.calibreRuntimeSocketSourceSpec;
+      guard = toString c.system.build.calibreRuntimeSocketSourceGuard;
+      variants = lib.mapAttrs (_: package: {
+        path = toString package;
+        postPatch = package.postPatch;
+        build = package.buildPhase;
+        patchFlags = package.patchFlags;
+        patchCount = builtins.length package.patches;
+      }) {
+        frozen = c.system.build.calibreRuntimeFrozenSocketPackage;
+        system = c.system.build.calibreRuntimeSystemSocketPackage;
+      };
+    };
     contextTransforms = map (patch: { path = toString patch; command = patch.buildCommand; })
       (builtins.filter (patch: builtins.isAttrs patch
         && lib.hasSuffix "-7.1.patch" (patch.name or "")) nativePackage.patches);
@@ -1209,6 +1223,53 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           try:guard['check'](bad,root,py,openssl)
           except AssertionError:pass
           else:raise AssertionError('CALIBRE_SSL_GUARD_SEED:'+kind)
+  sockets=v['socket'];socket_spec=json.loads(pathlib.Path(sockets['spec']).read_text())
+  assert socket_spec['schemaVersion']==1 and set(socket_spec['variants'])==set(sockets['variants'])=={'frozen','system'}
+  socket_api={'__name__':'test_socket_source_guard'}
+  socket_source=pathlib.Path(sockets['guard']).read_bytes()
+  exec(compile(socket_source,'<actual-socket-source-guard>','exec',optimize=0),socket_api)
+  try:exec(compile(socket_source,'<optimized-socket-source-guard>','exec',optimize=2),{'__name__':'test_optimized_socket'})
+  except AssertionError as error:assert str(error)=='CALIBRE_SOCKET_OPTIMIZED_SOURCE_GUARD'
+  else:raise AssertionError('SOCKET_OPTIMIZED_GUARD_SEED')
+  for variant,value in socket_spec['variants'].items():
+      package=sockets['variants'][variant];root=pathlib.Path(package['path'])
+      metadata=json.loads((root/'manifest.json').read_text());assert metadata['descriptor']==value
+      native=root/'lib/_socket.so';raw=native.read_bytes()
+      assert len(raw)==metadata['file']['bytes']<=value['limits']['fileBytes']
+      assert hashlib.sha256(raw).hexdigest()==metadata['file']['sha256']
+      assert sorted(subprocess.check_output(['patchelf','--print-needed',str(native)],text=True).splitlines())==value['needed']==['libc.so.6']
+      assert not subprocess.check_output(['patchelf','--print-rpath',str(native)],text=True).strip()
+      assert {str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}=={'lib/_socket.so','manifest.json'}
+      assert value['pythonVersion']==([3,14,8] if variant=='frozen' else [3,14,4])
+      assert value['original']['kind']==('file' if variant=='frozen' else 'builtin')
+      def socket_wired(entry):
+          return (entry['patchFlags']==['-p1','--fuzz=0'] and entry['patchCount']==1
+              and sockets['guard'] in entry['postPatch'] and ' -o _socket.so' in entry['build']
+              and ('Modules/socket-compat.c' if variant=='frozen' else 'Modules/socketmodule.c') in entry['build']
+              and ('cp ' in entry['postPatch'] if variant=='frozen' else True))
+      assert socket_wired(package)
+      for key in ['postPatch','build']:
+          missing=copy.deepcopy(package);missing[key]="";assert not socket_wired(missing),'SOCKET_WIRING_SEED:'+variant+':'+key
+      with tempfile.TemporaryDirectory() as directory:
+          source=pathlib.Path(directory);spec=copy.deepcopy(value)
+          for name in spec['sourceFiles']:
+              path=source/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(name)
+              spec['sourceFiles'][name]=hashlib.sha256(path.read_bytes()).hexdigest()
+          header=source/'pyconfig.h'
+          header.write_text("".join('#define '+name+' '+str(number)+'\n' for name,number in spec['abiMacros'].items()))
+          spec['headers']['python']=hashlib.sha256(header.read_bytes()).hexdigest()
+          socket_api['check'](spec,source,header)
+          for kind in ['schema','source','header','abi','feature','count']:
+              bad=copy.deepcopy(spec)
+              if kind=='schema':bad['schemaVersion']=0
+              elif kind=='source':bad['sourceFiles']['Modules/socketmodule.c']='0'*64
+              elif kind=='header':bad['headers']['python']='0'*64
+              elif kind=='abi':bad['abiMacros']['Py_ENABLE_SHARED']=1-spec['abiMacros']['Py_ENABLE_SHARED']
+              elif kind=='feature':bad['disabledFeatureMacros']=['UNKNOWN_FEATURE']
+              else:bad['sourceFiles']={}
+              try:socket_api['check'](bad,source,header)
+              except AssertionError:pass
+              else:raise AssertionError('SOCKET_SOURCE_GUARD_SEED:'+variant+':'+kind)
   recipe=pathlib.Path(sys.argv[2]).read_text()
   context=pathlib.Path(sys.argv[3])
   manifest=json.loads((context/'manifest.json').read_text())
