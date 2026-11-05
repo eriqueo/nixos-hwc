@@ -197,7 +197,7 @@ rec {
         if not __debug__:
             raise RuntimeError('FROZEN_STDLIB_OPTIMIZED_INSTALLER')
         spec = json.loads(sys.argv[1])
-        assert spec['schemaVersion'] == 1, 'FROZEN_HTTP_VERSION' 
+        assert spec['schemaVersion'] == 1, 'FROZEN_HTTP_VERSION'
         source = Path(spec['sourcePath'])
         assert source.stat().st_size <= 262144, 'FROZEN_HTTP_SOURCE_BOUND'
         raw = source.read_bytes()

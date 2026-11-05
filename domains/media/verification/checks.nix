@@ -1301,7 +1301,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
       ('COPY native-ssl /tmp/hwc-calibre-native-ssl','# omitted SSL copy'),
       ('RUN python3 -I -B /tmp/hwc-calibre-native-ssl/guard.py','# omitted SSL installer'),
       ('native_ssl = native_ssl_proof()','native_ssl = None'),
-      ('native_ssl_proof())','None)')]:
+      ('native_ssl_proof(),stdlib_proof())','None,stdlib_proof())')]:
       omitted=recipe.replace(before,after)
       assert omitted!=recipe
       # Rebind the selected image so this fails on its missing consumer wiring.
