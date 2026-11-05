@@ -5,6 +5,7 @@ let
   cfg = config.hwc.media.calibre;
   paths = config.hwc.paths;
   calibrePython = "/opt/calibre/calibre-debug";
+  calibrePythonVersion = [ 3 14 8 ];
   httpSourceSha256 = "016aa7664201a82f0f37ddfb11ed662dd1f07aa23c9470c6a3cb3278aa479230";
   httpSource = pkgs.fetchurl {
     url = "https://raw.githubusercontent.com/python/cpython/v3.14.8/Lib/http/client.py";
@@ -12,7 +13,7 @@ let
   };
   httpBackport = helpers.mkFrozenPythonHttpFramingBackport {
     python = calibrePython;
-    pythonVersion = [ 3 14 8 ];
+    pythonVersion = calibrePythonVersion;
     frozenBundle = "/opt/calibre/lib/calibre-extensions/python-lib.bypy.frozen";
     frozenBundleSha256 = "558037f93bef7df037ff1c38519680ed1083263b9e86b38407c4e819a2acffb2";
     sourcePath = "/tmp/hwc-calibre-http/client.py";
@@ -39,6 +40,131 @@ let
       assert actual == (False, str(path), True, False, native_ssl), 'CALIBRE_WORKER_HTTP_SELECTION'
     '';
   };
+  # Temporary: frozen3.14.8 lacks these upstream library repairs. Retire only
+  # after unmodified vendor modules pass the safety/GUI/worker/data contract.
+  # Artifact-only here; the early loader is wired after this bundle qualifies.
+  stdlibFacts = {
+    schemaVersion = 1;
+    pythonVersion = calibrePythonVersion;
+    commands = { extract = "extract"; finish = "finish"; };
+    # Original bytes already have one explicit owner; GNU patch must not
+    # publish extra .orig files when a strict hunk has only a line offset.
+    patchFlags = [ "--force" "--batch" "--no-backup-if-mismatch" "--fuzz=0" "-p1" ];
+    limits = { fileBytes = 262144; groupBytes = 1048576; manifestBytes = 16384; modules = 4; };
+    modules = {
+      poplib = { file = "poplib.py"; originalBytes = 14604; bytes = 14727;
+        originalSha256 = "527e714523264093910a0a0b1a55c6583f952835c89061537fc40ad98c347056";
+        sha256 = "a6ffff188814b56d95b043c31d9e0dfee51ac6d6e92afe74ab070cb6136b076f"; };
+      shutil = { file = "shutil.py"; originalBytes = 60235; bytes = 60684;
+        originalSha256 = "28a5df6415bf1a7ab36cbd544d6d35ae0f056a198e3872a786dc4e156d5fcd7d";
+        sha256 = "b6e01921d7f8a6dcac774c07d1d7f858b2d536ee9535ae576120503fcc559261"; };
+      tarfile = { file = "tarfile.py"; originalBytes = 120808; bytes = 120902;
+        originalSha256 = "825de0990d0bedf6ed8db97b4a0fc98f25617a692c3d38c0bbba800beb9952fb";
+        sha256 = "0bd3d6e26d6c4659fe23e79ca3390c05257209ba3259a3b3d909486677b4d475"; };
+      tempfile = { file = "tempfile.py"; originalBytes = 33112; bytes = 36132;
+        originalSha256 = "3714372b63f6bc05a5273425d446f6ad3a2112a659c71c321bb4575fd082d634";
+        sha256 = "5e2a8c5539e2aa3f4d39a364c701711ba54eeca88c17e95d31ebb83ea84de27d"; };
+    };
+    patches = [
+      { advisory = "CVE-2026-87910";
+        url = "https://github.com/python/cpython/commit/a4919937a4e1e69a0d178909c6f20557eca5d1d0.patch";
+        includes = [ "Lib/tarfile.py" ]; hash = "sha256-WYV0ICqpie1suOYcUfoGR9zo+W695b0e0DdiVWHppcc="; }
+      { advisory = "CVE-2026-114583";
+        url = "https://github.com/python/cpython/commit/0901ad4ffb22605f12b705d1c1197f0a01f0ba0b.patch";
+        includes = [ "Lib/tarfile.py" ]; hash = "sha256-NZn+H8oVxpoCzNXSmjw59LT+eu4RzLPv6F1j3uJHkEM="; }
+      { advisory = "CVE-2026-12345";
+        url = "https://github.com/python/cpython/commit/58ed0259cae509a19138795df302fe60b544dc74.patch";
+        includes = [ "Lib/shutil.py" "Lib/tempfile.py" ]; hash = "sha256-qCufvWMavq4yVj5HEj9Y19ckXvPuvITiSP71H5GBR6Q="; }
+      { advisory = "CVE-2025-15367";
+        url = "https://github.com/python/cpython/commit/b234a2b67539f787e191d2ef19a7cbdce32874e7.patch";
+        includes = [ "Lib/poplib.py" ]; hash = "sha256-ZfHY+/hyZHnhIjvt8rjpxxXaLl7K2d+khl7EA3OpGwQ="; }
+    ];
+  };
+  stdlibSpec = pkgs.writeText "calibre-stdlib-source.json" (builtins.toJSON stdlibFacts);
+  stdlibPatches = map (entry: pkgs.fetchpatch { inherit (entry) url includes hash; }) stdlibFacts.patches;
+  stdlibSourceGuard = pkgs.writeText "calibre-stdlib-source-guard.py" ''
+    import hashlib, json, pathlib, re, stat, sys, tarfile
+
+    if not __debug__:
+        raise AssertionError("CALIBRE_STDLIB_OPTIMIZED_GUARD")
+
+    def metadata(spec):
+        assert spec["schemaVersion"] == 1 and list(sys.version_info[:3]) == spec["pythonVersion"], "CALIBRE_STDLIB_VERSION"
+        assert len(spec["modules"]) == spec["limits"]["modules"] == 4, "CALIBRE_STDLIB_MODULE_BOUND"
+        assert len(spec["patches"]) == 4 and len({p["advisory"] for p in spec["patches"]}) == 4, "CALIBRE_STDLIB_PATCH_SET"
+        for name, entry in spec["modules"].items():
+            assert re.fullmatch(r"[a-z][a-z0-9_]*", name) and entry["file"] == name + ".py", "CALIBRE_STDLIB_PATH"
+            assert 0 < entry["bytes"] <= spec["limits"]["fileBytes"] and 0 < entry["originalBytes"] <= spec["limits"]["fileBytes"], "CALIBRE_STDLIB_SOURCE_BOUND"
+
+    def content(spec, entry, raw, original):
+        size, digest = ("originalBytes", "originalSha256") if original else ("bytes", "sha256")
+        assert len(raw) == entry[size] <= spec["limits"]["fileBytes"], "CALIBRE_STDLIB_SOURCE_SIZE"
+        assert hashlib.sha256(raw).hexdigest() == entry[digest], "CALIBRE_STDLIB_SOURCE_HASH"
+
+    def extract(spec, archive, root):
+        metadata(spec)
+        assert not root.exists() and not root.is_symlink(), "CALIBRE_STDLIB_SOURCE_ROOT"
+        prefix = "Python-" + ".".join(map(str, spec["pythonVersion"])) + "/Lib/"
+        files = {}
+        with tarfile.open(archive) as bundle:
+            for name, entry in spec["modules"].items():
+                member = bundle.getmember(prefix + entry["file"])
+                assert member.isfile() and member.size == entry["originalBytes"], "CALIBRE_STDLIB_ARCHIVE_MEMBER"
+                raw = bundle.extractfile(member).read(spec["limits"]["fileBytes"] + 1)
+                content(spec, entry, raw, True)
+                files[entry["file"]] = raw
+        assert sum(map(len, files.values())) * 2 <= spec["limits"]["groupBytes"], "CALIBRE_STDLIB_GROUP_BOUND"
+        # All original members validated before any owned work-tree write.
+        for folder in ["Lib", "original"]:
+            (root / folder).mkdir(parents=True)
+            for name, raw in files.items():
+                (root / folder / name).write_bytes(raw)
+
+    def finish(spec, root, output):
+        metadata(spec)
+        assert not output.exists() and not output.is_symlink(), "CALIBRE_STDLIB_OUTPUT_ROOT"
+        files, used = {}, 0
+        for folder, original in [("original", True), ("Lib", False)]:
+            directory = root / folder
+            assert directory.is_dir() and not directory.is_symlink(), "CALIBRE_STDLIB_INPUT_ROOT"
+            assert {p.name for p in directory.iterdir()} == {v["file"] for v in spec["modules"].values()}, "CALIBRE_STDLIB_INPUT_SET"
+            for name, entry in spec["modules"].items():
+                path = directory / entry["file"]
+                assert stat.S_ISREG(path.lstat().st_mode) and path.stat().st_size <= spec["limits"]["fileBytes"], "CALIBRE_STDLIB_FILE_TYPE_BOUND"
+                raw = path.read_bytes();used += len(raw)
+                assert used <= spec["limits"]["groupBytes"], "CALIBRE_STDLIB_GROUP_BOUND"
+                content(spec, entry, raw, original)
+                compile(raw, "<frozen/" + entry["file"] + ">", "exec", dont_inherit=True, optimize=2)
+                files[("original" if original else "lib", entry["file"])] = raw
+        manifest = json.dumps(spec, sort_keys=True, separators=(",", ":")).encode()
+        assert len(manifest) <= spec["limits"]["manifestBytes"], "CALIBRE_STDLIB_MANIFEST_BOUND"
+        # Every original and patched file passes before output publication.
+        for (folder, name), raw in files.items():
+            directory = output / folder;directory.mkdir(parents=True, exist_ok=True)
+            path = directory / name;path.write_bytes(raw);path.chmod(0o444)
+        (output / "manifest.json").write_bytes(manifest)
+
+    if __name__ == "__main__":
+        mode, spec_file, source, destination = sys.argv[1:]
+        spec_file, source, destination = map(pathlib.Path, [spec_file, source, destination])
+        assert spec_file.stat().st_size <= 16384, "CALIBRE_STDLIB_SPEC_BOUND"
+        spec = json.loads(spec_file.read_text())
+        if mode == spec["commands"]["extract"]:
+            extract(spec, source, destination)
+        else:
+            assert mode == spec["commands"]["finish"], "CALIBRE_STDLIB_COMMAND"
+            finish(spec, source, destination)
+  '';
+  # REPLACEABLE: extract only the four regular source members, retain their
+  # original bytes for the full frozen-code parity check, then patch/compile.
+  stdlibPackage = assert pkgs.python314.version == lib.concatMapStringsSep "." toString calibrePythonVersion;
+    pkgs.runCommand "calibre-frozen-stdlib-${pkgs.python314.version}" {} (''
+      ${pkgs.python314.interpreter} -I -B ${stdlibSourceGuard} ${stdlibFacts.commands.extract} ${stdlibSpec} ${pkgs.python314.src} source
+    '' + lib.concatMapStringsSep "\n" (patch:
+      "${pkgs.patch}/bin/patch ${lib.escapeShellArgs stdlibFacts.patchFlags} -d source -i ${patch}") stdlibPatches + ''
+
+      ${pkgs.python314.interpreter} -I -B ${stdlibSourceGuard} ${stdlibFacts.commands.finish} ${stdlibSpec} source "$out"
+    '');
   # Temporary: the vendor native SSL predates CPython's compromised-key distrust.
   # Retire when the unmodified vendor passes the TLS/API/GUI/worker contract.
   # Original-path fresh-process qualification precedes shared image adoption.
@@ -973,6 +1099,9 @@ in
       calibreRuntimeSslPackage = sslPackage;
       calibreRuntimeSslRuntimeSpec = sslRuntimeSpec;
       calibreRuntimeSslGuard = sslGuard;
+      calibreRuntimeStdlibSpec = stdlibSpec;
+      calibreRuntimeStdlibSourceGuard = stdlibSourceGuard;
+      calibreRuntimeStdlibPackage = stdlibPackage;
     }; }
     (lib.mkIf cfg.enable {
       system.build.calibreRuntimeImageRecipe = runtime.dockerfile;
