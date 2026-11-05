@@ -25,6 +25,7 @@ books-runtime-security = let
   });
 in
 assert withoutDesktop.system.build.calibreRuntimeAssets.text == assets.text;
+assert builtins.getContext assets.text == {};
 assert !(builtins.tryEval (builtins.deepSeq invalidBinding.virtualisation.oci-containers.containers.books.environment true)).success;
 pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pkgs.dpkg ]; } ''
   python3 - ${binding} ${c.system.build.booksRuntimeImageContext} ${c.system.build.booksRuntimeInputGuard} ${assets} <<'PYBOOKS'
@@ -1016,6 +1017,7 @@ pkgs.runCommand "immich-shared-brotli-wiring" { nativeBuildInputs = [ pkgs.pytho
 calibre-security-wiring = let
   c = self.nixosConfigurations.hwc-home.config;
   binding = pkgs.writeText "calibre-security-binding.json" (builtins.toJSON {
+    native = (builtins.fromJSON c.system.build.calibreRuntimeAssets.text).native;
     selected = c.hwc.media.calibre.image;
     container = c.virtualisation.oci-containers.containers.calibre.image;
     volumes = c.virtualisation.oci-containers.containers.calibre.volumes;
@@ -1024,7 +1026,7 @@ calibre-security-wiring = let
     pull = c.virtualisation.oci-containers.containers.calibre.pull;
     preStart = c.systemd.services.podman-calibre.preStart;
   });
-in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 pkgs.patchelf ]; } ''
   python3 - ${binding} ${c.system.build.calibreRuntimeImageRecipe} ${c.system.build.calibreRuntimeImageContext} <<'PYTEST'
   import ast, copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
   v=json.loads(pathlib.Path(sys.argv[1]).read_text())
@@ -1150,6 +1152,145 @@ in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python
           if kind=='source':
               seeded=execute(2)
               assert seeded.returncode==0 and output.exists(),'OPTIMIZED_GUARD_SEED_NOT_EXERCISED'
+  # Native metadata, actual portable bytes and the production command order
+  # share the canonical Calibre producer. The fault fixtures below touch only
+  # disposable fake libraries, never a vendor or application data directory.
+  import runpy
+  native_dir = context / 'native'
+  native_spec = json.loads((native_dir / 'spec.json').read_text())
+  native_source = (native_dir / 'guard.py').read_text()
+  native = v['native']
+  assert native['schemaVersion'] == 1 and native['descriptor'] == native_spec
+  input_hash = hashlib.sha256(((native_dir / 'spec.json').read_text() + native_source + native['bundleInput']).encode()).hexdigest()
+  assert input_hash == native['inputHash']
+  api = runpy.run_path(str(native_dir / 'guard.py'))
+  native_manifest = api['package'](native_spec, native_dir)
+  for name, entry in native_manifest['files'].items():
+      library = native_dir / 'lib' / name
+      def elf(flag): return subprocess.check_output(['patchelf',flag,str(library)],text=True).strip()
+      assert elf('--print-soname') == entry['soname']
+      assert elf('--print-rpath') == entry['rpath']
+      assert elf('--print-needed').splitlines() == entry['needed']
+  def native_wired(text):
+      marker = '# Native inputs ' + input_hash
+      lines = ['RUN python3 -I -B /tmp/hwc-calibre-native/guard.py ' + native_spec['commands'][mode]
+          + ' /tmp/hwc-calibre-native/spec.json /tmp/hwc-calibre-native /opt/calibre/lib /opt/calibre/lib'
+          for mode in ['verify','apply','installed']]
+      if marker not in text or 'COPY native /tmp/hwc-calibre-native' not in text: return False
+      if not all(text.count(line) == 1 for line in lines): return False
+      return (text.index('COPY native /tmp/hwc-calibre-native') < text.index(lines[0]) < text.index(lines[1])
+          < text.index(lines[2]) < text.index('RUN ', text.index(lines[2]) + len(lines[2])))
+  assert native_wired(recipe)
+  for omitted_mode in ['verify','apply','installed']:
+      omitted = recipe.replace('/guard.py ' + native_spec['commands'][omitted_mode] + ' ', '/guard.py omitted ')
+      assert omitted != recipe and not native_wired(omitted), omitted_mode
+  for before, after in [('# Native inputs ' + input_hash, '# omitted native identity'),
+      ('COPY native /tmp/hwc-calibre-native', '# omitted native copy')]:
+      omitted = recipe.replace(before, after)
+      assert omitted != recipe and not native_wired(omitted)
+  optimized = subprocess.run([sys.executable,'-OO',str(native_dir / 'guard.py')],capture_output=True,timeout=10)
+  assert optimized.returncode != 0 and b'CALIBRE_NATIVE_OPTIMIZED_GUARD' in optimized.stderr
+  import copy
+  import hashlib
+  import json
+  from pathlib import Path
+  import runpy
+  import stat
+  import sys
+  import tempfile
+
+  guard, spec_file = native_dir / 'guard.py', native_dir / 'spec.json'
+  api = runpy.run_path(str(guard))
+  original_spec = json.loads(spec_file.read_text())
+  sha = lambda raw: hashlib.sha256(raw).hexdigest()
+  cases = []
+  for kind in ["positive", "schema", "descriptor", "missing-second", "corrupt-second",
+               "source-hash", "source-mode", "unexpected", "link", "manifest-link",
+               "path", "soname", "rpath", "dependency", "minimum-version",
+               "candidate-version", "feature-loss", "installed-hash", "snapshot"]:
+      with tempfile.TemporaryDirectory() as name:
+          folder = Path(name)
+          root, inputs = folder / "installed", folder / "inputs"
+          root.mkdir(); (inputs / "lib").mkdir(parents=True)
+          spec = copy.deepcopy(original_spec)
+          files = {}
+          for i, (name, entry) in enumerate(spec["libraries"].items()):
+              old, new = ("old-" + name).encode(), ("new-" + name).encode()
+              (root / name).write_bytes(old); (root / name).chmod(entry["sourceMode"])
+              entry["sourceSha256"] = sha(old)
+              (inputs / "lib" / name).write_bytes(new)
+              files[name] = dict(sha256=sha(new), bytes=len(new), soname=name,
+                                 rpath="$ORIGIN", needed=list(entry["needed"]))
+          (root / "unrelated-library").write_bytes(b"preserved")
+          second = list(files)[1]
+          manifest = dict(schemaVersion=1, descriptor=copy.deepcopy(spec), files=files)
+          if kind == "schema": manifest["schemaVersion"] = 2
+          elif kind == "descriptor": manifest["descriptor"]["version"] = "8.1.0"
+          elif kind == "missing-second": (inputs / "lib" / second).unlink()
+          elif kind == "corrupt-second": (inputs / "lib" / second).write_bytes(b"wrong")
+          elif kind == "source-hash": (root / second).write_bytes(b"changed source")
+          elif kind == "source-mode": (root / second).chmod(0o644)
+          elif kind == "unexpected": (inputs / "lib" / "extra").write_bytes(b"extra")
+          elif kind == "link":
+              path = inputs / "lib" / second
+              path.rename(inputs / "link-target"); path.symlink_to(inputs / "link-target")
+          elif kind == "path":
+              item = manifest["files"].pop(second); manifest["files"]["../" + second] = item
+          elif kind == "soname": files[second]["soname"] = "wrong.so.1"
+          elif kind == "rpath": files[second]["rpath"] = "/nix/store/not-portable"
+          elif kind == "dependency": files[second]["needed"].append("libunexpected.so.1")
+          elif kind == "minimum-version":
+              spec["minimumVersion"] = "7.1.6"; manifest["descriptor"] = copy.deepcopy(spec)
+          (inputs / "manifest.json").write_text(json.dumps(manifest))
+          if kind == "manifest-link":
+              (inputs / "manifest.json").rename(inputs / "manifest-real.json")
+              (inputs / "manifest.json").symlink_to(inputs / "manifest-real.json")
+          before = {p.name: (p.read_bytes(), stat.S_IMODE(p.stat().st_mode)) for p in root.iterdir()}
+          reads = []
+          def feature_reader(path):
+              installed = (path / second).read_bytes().startswith(b"new-")
+              reads.append(str(path))
+              version = spec["version"] if installed else spec["sourceVersion"]
+              feature = ["old-feature", "extra-feature"] if installed else ["old-feature"]
+              if installed and kind == "candidate-version": version = "7.1.4"
+              if installed and kind == "feature-loss": feature = ["extra-feature"]
+              return dict(version=version, features={"decoders": feature})
+          error = None
+          try: api["apply"](spec, inputs, root, feature_reader)
+          except (AssertionError, FileNotFoundError) as caught: error = str(caught)
+          should_pass = kind in ["positive", "installed-hash", "snapshot"]
+          assert (error is None) == should_pass, (kind, error)
+          expected = {"schema": "CALIBRE_NATIVE_SCHEMA", "descriptor": "CALIBRE_NATIVE_DESCRIPTOR",
+                      "source-hash": "CALIBRE_NATIVE_SOURCE_HASH", "source-mode": "CALIBRE_NATIVE_SOURCE_MODE",
+                      "soname": "CALIBRE_NATIVE_ABI_RPATH", "rpath": "CALIBRE_NATIVE_ABI_RPATH",
+                      "dependency": "CALIBRE_NATIVE_DEPENDENCY", "minimum-version": "CALIBRE_NATIVE_VERSION",
+                      "candidate-version": "CALIBRE_NATIVE_SELECTED_VERSION", "feature-loss": "CALIBRE_NATIVE_FEATURE_LOST:decoders"}
+          if kind in expected: assert error == expected[kind], (kind, error)
+          if not should_pass:
+              after = {p.name: (p.read_bytes(), stat.S_IMODE(p.stat().st_mode)) for p in root.iterdir()}
+              assert before == after, "PARTIAL_NATIVE_WRITE:" + kind
+              assert not (inputs / spec["snapshotFile"]).exists(), "EARLY_SNAPSHOT:" + kind
+          else:
+              assert len(reads) == 3 and reads[0] == reads[2], reads
+              assert (root / "unrelated-library").read_bytes() == b"preserved"
+              api["verify_installed"](spec, inputs, root, feature_reader)
+              if kind == "installed-hash": (root / second).write_bytes(b"wrong")
+              if kind == "snapshot":
+                  snapshot = inputs / spec["snapshotFile"]
+                  content = json.loads(snapshot.read_text()); content["descriptorSha256"] = "0" * 64
+                  snapshot.write_text(json.dumps(content))
+              if kind != "positive":
+                  try: api["verify_installed"](spec, inputs, root, feature_reader)
+                  except AssertionError: pass
+                  else: raise AssertionError("INSTALLED_DRIFT_ACCEPTED:" + kind)
+          cases.append(kind)
+  assert api["dependency_order"]({"second": {"needed": ["first"]}, "first": {"needed": []}}) == ["first", "second"]
+  try: api["dependency_order"]({"first": {"needed": ["second"]}, "second": {"needed": ["first"]}})
+  except AssertionError: pass
+  else: raise AssertionError("DEPENDENCY_CYCLE_ACCEPTED")
+  print(json.dumps({"schemaVersion": 1, "state": "pass", "cases": cases,
+                    "allRejectedInputsPreserveInstalledBytesAndModes": True,
+                    "disposableFixtureRemoved": True}))
   print('actual Calibre recipe/context/selection and optimized-launcher drift guards pass; actual image consumer remains a runtime qualification')
   PYTEST
   touch "$out"
