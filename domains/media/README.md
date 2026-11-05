@@ -64,7 +64,8 @@ branch-specific context, so the complete Nix and security pipeline uses zero fuz
 
 The same Calibre index exports an artifact-only native SSL constructor. It builds
 one upstream-patched module with measured Python/OpenSSL headers and a portable
-ELF manifest. Its source guard rejects source, header and ABI drift. The existing
+ELF manifest. Its socket ABI includes the configured Bluetooth SDK headers.
+Its source guard rejects source, header and ABI drift. The existing
 security check exercises those guards and missing build wiring. Runtime images
 remain unchanged until the isolated original-path TLS consumer qualifies it.
 
@@ -140,6 +141,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Supply the socket header dependency declared by the measured Python SDK without changing its configuration or linking Bluetooth into the native SSL module.
 
 - 2026-11-05: Add the artifact-only Calibre native SSL constructor for the upstream compromised-key distrust fix. Pin matching headers, strict source hashes and portable ELF dependencies; exercise source/ABI and wiring failures before runtime adoption.
 
