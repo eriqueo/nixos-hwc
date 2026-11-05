@@ -786,7 +786,7 @@ let
     RUN /lsiopy/bin/python3 -I -B ${distroStaging}/guard.py ${distroFacts.commands.install} ${distroStaging}/spec.json ${distroStaging}/sources ${distroFacts.runtimeRoot}
     RUN /lsiopy/bin/python3 -I -B ${distroStaging}/guard.py ${distroFacts.commands.verify} ${distroStaging}/spec.json ${distroStaging}/sources ${distroFacts.runtimeRoot}
     RUN /lsiopy/bin/python3 -I -B ${distroStaging}/ssl/guard.py ${distroStaging}/ssl/spec.json ${distroStaging}/ssl ${distroSslRuntimeDescriptor.rootPath}
-    RUN /lsiopy/bin/python3 -I -B -c ${lib.escapeShellArg distroRuntimeProof}
+    RUN /lsiopy/bin/python3 -I -B -c ${lib.escapeShellArg ("exec(compile(" + builtins.toJSON distroRuntimeProof + ", '<system-python>', 'exec', optimize=0), {'__name__':'__main__'})")}
     RUN rm -rf ${distroStaging}
   '';
   distroContext = pkgs.runCommand "calibre-system-python-context" {} ''

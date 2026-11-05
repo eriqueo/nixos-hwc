@@ -1305,8 +1305,26 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
               except AssertionError:pass
               else:raise AssertionError('SYSTEM_PYTHON_INSTALLED_CORRUPTION_ACCEPTED')
   def system_wired(text):
-      return system['recipe'] in text and 'COPY system-python /tmp/hwc-system-python' in text and 'SYSTEM_PYTHON_RUNTIME_SELECTION' in text
+      programs=[]
+      try:
+          for line in text.splitlines():
+              if not line.startswith('RUN '):continue
+              args=shlex.split(line[4:])
+              if args[:1]!=['/lsiopy/bin/python3'] or '-c' not in args:continue
+              module=ast.parse(args[args.index('-c')+1]);invoke=module.body[-1].value
+              assert invoke.func.id=='exec' and invoke.args[0].func.id=='compile'
+              compiler=invoke.args[0]
+              assert next(k.value.value for k in compiler.keywords if k.arg=='optimize')==0
+              programs.append(ast.literal_eval(compiler.args[0]))
+      except (ValueError,SyntaxError,AttributeError,StopIteration,AssertionError):return False
+      return (system['recipe'] in text and 'COPY system-python /tmp/hwc-system-python' in text
+          and len(programs)==1 and 'SYSTEM_PYTHON_RUNTIME_SELECTION' in programs[0])
   assert system_wired(recipe)
+  consumer_line=next(line for line in system['recipe'].splitlines() if line.startswith('RUN /lsiopy/bin/python3') and ' -c ' in line)
+  consumer_args=shlex.split(consumer_line[4:]);consumer_ast=ast.parse(consumer_args[consumer_args.index('-c')+1])
+  consumer_body=ast.literal_eval(consumer_ast.body[-1].value.args[0].args[0])
+  invalid_line='RUN /lsiopy/bin/python3 -I -B -c '+shlex.quote(consumer_body)
+  assert not system_wired(recipe.replace(consumer_line,invalid_line)),'MULTILINE_DOCKER_RUN_ACCEPTED'
   for omitted in ['COPY system-python /tmp/hwc-system-python',
       '/guard.py '+system_spec['commands']['install']+' ',
       '/guard.py '+system_spec['commands']['verify']+' ',

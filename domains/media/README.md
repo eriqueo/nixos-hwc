@@ -161,6 +161,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-05: Compile the shared Python consumer probe through the single-line Docker recipe port and reject multiline quoting regressions.
+
 - 2026-11-05: Validate Ubuntu’s measured static development-header macro separately from the running shared interpreter.
 
 - 2026-11-05: Share guarded distro Python source and native SSL repairs across Selkies and Books, using the common source catalog and matched Ubuntu SDK; derive explicit private or system trust kinds from one catalog and separate patch/compiler phases.
