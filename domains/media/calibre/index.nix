@@ -154,6 +154,7 @@ let
       }
     }
   '';
+  nativeDependencies = lib.unique (lib.concatMap (entry: entry.needed) (builtins.attrValues nativeLibraries));
   nativeDescriptor = {
     schemaVersion = 1;
     sourceVersion = "7.1.2";
@@ -161,6 +162,11 @@ let
     minimumVersion = "7.1.5";
     families = nativeFfmpeg.meta.pkgConfigModules;
     libraries = nativeLibraries;
+    # Nix and the vendor use different names for the same bzip2 ABI. The
+    # required BZ2 exports exist in the retained bundled library. No bytes
+    # outside FFmpeg change. Permanent by design for this transport pair.
+    dependencyAliases."libbz2.so.1" = builtins.head (builtins.filter
+      (name: lib.hasPrefix "libbz2.so." name) nativeDependencies);
     # These paths describe input identity inside JSON; they are not a closure
     # to install in the container. nativeBundle holds the real build edges.
     sourceInput = builtins.unsafeDiscardStringContext (toString nativeFfmpeg.src);
@@ -216,6 +222,7 @@ let
         assert len(source_version) == len(target_version) == len(minimum) == 3, "CALIBRE_NATIVE_VERSION_TYPE"
         assert source_version[0] == target_version[0] and target_version >= minimum, "CALIBRE_NATIVE_VERSION"
         allowed = {needed for entry in libraries.values() for needed in entry["needed"]}
+        assert all(old != new and new in allowed for old, new in spec["dependencyAliases"].items()), "CALIBRE_NATIVE_DEPENDENCY_ALIAS"
         for name, entry in manifest["files"].items():
             assert Path(name).name == name and ".so." in name, "CALIBRE_NATIVE_PATH"
             assert entry["soname"] == name and entry["rpath"] == "$ORIGIN", "CALIBRE_NATIVE_ABI_RPATH"
@@ -440,6 +447,8 @@ let
         target = output / "lib" / name
         shutil.copyfile(source / name, target)
         target.chmod(0o755)
+        for old, new in spec["dependencyAliases"].items():
+            subprocess.run(["patchelf", "--replace-needed", old, new, str(target)], check=True)
         subprocess.run(["patchelf", "--set-rpath", "$ORIGIN", str(target)], check=True)
         def elf(flag):
             return subprocess.check_output(["patchelf", flag, str(target)], text=True).strip()
