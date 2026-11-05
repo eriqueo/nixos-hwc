@@ -40,6 +40,8 @@ Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
 selection. Its image build exercises the actual GUI import and fork_job worker.
 
 `immich-container/` keeps its pinned Ubuntu CA distrust policy even after host NSS removes the same roots. Its exact local runtime images must be built before activation.
+Its ML HTTP derivative inherits the existing TLS/Pillow/Starlette base and
+installs only fixed-hash Requests/urllib3 wheels plus shared framing guards.
 
 `youtube/` runs the transcripts site with captions-first extraction and a bounded Deepgram audio fallback, using the generated `deepgram-api-key` mount.
 
@@ -105,6 +107,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Add an offline Immich ML HTTP derivative and preserve its previous security base. Share urllib3 source identities with Frigate while retaining Frigate's emitted recipe.
 
 - 2026-11-05: Fix Calibre's HTTP hook enabling development icon builds; restore the frozen importer mode and verify actual GUI and native worker startup before image adoption.
 

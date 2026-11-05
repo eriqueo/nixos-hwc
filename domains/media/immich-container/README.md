@@ -17,6 +17,11 @@ photo library, PostgreSQL data and NVIDIA interfaces.
 Managed database credentials use the vendor `DB_PASSWORD_FILE` loader and a read-only secret bind. The server omits `DB_URL`, requires shared role provisioning before startup, and reloads on encrypted-secret changes. Existing container-visible media paths stay unchanged.
 
 The ML recipe consumes the shared exact-source Starlette Host parser backport from `domains/lib/mkContainer.nix`.
+That existing security recipe is now the explicit base of the final HTTP image.
+The final layer installs hash-bound Requests2.33.0 and urllib32.8.0 pure wheels,
+then applies the shared strict stdlib/urllib3 framing pair. Both wheel owners,
+paths and archives are validated before either package changes. No resolver or
+native build runs in this layer.
 
 The pinned Ubuntu image owns its emSign distrust list independently of the newer host NSS bundle. An empty host blacklist does not remove roots from this container. Prebuild its exact context before activation.
 
@@ -49,12 +54,17 @@ relative loader path; the image restores the original 0755 mode from read-only
 store inputs. It keeps the signed package's
 decoder code. OpenCV's separate TLS dependency is outside this Brotli correction.
 
-Build `system.build.immichServerRuntimeImageContext` and
+Build `system.build.immichServerRuntimeImageContext`, the retained
+`system.build.immichMlBaseRuntimeImageContext`, and the final
 `system.build.immichMlRuntimeImageContext`. Each contains its Dockerfile,
 manifest and local replacement inputs. Cache the pinned parent images, then
 build Docker-format images with the evaluated `hwc.media.immich.images` tags;
 Docker format preserves inherited health checks. An uncached ML build still
 downloads its pinned TLS/CA inputs. Building images does not switch services.
+The final ML recipe requires the exact source-derived local base tag. Its two
+wheels are fetched by Nix with fixed hashes and installed offline. Existing
+Hugging Face code still rejects duplicate Content-Length values; qualification
+records that prior limitation and verifies five normal download controls.
 Default containers require their prebuilt local images and refuse startup if
 they are absent. Startup does not pull or build replacement images.
 
@@ -92,6 +102,7 @@ trigger an automatic database file-path migration. Keep `/usr/src/app/upload`
 and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
+- 2026-11-05: Preserve the consumed security base and add an offline HTTP dependency/framing layer. Follow both layers in existing checks and reject missing, corrupt or escaping wheel inputs before writes.
 - 2026-11-03: Wire the existing password-file option to vendor startup, use Immich's restricted owning role, and require protected shared PostgreSQL provisioning.
 
 - 2026-11-02: Encode the backport as one Dockerfile RUN line and preserve a real FROM newline; check the complete recipe syntax.

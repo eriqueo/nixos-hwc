@@ -42,6 +42,8 @@ It also selects a hash-bound stdlib/urllib3 framing pair for streaming model
 downloads. The emitted builder checks the whole pair before writes and removes
 only those modules' bytecode. `frigate-http-framing` rejects omitted wiring and
 drift; actual image/client, current-data and CUDA qualification precede adoption.
+The shared framing manifest owns urllib32.8 source/result identities used here
+and by Immich ML. This changes the fact owner without changing Frigate's recipe.
 
 - `index.nix`: options, container, atomic config generation, native metrics and expected-camera recording rules.
 - `parts/config.nix`: camera settings, masks, zones and recording retention.
@@ -703,6 +705,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-05: Read the existing urllib32.8 source/result pair from the shared manifest; preserve the emitted Frigate image recipe and context.
 
 - 2026-11-04: Select a shared stdlib grammar and local urllib3 parser adaptation; private actual model-download tests preserve normal responses and reject malformed framing. Require final image and current-data qualification before deployment.
 

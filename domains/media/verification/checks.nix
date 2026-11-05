@@ -262,7 +262,7 @@ assert c.virtualisation.oci-containers.containers.frigate.pull == "never";
 assert lib.hasInfix "FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c" frigate;
 assert lib.hasInfix "image exists ${lib.escapeShellArg expectedFrigate}" c.systemd.services.podman-frigate.preStart;
 pkgs.runCommand "starlette-host-backport-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-  python3 - ${c.system.build.frigateRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.frigateRuntimeImageContext} <<'PYTEST'
+  python3 - ${c.system.build.frigateRuntimeImageRecipe} ${c.system.build.immichMlBaseRuntimeImageRecipe} ${c.system.build.frigateRuntimeImageContext} <<'PYTEST'
   import base64, hashlib, json, pathlib, shlex, sys
   expected = [('0.47.3', 'ce16c619c99e45507a3aebedf47c2807c8122bd9396e21f7cd48636f9715fa8c', '5c163e52df0a615c7860136b30d010c48696c0774011db8879a3299e025ed441'),
               ('0.50.0', 'dde752330006431c7ebc1ccb948a95825be5bd6b8c03839133cdee59899c3030', '77253c43dce33af8b92b1b76794c6b39205419a520663246dfba595e4c76b283')]
@@ -436,23 +436,91 @@ assert lib.assertMsg (lib.hasPrefix "localhost/immich-runtime:2.5.6-node24.22.1-
 assert c.virtualisation.oci-containers.containers.immich-server.image == cfg.images.server;
 assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
 pkgs.runCommand "immich-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-  python3 - ${fixture} ${c.system.build.immichServerRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.seerrRuntimeImageRecipe} <<'PY'
-  import hashlib, json, pathlib, re, sys
+  python3 - ${fixture} ${c.system.build.immichServerRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.seerrRuntimeImageRecipe} ${c.system.build.immichMlBaseRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageContext} <<'PY'
+  import ast, copy, hashlib, json, pathlib, re, shlex, subprocess, sys, tempfile, zipfile
   spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
-  server, ml, seerr = [pathlib.Path(p).read_text() for p in sys.argv[2:]]
+  server, ml, seerr, base = [pathlib.Path(p).read_text() for p in sys.argv[2:6]]
+  context = pathlib.Path(sys.argv[6])
   sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
   assert spec['server'] == 'localhost/immich-runtime:2.5.6-node24.22.1-' + sha(server)[:12]
   assert spec['ml'] == 'localhost/immich-ml-runtime:2.5.6-' + sha(ml)[:12]
-  for recipe in [server, ml]:
+  for recipe in [server, base]:
       sources = re.findall(r'^FROM (\S+)', recipe, re.M)
       assert len(sources) == 2 and all(re.search(r'@sha256:[0-9a-f]{64}$', s) for s in sources)
   assert 'ENV NODE_VERSION=24.22.1' in server
-  assert '--only-upgrade' in ml and 'libssl3=3.0.2-0ubuntu1.30' in ml and 'openssl=3.0.2-0ubuntu1.30' in ml
-  assert 'ca-certificates=20260816ubuntu0.22.04.1' in ml
-  assert '--checksum=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1' in ml
-  assert '--no-index --no-deps' in ml and 'certifi-2026.10.23' in ml
-  assert 'emSign Root CA - C1' in ml and 'emSign ECC Root CA - C3' in ml
-  assert 'update-ca-certificates --fresh' in ml
+  assert '--only-upgrade' in base and 'libssl3=3.0.2-0ubuntu1.30' in base and 'openssl=3.0.2-0ubuntu1.30' in base
+  assert 'ca-certificates=20260816ubuntu0.22.04.1' in base
+  assert '--checksum=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1' in base
+  assert '--no-index --no-deps' in base and 'certifi-2026.10.23' in base
+  assert 'emSign Root CA - C1' in base and 'emSign ECC Root CA - C3' in base
+  assert 'update-ca-certificates --fresh' in base
+  # The previous consumed producer stays byte-identical and is the new parent.
+  base_image='localhost/immich-ml-runtime:2.5.6-'+sha(base)[:12]
+  assert base_image=='localhost/immich-ml-runtime:2.5.6-9e53cacc2f21'
+  manifest=json.loads((context/'manifest.json').read_text())
+  assert manifest['schemaVersion']==1 and manifest['baseImage']==base_image
+  assert manifest['sitePackages']=='/opt/venv/lib/python3.11/site-packages'
+  assert manifest['wheelDirectory']=='/tmp/hwc-http'
+  assert set(manifest['wheels'])=={'requests','urllib3'}
+  assert {k:v['version'] for k,v in manifest['wheels'].items()}=={'requests':'2.33.0','urllib3':'2.8.0'}
+  assert (context/'Dockerfile').read_text()==ml
+  for entry in manifest['wheels'].values():
+      assert hashlib.sha256((context/'wheels'/entry['filename']).read_bytes()).hexdigest()==entry['sha256']
+  def emitted(text):
+      installers=[];framing=[]
+      for line in text.splitlines():
+          if not line.startswith('RUN '):continue
+          argv=shlex.split(line[4:])
+          if '-c' not in argv:continue
+          assert argv[:3]==['/opt/venv/bin/python','-B','-c']
+          if 'ML_HTTP_PACKAGE_PAIR' in argv[3]:
+              module=ast.parse(argv[3]);invoke=module.body[-1].value
+              assert invoke.func.id=='exec' and invoke.args[0].func.id=='compile'
+              assert next(x.value.value for x in invoke.args[0].keywords if x.arg=='optimize')==0
+              assert json.loads(ast.literal_eval(module.body[1].value.elts[1]))==manifest
+              installers.append(ast.literal_eval(invoke.args[0].args[0]))
+          elif 'HTTP_BACKPORT_PAIR' in argv[3]:
+              assert json.loads(argv[4])==manifest['framing'];framing.append(line)
+      return installers,framing
+  def wired(text):
+      try:
+          install,framing=emitted(text)
+          return (re.findall(r'^FROM (\S+)',text,re.M)==[base_image] and len(install)==len(framing)==1
+              and 'COPY wheels/ /tmp/hwc-http/' in text)
+      except (AssertionError,ValueError,StopIteration):return False
+  assert wired(ml)
+  for marker in ['ML_HTTP_PACKAGE_PAIR','HTTP_BACKPORT_PAIR']:
+      omitted='\n'.join(line for line in ml.splitlines() if marker not in line)+'\n'
+      assert omitted!=ml and not wired(omitted),'ML_HTTP_INTEGRATION_SEED:'+marker
+  assert not wired(ml.replace('FROM '+base_image,'FROM unrelated-base'))
+  installer=emitted(ml)[0][0]
+  # Execute the emitted installer on disposable package owners and real wheels.
+  # A bad second input must leave the entire original tree intact.
+  for failure in ['none','missing-second','corrupt-second','escape-second']:
+      with tempfile.TemporaryDirectory() as directory:
+          root=pathlib.Path(directory);site=root/'site';inputs=root/'wheels';site.mkdir();inputs.mkdir()
+          value=copy.deepcopy(manifest);value['sitePackages']=str(site);value['wheelDirectory']=str(inputs)
+          for name,entry in value['wheels'].items():
+              (site/name).mkdir();(site/name/'sentinel').write_text('original-'+name)
+              (site/(name+'-'+entry['originalVersion']+'.dist-info')).mkdir()
+              (inputs/entry['filename']).write_bytes((context/'wheels'/entry['filename']).read_bytes())
+          second=value['wheels']['urllib3'];path=inputs/second['filename']
+          if failure=='missing-second':path.unlink()
+          elif failure=='corrupt-second':path.write_bytes(b'corrupt')
+          elif failure=='escape-second':
+              with zipfile.ZipFile(path,'w') as archive:archive.writestr('../escape','wrong-owner')
+              second['sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+          before={str(p.relative_to(site)):p.read_bytes() for p in site.rglob('*') if p.is_file()}
+          harness="import importlib.metadata,json,pathlib,sys,types;spec=json.loads(sys.argv[1]);root=pathlib.Path(spec['sitePackages']);importlib.metadata.distribution=lambda n:types.SimpleNamespace(version=spec['wheels'][n]['originalVersion'],locate_file=lambda _:root,files=[pathlib.Path(n)/'sentinel']);exec(compile("+repr(installer)+",'<actual-installer>','exec',optimize=0),{'__name__':'__main__'})"
+          result=subprocess.run([sys.executable,'-OO','-c',harness,json.dumps(value)],capture_output=True,timeout=10)
+          after={str(p.relative_to(site)):p.read_bytes() for p in site.rglob('*') if p.is_file()}
+          if failure=='none':
+              assert result.returncode==0,(failure,result.stderr)
+              assert before.keys().isdisjoint(after) and all((site/name/'__init__.py').is_file() for name in value['wheels'])
+          else:
+              assert result.returncode!=0 and after==before,(failure,result.stderr)
+              wanted={'missing-second':b'FileNotFoundError','corrupt-second':b'ML_HTTP_WHEEL_DRIFT','escape-second':b'ML_HTTP_ARCHIVE_PATH'}[failure]
+              assert wanted in result.stderr,(failure,result.stderr)
   # Security backports preserve the accepted same-app Node recipe prefix.
   assert sha(seerr.split('# Security backports', 1)[0].replace(' AS seerr-base', "")) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'
   assert spec['seerr'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(seerr)[:12]
@@ -464,11 +532,12 @@ immich-shared-brotli-wiring = let
   c = self.nixosConfigurations.hwc-home.config;
   cfg = c.hwc.media.immich;
   serverContext = c.system.build.immichServerRuntimeImageContext;
-  mlContext = c.system.build.immichMlRuntimeImageContext;
+  mlContext = c.system.build.immichMlBaseRuntimeImageContext;
   libraries = c.system.build.immichPillowBrotliLibraries;
   manifest = builtins.fromJSON c.system.build.immichRuntimeSecurityManifest.text;
   server = c.system.build.immichServerRuntimeImageRecipe.text;
-  ml = c.system.build.immichMlRuntimeImageRecipe.text;
+  ml = c.system.build.immichMlBaseRuntimeImageRecipe.text;
+  finalMl = c.system.build.immichMlRuntimeImageRecipe.text;
 in
 assert lib.assertMsg (lib.hasInfix "COPY ${manifest.brotli.filename} /tmp/hwc-brotli.deb" server
   && lib.hasInfix "dpkg -i /tmp/hwc-brotli.deb" server
@@ -476,7 +545,8 @@ assert lib.assertMsg (lib.hasInfix "COPY ${manifest.brotli.filename} /tmp/hwc-br
   && lib.hasInfix "RUN chmod ${manifest.pillowLibraryMode}" ml)
   "Immich recipes must consume both corrected shared Brotli inputs";
 assert cfg.images.server == "localhost/immich-runtime:2.5.6-node24.22.1-${builtins.substring 0 12 (builtins.hashString "sha256" server)}";
-assert cfg.images.machineLearning == "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}";
+assert cfg.images.machineLearning == "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" finalMl)}";
+assert lib.hasPrefix "FROM localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}\n" finalMl;
 assert c.virtualisation.oci-containers.containers.immich-server.image == cfg.images.server;
 assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
 assert c.virtualisation.oci-containers.containers.immich-server.pull == "never";

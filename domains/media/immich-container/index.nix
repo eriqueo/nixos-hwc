@@ -79,7 +79,7 @@ let
   ];
   caPolicyScript = "from pathlib import Path; import json,sys; p=Path('/etc/ca-certificates.conf'); blocked={'mozilla/'+n.replace(' ','_')+'.crt' for n in json.loads(sys.argv[1])}; p.write_text(''.join('!'+l if l.strip() in blocked else l for l in p.read_text().splitlines(True)))";
   caPolicyCheck = "import ssl,json,sys,certifi; blocked=set(json.loads(sys.argv[1])); roots=lambda p:{v for c in ssl.create_default_context(cafile=p).get_ca_certs() for row in c['subject'] for k,v in row if k=='commonName'}; assert all(not roots(p)&blocked for p in [certifi.where(),'/etc/ssl/certs/ca-certificates.crt']), 'blocked root remains trusted'";
-  mlRuntimeRecipe = "# Pillow Brotli ${pillowBrotli} sha256:${brotli.sha256}\n" + ''
+  mlBaseRuntimeRecipe = "# Pillow Brotli ${pillowBrotli} sha256:${brotli.sha256}\n" + ''
     FROM ${mlBaseImage} AS certifi-builder
     ADD --checksum=sha256:${certifi.sha256} ${certifi.url} /tmp/${certifi.filename}
     RUN /opt/venv/bin/python -m ensurepip && /opt/venv/bin/python -m pip install --no-index --no-deps --force-reinstall /tmp/${certifi.filename}
@@ -97,6 +97,109 @@ let
     sourceSha256 = "dde752330006431c7ebc1ccb948a95825be5bd6b8c03839133cdee59899c3030";
     patchedSha256 = "77253c43dce33af8b92b1b76794c6b39205419a520663246dfba595e4c76b283";
   };
+  mlBaseRuntime = helpers.mkRuntimeImage {
+    name = "immich-ml";
+    version = appVersion;
+    recipe = mlBaseRuntimeRecipe;
+  };
+  # Temporary: these vendor HTTP fixes and strict framing preserve the frozen
+  # app/native graph. Retire after the upstream ML image passes these consumers.
+  httpWheels = {
+    requests = {
+      originalVersion = "2.32.4";
+      version = "2.33.0";
+      filename = "requests-2.33.0-py3-none-any.whl";
+      url = "https://files.pythonhosted.org/packages/56/5d/c814546c2333ceea4ba42262d8c4d55763003e767fa169adc693bd524478/requests-2.33.0-py3-none-any.whl";
+      sha256 = "3324635456fa185245e24865e810cecec7b4caf933d7eb133dcde67d48cee69b";
+    };
+    urllib3 = {
+      originalVersion = "2.6.2";
+      version = "2.8.0";
+      filename = "urllib3-2.8.0-py3-none-any.whl";
+      url = "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl";
+      sha256 = "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3";
+    };
+  };
+  httpBackport = helpers.mkPythonHttpFramingBackport {
+    python = "/opt/venv/bin/python";
+    stdlibUpstreamCommits = pkgs.pythonHttpFramingBackport.upstreamCommits;
+    modules = {
+      httpClient = {
+        path = "/usr/local/lib/python3.11/http/client.py";
+        sourceSha256 = "c3968eae8a9f38b0026e9b0ae0d2396b5fb3ade65688a17ed0ffeb4d7d9630f6";
+        patchedSha256 = "18395a51c62e28c81855f6b847c1a62f1e484ab587ea754931bcefe9d626fe58";
+        replacements = pkgs.pythonHttpFramingBackport.replacements;
+      };
+      urllib3 = {
+        path = "${mlSitePackages}/urllib3/response.py";
+        inherit (pkgs.pythonUrllib3FramingBackport.sources.${httpWheels.urllib3.version}) sourceSha256 patchedSha256;
+        replacements = pkgs.pythonUrllib3FramingBackport.replacements;
+      };
+    };
+  };
+  httpManifest = {
+    schemaVersion = 1;
+    sitePackages = mlSitePackages;
+    wheelDirectory = "/tmp/hwc-http";
+    wheels = httpWheels;
+    baseImage = mlBaseRuntime.image;
+    framing = httpBackport.manifest;
+  };
+  # All archive and installed-owner guards precede writes in this private image
+  # layer. Install pure wheels directly; no dependency resolver or native build.
+  installHttpWheels = ''
+    import hashlib, importlib.metadata, json, shutil, stat, sys, zipfile
+    from pathlib import Path
+    spec = json.loads(sys.argv[1])
+    assert spec['schemaVersion'] == 1, 'ML_HTTP_VERSION'
+    root = Path(spec['sitePackages'])
+    assert root.is_absolute(), 'ML_HTTP_SITE_PATH'
+    prepared = []
+    for name, entry in spec['wheels'].items():
+        assert name in {'requests', 'urllib3'}, 'ML_HTTP_PACKAGE_OWNER'
+        installed = importlib.metadata.distribution(name)
+        assert installed.version == entry['originalVersion'], 'ML_HTTP_INSTALLED_VERSION'
+        assert Path(installed.locate_file("")) == root, 'ML_HTTP_INSTALLED_PATH'
+        old_info = name + '-' + entry['originalVersion'] + '.dist-info'
+        new_info = name + '-' + entry['version'] + '.dist-info'
+        assert (root / name).is_dir() and (root / old_info).is_dir() and not (root / new_info).exists(), 'ML_HTTP_INSTALLED_OWNER'
+        assert all(Path(f).parts[0] in {name, old_info} and '..' not in Path(f).parts for f in installed.files), 'ML_HTTP_INSTALLED_RECORD'
+        wheel = Path(spec['wheelDirectory']) / entry['filename']
+        assert wheel.stat().st_size <= 1048576, 'ML_HTTP_WHEEL_BOUND'
+        raw = wheel.read_bytes()
+        assert hashlib.sha256(raw).hexdigest() == entry['sha256'], 'ML_HTTP_WHEEL_DRIFT'
+        with zipfile.ZipFile(wheel) as archive:
+            members = archive.infolist()
+            assert len(members) <= 128 and sum(x.file_size for x in members) <= 2097152, 'ML_HTTP_ARCHIVE_BOUND'
+            outputs = []
+            for member in members:
+                rel = Path(member.filename)
+                assert not rel.is_absolute() and '..' not in rel.parts and rel.parts[0] in {name, new_info}, 'ML_HTTP_ARCHIVE_PATH'
+                if member.is_dir():
+                    continue
+                mode = member.external_attr >> 16
+                assert mode == 0 or stat.S_ISREG(mode), 'ML_HTTP_ARCHIVE_TYPE'
+                outputs.append((rel, archive.read(member)))
+            assert outputs and any(str(p) == new_info + '/METADATA' for p, _ in outputs), 'ML_HTTP_ARCHIVE_METADATA'
+        prepared.append((name, old_info, outputs))
+    assert {name for name, _, _ in prepared} == {'requests', 'urllib3'}, 'ML_HTTP_PACKAGE_PAIR'
+    for name, old_info, outputs in prepared:
+        shutil.rmtree(root / name)
+        shutil.rmtree(root / old_info)
+        for relative, raw in outputs:
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(raw)
+            path.chmod(0o644)
+  '';
+  httpInstallCommand = "import sys; sys.argv = ['hwc-ml-http', "
+    + builtins.toJSON (builtins.toJSON httpManifest) + "]; exec(compile("
+    + builtins.toJSON installHttpWheels + ", '<ml-http-wheels>', 'exec', optimize=0), {'__name__':'__main__'})";
+  mlRuntimeRecipe = ''
+    FROM ${mlBaseRuntime.image}
+    COPY wheels/ /tmp/hwc-http/
+    RUN /opt/venv/bin/python -B -c ${lib.escapeShellArg httpInstallCommand}
+  '' + httpBackport.recipe + "RUN rm -rf /tmp/hwc-http\n";
   mlRuntimeImage = "localhost/immich-ml-runtime:${appVersion}-${builtins.substring 0 12 (builtins.hashString "sha256" mlRuntimeRecipe)}";
   securityManifest = pkgs.writeText "immich-runtime-security.json" (builtins.toJSON {
     schemaVersion = 1;
@@ -111,11 +214,18 @@ let
     cp ${securityManifest} "$out/manifest.json"
     cp ${brotli.source} "$out/${brotli.filename}"
   '';
-  mlContext = pkgs.runCommand "immich-ml-runtime-context" {} ''
+  mlBaseContext = pkgs.runCommand "immich-ml-runtime-context" {} ''
     mkdir -p "$out/pillow-brotli"
-    cp ${pkgs.writeText "immich-ml-runtime.Dockerfile" mlRuntimeRecipe} "$out/Dockerfile"
+    cp ${mlBaseRuntime.dockerfile} "$out/Dockerfile"
     cp ${securityManifest} "$out/manifest.json"
     cp -p ${pillowBrotli}/* "$out/pillow-brotli/"
+  '';
+  mlContext = pkgs.runCommand "immich-ml-http-runtime-context" {} ''
+    mkdir -p "$out/wheels"
+    cp ${pkgs.writeText "immich-ml-runtime.Dockerfile" mlRuntimeRecipe} "$out/Dockerfile"
+    cp ${pkgs.writeText "immich-ml-http.json" (builtins.toJSON httpManifest)} "$out/manifest.json"
+    ${lib.concatStringsSep "\n" (lib.mapAttrsToList (_: entry:
+      "cp ${pkgs.fetchurl { inherit (entry) url sha256; }} \"$out/wheels/${entry.filename}\"") httpWheels)}
   '';
 in
 {
@@ -220,6 +330,8 @@ in
     system.build.immichMlRuntimeImageRecipe = pkgs.writeText "immich-ml-runtime.Dockerfile" mlRuntimeRecipe;
     system.build.immichServerRuntimeImageContext = serverContext;
     system.build.immichMlRuntimeImageContext = mlContext;
+    system.build.immichMlBaseRuntimeImageRecipe = mlBaseRuntime.dockerfile;
+    system.build.immichMlBaseRuntimeImageContext = mlBaseContext;
     system.build.immichPillowBrotliLibraries = pillowBrotli;
     system.build.immichRuntimeSecurityManifest = securityManifest;
     # HWC-EXCEPTION(Law 5): mkContainer in parts/config.nix still owns each

@@ -33,8 +33,7 @@ let
       };
       urllib3 = {
         path = "/usr/local/lib/python3.11/dist-packages/urllib3/response.py";
-        sourceSha256 = "0e4559c737914d4f8f941dca9ecfaf6caec6792258302bffec7b8b41dae3c71a";
-        patchedSha256 = "dcec06f8eea936941e81ba8ab6479a0c0ee136829df0058abff7bfb5c9394ea9";
+        inherit (pkgs.pythonUrllib3FramingBackport.sources."2.8.0") sourceSha256 patchedSha256;
         replacements = pkgs.pythonUrllib3FramingBackport.replacements;
       };
     };

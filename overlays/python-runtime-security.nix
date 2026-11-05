@@ -266,7 +266,10 @@ assert spec.schemaVersion == 1;
   pythonHttpFramingBackport = { inherit (spec) upstreamCommits replacements; };
   # Local urllib3 adaptation reuses the controlled stdlib predicates. This is
   # not an upstream urllib3 release; image callers must qualify both modules.
-  pythonUrllib3FramingBackport = { replacements = spec.urllib3Replacements; };
+  pythonUrllib3FramingBackport = {
+    replacements = spec.urllib3Replacements;
+    sources = spec.urllib3Sources;
+  };
   # Frozen importers need the same registered source/result identity, while
   # the existing native and SAB manifest projections retain their exact bytes.
   pythonFrozenFramingBackport = { inherit (spec) upstreamCommits replacements nativeSources; };
