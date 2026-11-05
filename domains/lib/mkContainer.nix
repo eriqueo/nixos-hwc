@@ -468,20 +468,14 @@ rec {
   ]
 }
   '';
-  selectFfmpegSecurityBackports = { advisories, contextEdits ? {} }:
-    assert advisories != [] && builtins.length advisories <= 32;
-    assert advisories == lib.unique advisories;
-    assert lib.all (id: builtins.hasAttr id ffmpegSecurityGroups) advisories;
-    let
-      commits = lib.unique (lib.concatMap (id: ffmpegSecurityGroups.${id}) advisories);
-      patches = map (commit:
-        let
-          spec = ffmpegSecurityInputs.${commit};
-          upstream = if spec ? excludes then pkgs.fetchpatch spec else pkgs.fetchurl spec;
-          edits = contextEdits.${commit} or [];
-          editFile = pkgs.writeText "ffmpeg-${commit}-context.json" (builtins.toJSON edits);
-        in if edits == [] then upstream else
-          pkgs.runCommand "ffmpeg-${commit}-7.1.patch" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  # Context adaptation is shared with inherited distribution patches. Keep
+  # every code addition; caller proves exact full-file postimages.
+  adaptFfmpegPatchContext = { upstream, edits, name }:
+    assert builtins.match "[a-z0-9][a-z0-9-]*" name != null;
+    assert builtins.isList edits && edits != [] && builtins.length edits <= 2;
+    let editFile = pkgs.writeText "ffmpeg-${name}-context.json" (builtins.toJSON edits);
+    in
+          pkgs.runCommand "ffmpeg-${name}-7.1.patch" { nativeBuildInputs = [ pkgs.python3 ]; } ''
             python3 -I -B - ${upstream} ${editFile} "$out" <<'PYPATCH'
             import json, pathlib, sys
             source, edits, output = map(pathlib.Path, sys.argv[1:])
@@ -499,7 +493,21 @@ rec {
             assert len(text.encode()) <= 131072, 'FFMPEG_CONTEXT_OUTPUT_BOUND'
             output.write_text(text)
             PYPATCH
-          ''
+          '';
+
+  selectFfmpegSecurityBackports = { advisories, contextEdits ? {} }:
+    assert advisories != [] && builtins.length advisories <= 32;
+    assert advisories == lib.unique advisories;
+    assert lib.all (id: builtins.hasAttr id ffmpegSecurityGroups) advisories;
+    let
+      commits = lib.unique (lib.concatMap (id: ffmpegSecurityGroups.${id}) advisories);
+      patches = map (commit:
+        let
+          spec = ffmpegSecurityInputs.${commit};
+          upstream = if spec ? excludes then pkgs.fetchpatch spec else pkgs.fetchurl spec;
+          edits = contextEdits.${commit} or [];
+        in if edits == [] then upstream else
+          adaptFfmpegPatchContext { inherit upstream edits; name = commit; }
       ) commits;
     in
     assert builtins.length commits <= 32;

@@ -1020,6 +1020,8 @@ calibre-security-wiring = let
   nativePackage = c.system.build.calibreRuntimeNativePackage;
   rejectCatalog = args: !(builtins.tryEval (builtins.deepSeq
     (helpers.selectFfmpegSecurityBackports args).commits true)).success;
+  rejectContext = args: !(builtins.tryEval
+    (helpers.adaptFfmpegPatchContext args).drvPath).success;
   binding = pkgs.writeText "calibre-security-binding.json" (builtins.toJSON {
     native = (builtins.fromJSON c.system.build.calibreRuntimeAssets.text).native;
     nativeSourceGuard = toString c.system.build.calibreRuntimeNativeSourceGuard;
@@ -1043,6 +1045,9 @@ assert rejectCatalog { advisories = []; };
 assert rejectCatalog { advisories = [ "unknown" ]; };
 assert rejectCatalog { advisories = [ "CVE-2026-107676" "CVE-2026-107676" ]; };
 assert rejectCatalog { advisories = [ "CVE-2026-107676" ]; contextEdits.unknown = []; };
+assert rejectContext { upstream = ""; name = "../escape"; edits = [ [ "old" "new" ] ]; };
+assert rejectContext { upstream = ""; name = "empty"; edits = []; };
+assert rejectContext { upstream = ""; name = "excess"; edits = [ [] [] [] ]; };
 pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 pkgs.patchelf ]; } ''
   python3 - ${binding} ${c.system.build.calibreRuntimeImageRecipe} ${c.system.build.calibreRuntimeImageContext} <<'PYTEST'
   import ast, copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
@@ -1212,7 +1217,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
       spec_file.write_text(json.dumps(good))
       result = subprocess.run([sys.executable,'-OO',v['nativeSourceGuard'],str(spec_file),str(root)],capture_output=True,timeout=10)
       assert result.returncode != 0 and b'CALIBRE_NATIVE_SOURCE_OPTIMIZED' in result.stderr
-      assert len(v['contextTransforms']) == 2
+      assert len(v['contextTransforms']) == 3
       for transform in v['contextTransforms']:
           # Exercise the emitted builder program, including its real inputs.
           command_text = transform['command']
