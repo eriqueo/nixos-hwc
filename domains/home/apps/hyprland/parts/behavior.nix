@@ -348,7 +348,9 @@ in {
 
       # Keep this after app-specific sizes. Clamp oversized floating dialogs
       # while retaining small dialogs, and leave room for Waybar and borders.
-      "match:float 1, max_size ${floatingMaxSize}, center 1"
+      # Preserve client positioning: native XWayland context menus float too.
+      # Only the explicit dialog/utility rules above may center windows.
+      "match:float 1, max_size ${floatingMaxSize}"
     ];
   };
 }

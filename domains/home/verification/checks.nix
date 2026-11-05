@@ -25,7 +25,13 @@ hyprland-lua-config = let
   bars = pkgs.writeText "waybar-fixture.json" (builtins.toJSON home.programs.waybar.settings);
   cursor = home.hwc.home.theme.cursor.hyprcursor.name;
   cursorAssets = home.home.file.".local/share/icons/${cursor}".source;
-in assert hypr.configType == "lua";
+  preservesPopupPosition = rules: lib.all (rule:
+    !(rule.match ? float) || !(rule ? center)) rules;
+in assert preservesPopupPosition hypr.settings.window_rule;
+assert !preservesPopupPosition [{ match.float = "1"; center = "1"; }];
+assert lib.any (rule: (rule.match.title or "") == "^(Open).*" && rule ? center)
+  hypr.settings.window_rule;
+assert hypr.configType == "lua";
 assert !(home.xdg.configFile ? "hypr/hyprland.conf");
 pkgs.runCommand "hyprland-lua-config" { nativeBuildInputs = [ hypr.package pkgs.python3 pkgs.jq ]; } ''
   export HOME="$TMPDIR" XDG_RUNTIME_DIR="$TMPDIR"
