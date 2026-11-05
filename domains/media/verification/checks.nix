@@ -1111,7 +1111,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   except AssertionError as error:assert str(error)=='CALIBRE_STDLIB_OPTIMIZED_GUARD'
   else:raise AssertionError('STDLIB_OPTIMIZED_GUARD_SEED')
   # Replay the emitted producer itself on bounded disposable source members.
-  # Removing each patch must fail the real postimage guard before publication.
+  # Removing each patch must fail the complete producer before publication.
   producer=stdlib['command'];producer_lines=producer.splitlines()
   patch_lines=[line for line in producer_lines if shlex.split(line) and shlex.split(line)[0].endswith('/bin/patch')]
   assert len(patch_lines)==len(stdlib_spec['patches'])==4
@@ -1133,7 +1133,6 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           else:
               assert not output.exists(),'STDLIB_OMITTED_STEP_PUBLISHED:'+kind
               if kind!=stdlib_spec['commands']['finish']:assert run.returncode!=0,kind
-              if kind.startswith('patch-'):assert b'CALIBRE_STDLIB_SOURCE_HASH' in run.stderr,(kind,run.stderr)
   ssl=v['ssl'];ssl_spec=json.loads(pathlib.Path(ssl['spec']).read_text())
   def ssl_wired(value):
       return (value['patchFlags']==['-p1','--fuzz=0'] and value['patchCount']==1

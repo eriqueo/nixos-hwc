@@ -151,6 +151,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-05: Make omitted-patch checks assert failed publication without depending on whether the exact byte-size or hash guard rejects first.
+
 - 2026-11-05: Add the guarded four-library source artifact for POP commands, tar filtering and coupled temporary-directory cleanup. Preserve original sources, check exact postimages and syntax, and exercise missing patch/phase failures before loader wiring.
 
 - 2026-11-05: Make only the disposable copied library directory writable before seeding the SSL symlink rejection test; retain read-only source inputs and installed proof modes.
