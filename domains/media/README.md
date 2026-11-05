@@ -153,6 +153,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-05: Compare nested Python 3.14 annotation code constants recursively during frozen source parity checks.
+
 - 2026-11-05: Integrate the qualified frozen library bundle with early source selection, shared Books verification and opaque-importer probes.
 
 - 2026-11-05: Make omitted-patch checks assert failed publication without depending on whether the exact byte-size or hash guard rejects first.
