@@ -2,6 +2,168 @@
 { lib, pkgs, repoRoot, self }:
 {
 
+books-runtime-security = let
+  c = self.nixosConfigurations.hwc-home.config;
+  container = c.virtualisation.oci-containers.containers.books;
+  assets = c.system.build.calibreRuntimeAssets;
+  withoutDesktop = (self.nixosConfigurations.hwc-home.extendModules {
+    modules = [ { hwc.media.calibre.enable = lib.mkForce false; } ];
+  }).config;
+  binding = pkgs.writeText "books-runtime-binding.json" (builtins.toJSON {
+    selected = container.image;
+    configured = c.hwc.media.books.image;
+    preStart = c.systemd.services.podman-books.preStart;
+    environment = container.environment;
+    pull = container.pull;
+    declared = builtins.fromJSON c.system.build.booksRuntimeBinding.text;
+  });
+in
+assert withoutDesktop.system.build.calibreRuntimeAssets.text == assets.text;
+pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pkgs.dpkg ]; } ''
+  python3 - ${binding} ${c.system.build.booksRuntimeImageContext} ${c.system.build.booksRuntimeInputGuard} ${assets} <<'PYBOOKS'
+  import copy, hashlib, json, pathlib, runpy, stat, sys, tempfile
+  binding = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  context, guard, asset_file = map(pathlib.Path, sys.argv[2:])
+  spec = json.loads((context / 'inputs/manifest.json').read_text())
+  provider = json.loads(asset_file.read_text())
+  recipe = (context / 'Dockerfile').read_text()
+  assert provider == spec['calibre'] and provider['schemaVersion'] == 1
+  assert binding['selected'] == binding['configured'] == 'localhost/books-runtime:schema' + str(spec['app']['databaseVersion']) + '-python' + spec['pythonVersion'] + '-' + hashlib.sha256(recipe.encode()).hexdigest()[:12]
+  assert binding['pull'] == 'never' and binding['selected'] in binding['preStart'] and 'image exists' in binding['preStart'] and 'exit 1' in binding['preStart']
+  assert binding['declared']['schemaVersion'] == 1 and binding['declared']['image'] == binding['selected']
+  assert binding['declared']['environment'] == spec['environment']
+  canonical = json.dumps(spec, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+  input_marker = '# Qualified inputs ' + hashlib.sha256((canonical + guard.read_text()).encode()).hexdigest()
+  assert all(binding['environment'][name] == value for name, value in spec['environment'].items())
+  assert binding['environment']['DOCKER_MODS'] == ""
+  assert binding['environment'][provider['http']['selectionVariable']] == provider['http']['rootPath']
+  def wiring(text):
+      assert input_marker in text
+      assert 'FROM ' + spec['sourceImage'] + ' AS app-source' in text
+      assert 'FROM ' + provider['image'] + ' AS calibre-source' in text
+      assert 'FROM ' + spec['baseImage'] + '\n' in text
+      assert 'COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/' in text
+      assert 'COPY --from=calibre-source ' + provider['rootPath'] + '/ ' + provider['rootPath'] + '/' in text
+      assert 'COPY --from=calibre-source ' + provider['http']['rootPath'] + '/ ' + provider['http']['rootPath'] + '/' in text
+      assert 'RUN python3 -B /tmp/hwc-books/guard.py ' + spec['commands']['verify'] + ' /tmp/hwc-books/manifest.json /tmp/hwc-books-app ' in text
+      assert 'RUN python3 -B /tmp/hwc-books/guard.py ' + spec['commands']['apply'] + ' /tmp/hwc-books/manifest.json /app/lazylibrarian' in text
+      assert 'rm -rf /app/lazylibrarian && mv /tmp/hwc-books-app /app/lazylibrarian' in text
+      assert 'ln -s ' + provider['rootPath'] + ' /app/calibre' in text
+      assert 'RUN dpkg --unpack ' in text and 'dpkg --configure --pending' in text and 'dpkg --audit' in text
+      assert 'sourcelist=/tmp/hwc-books-empty.list' in text and 'sourceparts=/tmp/hwc-books-empty-sources check' in text
+      assert provider['rootPath'] + '/calibre_postinstall' in text and 'calibredb --version' in text and 'ebook-convert --version' in text
+      assert spec['framing']['modules']['httpClient']['sourceSha256'] in text
+      assert spec['framing']['modules']['urllib3']['patchedSha256'] in text
+      assert 'linuxserver/mods' not in text and 'apt-get update' not in text
+      assert 'ENTRYPOINT' not in text and 'CMD [' not in text and 'EXPOSE' not in text
+  wiring(recipe)
+  for token in [input_marker, 'COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/',
+                'COPY --from=calibre-source ' + provider['http']['rootPath'] + '/ ' + provider['http']['rootPath'] + '/',
+                '/guard.py ' + spec['commands']['verify'] + ' ',
+                '/guard.py ' + spec['commands']['apply'] + ' ',
+                'rm -rf /app/lazylibrarian && mv /tmp/hwc-books-app /app/lazylibrarian',
+                'dpkg --configure --pending',
+                spec['framing']['modules']['urllib3']['patchedSha256']]:
+      assert token in recipe
+      try: wiring(recipe.replace(token, 'omitted-integration'))
+      except AssertionError: pass
+      else: raise AssertionError('omitted Books runtime integration passed')
+  assert (context / 'inputs/guard.py').read_bytes() == guard.read_bytes()
+  api = runpy.run_path(str(guard))
+  sha = lambda value: hashlib.sha256(value).hexdigest()
+  def tree(root):
+      result = {}
+      for path in sorted(root.rglob('*')):
+          if path.is_file() and '__pycache__' not in path.parts:
+              raw = path.read_bytes()
+              result[str(path.relative_to(root))] = {'sha256': sha(raw), 'bytes': len(raw), 'mode': path.stat().st_mode & 0o777}
+      return result
+  tree_hash = lambda files: sha(json.dumps(files, sort_keys=True, separators=(',', ':')).encode())
+  with tempfile.TemporaryDirectory() as directory:
+      root = pathlib.Path(directory)
+      app = root / 'app'; (app / 'lazylibrarian').mkdir(parents=True)
+      cache = app / spec['app']['requestOptions']['path']
+      original = ('def fetch(url, payload, headers):\n'
+          '    a = requests.get(url, params=payload, headers=headers)\n'
+          '    b = requests.get(url, params=payload, headers=headers)\n'
+          '    return requests.get(url, params=payload, headers=headers)\n').encode()
+      cache.write_bytes(original)
+      db_module = app / 'lazylibrarian/dbupgrade.py'
+      db_module.write_text('db_current_version = ' + str(spec['app']['databaseVersion']) + '\n')
+      fixture = copy.deepcopy(spec)
+      files = tree(app)
+      fixture['app']['fileCount'] = len(files)
+      fixture['app']['sourceDistributionSha256'] = tree_hash(files)
+      backport = fixture['app']['requestOptions']
+      backport['sourceSha256'] = sha(original)
+      expected = original.decode().replace(backport['old'], backport['new']).encode()
+      backport['patchedSha256'] = sha(expected)
+      updated = copy.deepcopy(files)
+      updated[backport['path']].update(sha256=sha(expected), bytes=len(expected))
+      fixture['app']['patchedDistributionSha256'] = tree_hash(updated)
+      for name, entry in fixture['framing']['modules'].items():
+          path = root / name / ('http/client.py' if name == 'httpClient' else 'urllib3/response.py')
+          path.parent.mkdir(parents=True); path.write_bytes(b'owned_parser_fixture = True\n')
+          entry['path'] = str(path); entry['sourceSha256'] = sha(path.read_bytes())
+      calibre, hook = root / 'calibre', root / 'hook'
+      bundle = calibre / pathlib.Path(provider['http']['frozenBundle']).relative_to(provider['rootPath'])
+      bundle.parent.mkdir(parents=True); bundle.write_bytes(b'owned-frozen-archive-fixture')
+      fixture['calibre']['http']['frozenBundleSha256'] = sha(bundle.read_bytes())
+      (hook / 'http').mkdir(parents=True)
+      (hook / 'http/client.py').write_bytes(b'owned_http_fixture = True\n')
+      (hook / 'site.py').write_bytes(b'owned_site_fixture = True\n')
+      fixture['calibre']['http']['patchedSha256'] = sha((hook / 'http/client.py').read_bytes())
+      fixture['calibre']['http']['bootstrapSha256'] = sha((hook / 'site.py').read_bytes())
+      (hook / 'http-framing.json').write_text(json.dumps(fixture['calibre']['http']))
+      for path in [hook / 'http/client.py', hook / 'site.py', hook / 'http-framing.json']: path.chmod(0o444)
+      (hook / 'http').chmod(0o555)
+      hook.chmod(0o555)
+      native = context / 'inputs/native'
+      def verify(value):
+          api['verify'](value, app, native, calibre, hook, fixture['pythonVersion'], fixture['pythonPackages'], api['metadata'])
+      try:
+          verify(fixture)
+          for kind in ['version', 'package', 'parser', 'app', 'database', 'native', 'missing-native', 'duplicate-native', 'native-metadata', 'archive', 'bootstrap', 'provider-version']:
+              bad = copy.deepcopy(fixture)
+              if kind == 'version': bad['pythonVersion'] = '0.0.0'
+              elif kind == 'package': bad['pythonPackages']['requests'] = 'wrong'
+              elif kind == 'parser': bad['framing']['modules']['urllib3']['sourceSha256'] = '0' * 64
+              elif kind == 'app': bad['app']['sourceDistributionSha256'] = '0' * 64
+              elif kind == 'database': bad['app']['databaseVersion'] += 1
+              elif kind == 'native': bad['nativePackages'][-1]['sha256'] = '0' * 64
+              elif kind == 'missing-native': bad['nativePackages'].pop()
+              elif kind == 'duplicate-native': bad['nativePackages'].append(bad['nativePackages'][0])
+              elif kind == 'native-metadata': bad['nativePackages'][0]['version'] = 'wrong'
+              elif kind == 'archive': bad['calibre']['http']['frozenBundleSha256'] = '0' * 64
+              elif kind == 'bootstrap': bad['calibre']['http']['bootstrapSha256'] = '0' * 64
+              else: bad['calibre']['schemaVersion'] = 0
+              try: verify(bad)
+              except AssertionError: pass
+              else: raise AssertionError('invalid Books input passed: ' + kind)
+              assert cache.read_bytes() == original and db_module.read_text().endswith(str(fixture['app']['databaseVersion']) + '\n')
+          for kind in ['source-tree', 'source', 'hunk', 'count', 'result', 'result-tree', 'path']:
+              bad = copy.deepcopy(fixture)
+              if kind == 'source-tree': bad['app']['sourceDistributionSha256'] = '0' * 64
+              elif kind == 'result-tree': bad['app']['patchedDistributionSha256'] = '0' * 64
+              else:
+                  key = {'source':'sourceSha256', 'hunk':'old', 'count':'count', 'result':'patchedSha256', 'path':'path'}[kind]
+                  bad['app']['requestOptions'][key] = 2 if kind == 'count' else '../escape.py' if kind == 'path' else 'missing' if kind == 'hunk' else '0' * 64
+              try: api['apply_request_options'](bad, app)
+              except AssertionError: pass
+              else: raise AssertionError('invalid Books app adapter passed: ' + kind)
+              assert cache.read_bytes() == original, 'app guard wrote before validation: ' + kind
+          api['apply_request_options'](fixture, app)
+          assert cache.read_bytes() == expected and tree_hash(tree(app)) == fixture['app']['patchedDistributionSha256']
+      finally:
+          hook.chmod(0o755)
+          (hook / 'http').chmod(0o755)
+  print('Books production context/wiring, actual native input hashes/metadata, source/frozen guards and request-adapter pre-write negatives pass; installed runtime still needs qualification')
+  PYBOOKS
+  touch "$out"
+'';
+
+
+
 soularr-runtime-security = let
   c = self.nixosConfigurations.hwc-home.config;
   container = c.virtualisation.oci-containers.containers.soularr;
