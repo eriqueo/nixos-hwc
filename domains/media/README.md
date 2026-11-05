@@ -12,6 +12,10 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Calibre's native extension constructor shares source, SDK and ELF guards across
+SSL and the two source-only socket repair artifacts. The frozen socket build
+keeps its original feature set. Distro startup integration is a separate slice.
+
 Calibre's existing producer also exports one shared Ubuntu Python repair for
 Selkies and the Books candidate. It keeps the distro interpreter and packages,
 rebuilds only the SSL extension against matched headers, and validates five
@@ -164,6 +168,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Add matched frozen/distro socket artifacts from the upstream3.14 NUL-byte backport; share the existing native constructor and SDK/source guards without changing interpreter or virtualenv inputs.
 
 - 2026-11-05: Exercise the distro SSL installer with an unwritable image root and seed the old root placement to prove the owner binding.
 
