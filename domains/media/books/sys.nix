@@ -5,7 +5,8 @@ let
   cfg = config.hwc.media.books;
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/books/config";
-  runtime = builtins.fromJSON config.system.build.booksRuntimeBinding.text;
+  runtime = let value = builtins.fromJSON config.system.build.booksRuntimeBinding.text;
+    in assert value.schemaVersion == 1; value;
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
