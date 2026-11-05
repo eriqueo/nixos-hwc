@@ -133,15 +133,44 @@ rec {
   # or compiled offsets. Caller owns the immutable source and image selection.
   mkFrozenPythonHttpFramingBackport =
     { python, pythonVersion, frozenBundle, frozenBundleSha256, sourcePath
-    , sourceSha256, rootPath, selectionVariable, environment ? {} }:
+    , sourceSha256, rootPath, selectionVariable, environment ? {}
+    , consumerVerification ? "" }:
     let
       shared = pkgs.pythonFrozenFramingBackport;
+      # The vendor source hook also enables application development mode.
+      # Restore its frozen loader before any app import, while retaining the
+      # environment for native child launchers. Only http.client is replaced.
+      bootstrap = ''
+        def _hwc_bootstrap(namespace):
+            import sys
+            from _frozen_importlib_external import spec_from_file_location
+            importer = next(x for x in sys.meta_path if type(x).__name__ == 'BypyFrozenImporter')
+            importer.develop_mode_path = None
+            original = importer.find_spec('site', None)
+            if original is None or type(original.loader).__name__ != 'FrozenByteCodeLoader':
+                raise RuntimeError('FROZEN_HTTP_SITE_LOADER_DRIFT')
+            if 'http.client' in sys.modules:
+                raise RuntimeError('FROZEN_HTTP_EARLY_IMPORT')
+            class HttpFinder:
+                def find_spec(self, fullname, path=None, target=None):
+                    if fullname == 'http.client':
+                        return spec_from_file_location(fullname, ${builtins.toJSON (rootPath + "/http/client.py")})
+                    return None
+            sys.meta_path.insert(0, HttpFinder())
+            name = namespace['__name__']
+            namespace.clear()
+            namespace.update(__name__=name, __spec__=original, __loader__=original.loader,
+                __package__="", __file__=original.loader.get_filename('site'))
+            exec(original.loader.get_code('site'), namespace)
+        _hwc_bootstrap(globals())
+      '';
       manifest = {
         schemaVersion = 1;
         inherit pythonVersion frozenBundle frozenBundleSha256 sourcePath
           sourceSha256 rootPath selectionVariable;
         inherit (shared) replacements upstreamCommits;
         patchedSha256 = shared.nativeSources.${sourceSha256};
+        bootstrapSha256 = builtins.hashString "sha256" bootstrap;
       };
       program = ''
         import hashlib, json, sys, types
@@ -182,6 +211,9 @@ rec {
         original = loader.get_code('http.client')
         expected = compile(raw, original.co_filename, 'exec', dont_inherit=True, optimize=2)
         assert shape(original) == shape(expected), 'FROZEN_HTTP_SOURCE_CODE_DRIFT'
+        bootstrap = ${builtins.toJSON bootstrap}
+        assert hashlib.sha256(bootstrap.encode()).hexdigest() == spec['bootstrapSha256'], 'FROZEN_HTTP_BOOTSTRAP_DRIFT'
+        compile(bootstrap, '<frozen-bootstrap>', 'exec', dont_inherit=True, optimize=2)
         root = Path(spec['rootPath'])
         assert root.is_absolute() and str(root).startswith('/opt/') and not root.exists(), 'FROZEN_HTTP_OUTPUT_DRIFT'
         # Every guard runs before any write, even inside an optimized launcher.
@@ -190,6 +222,9 @@ rec {
         path = folder / 'client.py'
         path.write_bytes(output)
         path.chmod(0o444)
+        site = root / 'site.py'
+        site.write_text(bootstrap)
+        site.chmod(0o444)
         proof = root / 'http-framing.json'
         proof.write_text(json.dumps(spec, sort_keys=True) + '\n')
         proof.chmod(0o444)
@@ -205,9 +240,15 @@ rec {
         assert http.client.__file__ == str(path), 'FROZEN_HTTP_SELECTION_MISSING'
         assert hashlib.sha256(path.read_bytes()).hexdigest() == spec['patchedSha256'], 'FROZEN_HTTP_SELECTED_SOURCE_DRIFT'
         assert getattr(sys, 'frozen', False), 'FROZEN_HTTP_APP_MODE_DRIFT'
+        import bypy_importer
+        assert not bypy_importer.running_in_develop_mode(), 'FROZEN_HTTP_DEVELOP_MODE'
+        site = Path(spec['rootPath']) / 'site.py'
+        assert hashlib.sha256(site.read_bytes()).hexdigest() == spec['bootstrapSha256'], 'FROZEN_HTTP_BOOTSTRAP_MISSING'
+        finder = next(x for x in sys.meta_path if type(x).__name__ == 'HttpFinder')
+        assert finder.find_spec('calibre') is None and finder.find_spec('urllib.request') is None, 'FROZEN_HTTP_SELECTION_TOO_BROAD'
         assert http.client._is_legal_content_length('5') and not http.client._is_legal_content_length('+5')
         assert http.client._is_legal_chunk_size(b'a') and not http.client._is_legal_chunk_size(b'+a')
-      '';
+      '' + consumerVerification;
       command = code: "import sys; sys.argv = ['hwc-frozen-http', "
         + builtins.toJSON (builtins.toJSON manifest) + "]; exec(compile("
         + builtins.toJSON code

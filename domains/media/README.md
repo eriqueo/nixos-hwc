@@ -36,6 +36,9 @@ Frigate and Immich ML derive same-app images with the shared Starlette Host pars
 Frigate additionally selects a paired stdlib/urllib3 framing recipe; its actual
 streaming model client and current-data qualification own deployment acceptance.
 
+Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
+selection. Its image build exercises the actual GUI import and fork_job worker.
+
 `immich-container/` keeps its pinned Ubuntu CA distrust policy even after host NSS removes the same roots. Its exact local runtime images must be built before activation.
 
 `youtube/` runs the transcripts site with captions-first extraction and a bounded Deepgram audio fallback, using the generated `deepgram-api-key` mount.
@@ -102,6 +105,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Fix Calibre's HTTP hook enabling development icon builds; restore the frozen importer mode and verify actual GUI and native worker startup before image adoption.
 
 - 2026-11-04: Add a Calibre 9.17 runtime context that selects one hash-bound CPython HTTP source through the vendor frozen importer. Preserve the archive, app, data paths and credentials; require a prebuilt image and guard actual selection and optimized-launcher failures.
 

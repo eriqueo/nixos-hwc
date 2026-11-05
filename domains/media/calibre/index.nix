@@ -22,6 +22,15 @@ let
       CALIBRE_CONFIG_DIRECTORY = "/tmp/hwc-frozen-config";
       XDG_CACHE_HOME = "/tmp/hwc-frozen-cache";
     };
+    consumerVerification = ''
+      import calibre.gui2
+      from calibre.constants import is_running_from_develop
+      from calibre.utils.ipc.simple_worker import fork_job
+      assert not is_running_from_develop, 'CALIBRE_GUI_DEVELOP_MODE'
+      worker = "def prove():\n import http.client\n from calibre.constants import is_running_from_develop\n return (is_running_from_develop,http.client.__file__,bool(http.client._is_legal_chunk_size(b'a')),bool(http.client._is_legal_chunk_size(b'+a')))\n"
+      actual = fork_job(worker, 'prove', timeout=15, no_output=True, module_is_source_code=True)['result']
+      assert actual == (False, str(path), True, False), 'CALIBRE_WORKER_HTTP_SELECTION'
+    '';
   };
   # Temporary: vendor 9.17's frozen Python still accepts malformed chunks.
   # Retire after the unmodified vendor browser passes the framing/data contract.

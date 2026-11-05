@@ -559,9 +559,18 @@ in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python
       return result
   def wired(binding,text):
       wanted='localhost/calibre-runtime:9.17.0-http-framing-'+hashlib.sha256(text.encode()).hexdigest()[:12]
+      emitted=commands(text)
+      if len(emitted)!=2: return False
+      builder=ast.parse(emitted[0][0]); verify=ast.parse(emitted[1][0])
+      bootstraps=[ast.literal_eval(n.value) for n in builder.body if isinstance(n,ast.Assign)
+          and any(isinstance(t,ast.Name) and t.id=='bootstrap' for t in n.targets)]
+      gui=any(isinstance(n,ast.Import) and any(a.name=='calibre.gui2' for a in n.names) for n in verify.body)
+      worker=any(isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='fork_job' for n in ast.walk(verify))
       return (binding['selected']==binding['container']==wanted and binding['pull']=='never'
           and 'ENV '+manifest['selectionVariable']+'='+manifest['rootPath'] in text
-          and len(commands(text))==2 and all(x[1]==0 and x[2]==manifest for x in commands(text)))
+          and all(x[1]==0 and x[2]==manifest for x in emitted)
+          and len(bootstraps)==1 and hashlib.sha256(bootstraps[0].encode()).hexdigest()==manifest['bootstrapSha256']
+          and gui and worker)
   assert wired(v,recipe)
   def rebound(text):
       binding=copy.deepcopy(v)
@@ -571,6 +580,10 @@ in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python
   assert not wired(rebound(omitted),omitted)
   optimized=recipe.replace('optimize=0','optimize=2')
   assert not wired(rebound(optimized),optimized)
+  for before,after in [('import calibre.gui2','pass # omitted GUI import'),
+      ("actual = fork_job(worker,", "actual = omitted_worker(worker,")]:
+      omitted=recipe.replace(before,after)
+      assert omitted!=recipe and not wired(rebound(omitted),omitted)
   wrong=copy.deepcopy(v);wrong['container']='lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378'
   assert not wired(wrong,recipe)
   assert ' image exists ' in v['preStart'] and v['selected'] in v['preStart']
@@ -579,6 +592,36 @@ in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python
   assert v['config'] + ':/config' in v['volumes']
   program=commands(recipe)[0][0]
   assert 'FROZEN_HTTP_SOURCE_CODE_DRIFT' in program
+  bootstrap=next(ast.literal_eval(n.value) for n in ast.parse(program).body if isinstance(n,ast.Assign)
+      and any(isinstance(t,ast.Name) and t.id=='bootstrap' for t in n.targets))
+  # Execute the emitted bootstrap with an opaque frozen entry point. The
+  # observer checks importer mode, precise selection and original site metadata.
+  harness="""import sys,types
+  class FrozenByteCodeLoader:
+      def get_filename(self,name): return '/vendor/site.pyc'
+      def get_code(self,name): return compile("def main(): return 'original-vendor-entry'",'/vendor/site.pyc','exec')
+  class BypyFrozenImporter:
+      develop_mode_path='/opt/hwc-calibre-http'
+      def find_spec(self,name,path): return types.SimpleNamespace(loader=FrozenByteCodeLoader())
+  importer=BypyFrozenImporter()
+  sys.meta_path.insert(0,importer)
+  namespace={'__name__':'__main__'}
+  exec(compile(BOOTSTRAP,'<emitted-bootstrap>','exec',optimize=2),namespace)
+  assert importer.develop_mode_path is None, 'MODE_NOT_RESTORED'
+  assert namespace['__name__']=='__main__' and namespace['__file__']=='/vendor/site.pyc'
+  assert namespace['main']()=='original-vendor-entry'
+  assert namespace['__spec__'].loader is namespace['__loader__']
+  finder=sys.meta_path[0]
+  assert finder.find_spec('http.client').origin=='/opt/hwc-calibre-http/http/client.py', 'HTTP_SELECTION_MISSING'
+  assert finder.find_spec('calibre') is None and finder.find_spec('urllib.request') is None
+  """
+  for variant,source in [('actual',bootstrap),
+      ('develop-mode',bootstrap.replace('importer.develop_mode_path = None','pass')),
+      ('selection',bootstrap.replace("fullname == 'http.client'", "fullname == 'missing.client'")),
+      ('vendor-entry',bootstrap.replace("exec(original.loader.get_code('site'), namespace)",'pass'))]:
+      result=subprocess.run([sys.executable,'-c',harness.replace('BOOTSTRAP',repr(source))],capture_output=True,timeout=10)
+      assert (result.returncode==0)==(variant=='actual'), (variant,result.stderr)
+      if variant!='actual': assert b'AssertionError' in result.stderr or b'KeyError' in result.stderr or b'AttributeError' in result.stderr
   sha=lambda b:hashlib.sha256(b).hexdigest()
   for kind,code in [('source','FROZEN_HTTP_SOURCE_DRIFT'),('result','FROZEN_HTTP_RESULT_DRIFT'),
       ('hunk','FROZEN_HTTP_HUNK_DRIFT'),('bound','FROZEN_HTTP_SOURCE_BOUND'),('bundle','FROZEN_HTTP_ARCHIVE_DRIFT')]:
