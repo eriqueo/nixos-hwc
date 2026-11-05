@@ -1016,8 +1016,20 @@ pkgs.runCommand "immich-shared-brotli-wiring" { nativeBuildInputs = [ pkgs.pytho
 
 calibre-security-wiring = let
   c = self.nixosConfigurations.hwc-home.config;
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  nativePackage = c.system.build.calibreRuntimeNativePackage;
+  rejectCatalog = args: !(builtins.tryEval (builtins.deepSeq
+    (helpers.selectFfmpegSecurityBackports args).commits true)).success;
   binding = pkgs.writeText "calibre-security-binding.json" (builtins.toJSON {
     native = (builtins.fromJSON c.system.build.calibreRuntimeAssets.text).native;
+    nativeSourceGuard = toString c.system.build.calibreRuntimeNativeSourceGuard;
+    nativeSourceSpec = toString c.system.build.calibreRuntimeNativeSourceSpec;
+    nativePostPatch = nativePackage.postPatch;
+    nativePatchFlags = nativePackage.patchFlags;
+    nativePatchCount = builtins.length nativePackage.patches;
+    contextTransforms = map (patch: { path = toString patch; command = patch.buildCommand; })
+      (builtins.filter (patch: builtins.isAttrs patch
+        && lib.hasSuffix "-7.1.patch" (patch.name or "")) nativePackage.patches);
     selected = c.hwc.media.calibre.image;
     container = c.virtualisation.oci-containers.containers.calibre.image;
     volumes = c.virtualisation.oci-containers.containers.calibre.volumes;
@@ -1026,7 +1038,12 @@ calibre-security-wiring = let
     pull = c.virtualisation.oci-containers.containers.calibre.pull;
     preStart = c.systemd.services.podman-calibre.preStart;
   });
-in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 pkgs.patchelf ]; } ''
+in
+assert rejectCatalog { advisories = []; };
+assert rejectCatalog { advisories = [ "unknown" ]; };
+assert rejectCatalog { advisories = [ "CVE-2026-107676" "CVE-2026-107676" ]; };
+assert rejectCatalog { advisories = [ "CVE-2026-107676" ]; contextEdits.unknown = []; };
+pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 pkgs.patchelf ]; } ''
   python3 - ${binding} ${c.system.build.calibreRuntimeImageRecipe} ${c.system.build.calibreRuntimeImageContext} <<'PYTEST'
   import ast, copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
   v=json.loads(pathlib.Path(sys.argv[1]).read_text())
@@ -1161,6 +1178,62 @@ in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python
   native_source = (native_dir / 'guard.py').read_text()
   native = v['native']
   assert native['schemaVersion'] == 1 and native['descriptor'] == native_spec
+  backports = native_spec['securityBackports']
+  source_spec = json.loads(pathlib.Path(v['nativeSourceSpec']).read_text())
+  assert all(backports[key] == value for key, value in source_spec.items())
+  assert backports['schemaVersion'] == 1 and len(backports['commits']) == 25
+  assert len(backports['advisories']) == 21 and len(backports['sourceSha256']) >= 20
+  assert v['nativePatchFlags'] == ['-p1','--fuzz=0'] and v['nativePatchCount'] == 27
+  def source_wired(text):
+      return v['nativeSourceGuard'] + ' ' + v['nativeSourceSpec'] + ' .' in text
+  assert source_wired(v['nativePostPatch'])
+  omitted = v['nativePostPatch'].replace(v['nativeSourceGuard'], '/omitted-source-guard')
+  assert omitted != v['nativePostPatch'] and not source_wired(omitted)
+  with tempfile.TemporaryDirectory() as source_temp:
+      root = pathlib.Path(source_temp)
+      fake = root / 'lib.c'; fake.write_bytes(b'qualified source')
+      spec_file = root / 'spec.json'
+      good = {'schemaVersion':1,'sourceRevision':backports['sourceRevision'],
+          'sourceSha256':{'lib.c':hashlib.sha256(fake.read_bytes()).hexdigest()}}
+      spec_file.write_text(json.dumps(good))
+      command = [sys.executable,'-I','-B',v['nativeSourceGuard'],str(spec_file),str(root)]
+      subprocess.run(command,check=True,capture_output=True,timeout=10)
+      for kind in ['schema','revision','empty','path','missing','hash']:
+          bad = copy.deepcopy(good)
+          if kind == 'schema': bad['schemaVersion'] = 2
+          elif kind == 'revision': bad['sourceRevision'] = 'unknown'
+          elif kind == 'empty': bad['sourceSha256'] = {}
+          elif kind == 'path': bad['sourceSha256']['../escape.c'] = bad['sourceSha256'].pop('lib.c')
+          elif kind == 'missing': bad['sourceSha256']['missing.c'] = bad['sourceSha256'].pop('lib.c')
+          elif kind == 'hash': bad['sourceSha256']['lib.c'] = '0' * 64
+          spec_file.write_text(json.dumps(bad))
+          result = subprocess.run(command,capture_output=True,timeout=10)
+          assert result.returncode != 0 and fake.read_bytes() == b'qualified source', kind
+      spec_file.write_text(json.dumps(good))
+      result = subprocess.run([sys.executable,'-OO',v['nativeSourceGuard'],str(spec_file),str(root)],capture_output=True,timeout=10)
+      assert result.returncode != 0 and b'CALIBRE_NATIVE_SOURCE_OPTIMIZED' in result.stderr
+      assert len(v['contextTransforms']) == 2
+      for transform in v['contextTransforms']:
+          # Exercise the emitted builder program, including its real inputs.
+          command_text = transform['command']
+          args = shlex.split(command_text.splitlines()[0])
+          assert args[:4] == ['python3','-I','-B','-']
+          program = command_text.split("<<'PYPATCH'\n",1)[1].split('\nPYPATCH',1)[0]
+          ast.parse(program)
+          source = root / 'upstream.patch'; source.write_bytes(pathlib.Path(args[4]).read_bytes())
+          edits = root / 'edits.json'; original_edits = json.loads(pathlib.Path(args[5]).read_text())
+          output = root / 'result.patch'
+          command = [sys.executable,'-I','-B','-',str(source),str(edits),str(output)]
+          edits.write_text(json.dumps(original_edits))
+          subprocess.run(command,input=program.encode(),check=True,capture_output=True,timeout=10)
+          assert output.read_bytes() == pathlib.Path(transform['path']).read_bytes()
+          for bad in [[], [['absent hunk','replacement']], [[original_edits[0][0],""]]]:
+              edits.write_text(json.dumps(bad)); output.write_bytes(b'unchanged')
+              result = subprocess.run(command,input=program.encode(),capture_output=True,timeout=10)
+              assert result.returncode != 0 and output.read_bytes() == b'unchanged'
+          edits.write_text(json.dumps(original_edits)); output.write_bytes(b'unchanged')
+          result = subprocess.run([sys.executable,'-OO','-',str(source),str(edits),str(output)],input=program.encode(),capture_output=True,timeout=10)
+          assert result.returncode != 0 and b'FFMPEG_CONTEXT_OPTIMIZED' in result.stderr and output.read_bytes() == b'unchanged'
   input_hash = hashlib.sha256(((native_dir / 'spec.json').read_text() + native_source + native['bundleInput']).encode()).hexdigest()
   assert input_hash == native['inputHash']
   api = runpy.run_path(str(native_dir / 'guard.py'))

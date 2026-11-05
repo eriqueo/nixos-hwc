@@ -33,6 +33,87 @@ let
       assert actual == (False, str(path), True, False), 'CALIBRE_WORKER_HTTP_SELECTION'
     '';
   };
+  # Upstream7.1 maintenance keeps RELEASE7.1.5; bind its exact revision
+  # and complete post-patch source separately from the library version.
+  nativeSourceFacts = builtins.fromJSON ''
+{
+  "schemaVersion": 1,
+  "sourceRevision": "f9db090b14c255a8f1c5f8f41a4c92b723228763",
+  "sourceSha256": {
+    "libavcodec/adxdec.c": "801f06624465f5e5f08e4582bc70dd925d767f50a8d0a530edb1510d78208006",
+    "libavcodec/cfhd.c": "0588d773b1c4e8fa2427bb6737e8317a9c76427dc21587596a918e5cb99b484d",
+    "libavcodec/dvbsub_parser.c": "71e716bc56433b8a46c1d5c8a1a5fb454731b3fea7b7e95b7d4a5cc64d37d073",
+    "libavcodec/lcldec.c": "8974c46459aa97eeb68f14cd6d371e0d5032790aa5acce71900e6a5e267c1544",
+    "libavcodec/mace.c": "b982ff4276da9a87f19c334e4f92f5317f4ef4bd758682deb335ed30a0be050f",
+    "libavcodec/rscc.c": "774382c170ff4603590120b1dbd9190ac48f446a521ef34e5870c6bbe3d104b0",
+    "libavcodec/screenpresso.c": "882d6e383c4ccf44af608e0aca385e038c36762b5142268e942388ee3248833e",
+    "libavcodec/tdsc.c": "59455f38dca7f007f2abef4493463880b3311aeb0a3ce78568e11af99b402a45",
+    "libavcodec/tiff.c": "d71d08c601fe824970515c640cc72c39e497297828c8f8d183e8e4801e4438b3",
+    "libavfilter/avfilter.c": "dd869e2e7c85037d07458da1dcb3ff95db3b97d9c0442a72df3608202332ed2d",
+    "libavfilter/vf_floodfill.c": "1a1dfb0a028421a843fb672ba40e9e66e5b25c0ae7c1bd8149b2f90ad7029fca",
+    "libavfilter/vf_hqdn3d.c": "02664152f7a9679c989185dfa66ac27484a3bb14850a8026a5313f256c989831",
+    "libavfilter/vf_hqdn3d.h": "15de9174517591c41d2df3874376cd7271c43748745f4437e9cb7b9209dbd4b9",
+    "libavfilter/vf_swaprect.c": "9d5875d821d4bf670094ec09d91f8b2ec67dbcb7556e17df22a4e75ad09def45",
+    "libavformat/hls.c": "a297662d8e83c1067b905fb198af7c47bacbb20d184195da52335d04e4fc13d7",
+    "libavformat/isom.h": "cb23c58f760cc13c66b2fb3bced1478886133eb46dc8bc4fd73ebc1141a5b8aa",
+    "libavformat/mov.c": "bed4eb73bba5000e5b8a86bb3f9d32568738b3e5d84581ec6d4ccc94a22631a4",
+    "libavformat/mpeg.c": "75a8c8b1c5642b313cebae32621a85e443eb8920e08836da43c24221d5c57659",
+    "libavformat/rtpdec_asf.c": "b4748d01fbe4971e7273519e6b5fbccea9f21aa9f2a9f48a5920ce1773e1a707",
+    "libavformat/rtsp.c": "204cff07d490b0422c8ed4676e8e1997c5b36d052e4a410a265b3916ee085bc5",
+    "libavformat/spdifenc.c": "7a6d6eba8a3d26570114fd17bd3503f339520c5a3db6164c98f6ead38f514294",
+    "libavformat/ty.c": "2b89305396b5be7bff698068356c7a0c37799f177c4c99e79645bc30b9f66338",
+    "libavutil/encryption_info.c": "012a2b4d31c2f5311ea97e16b19c77ecc2c25d44f712bf5c69f8b82334ca7075",
+    "libavutil/encryption_info.h": "782fcd91eee6cce50eb6336d6311c4c113a38f1d8f21e6cc1eb616cb1cac653b",
+    "libavutil/hdr_dynamic_metadata.c": "70876a30e7ac083375382ea48df91ff1c0e5590f13a8957ffbb058139cba417b",
+    "libavutil/tests/encryption_info.c": "336c641861b4b735cbbf1dbb3bcdea8a90db6e43d19107d43eb0170d2f80de67"
+  }
+}
+  '';
+  nativeSecurity = helpers.selectFfmpegSecurityBackports {
+    advisories = [ "CVE-2026-107676" "CVE-2026-107678" "CVE-2026-107695" "CVE-2026-107696" "CVE-2026-107697" "CVE-2026-64830" "CVE-2026-64833" "CVE-2026-64834" "CVE-2026-64835" "CVE-2026-65703" "CVE-2026-65704" "CVE-2026-65705" "CVE-2026-65706" "CVE-2026-66036" "CVE-2026-66038" "CVE-2026-66039" "CVE-2026-70628" "CVE-2026-70629" "CVE-2026-70630" "CVE-2026-70631" "CVE-2026-70632" ];
+    # Adapt branch context only; preserve all upstream security additions.
+    contextEdits = builtins.fromJSON ''
+{
+  "eb9cef3ef1f6adac1e701e3f5f06739a0fcb0c97": [
+    [
+      "@@ -2243,6 +2244,11 @@ redirect:\n     if (reply->status_code >=300 && reply->status_code < 400 && s->iformat) {\n         int ret;\n \n+        if (redirects++ >= 8 /* MAX_RTSP_REDIRECTS */) {\n+            av_log(s, AV_LOG_ERROR, \"Too many RTSP redirects\\n\");\n+            err = AVERROR(EIO);\n+            goto fail2;\n+        }\n         if (!rtsp_url_same_origin(s->url, reply->location)) {\n             memset(rt->auth, 0, sizeof(rt->auth));\n             memset(&rt->auth_state, 0, sizeof(rt->auth_state));\n",
+      "@@ -2243,6 +2244,11 @@ redirect:\n     if (reply->status_code >=300 && reply->status_code < 400 && s->iformat) {\n+        if (redirects++ >= 8 /* MAX_RTSP_REDIRECTS */) {\n+            av_log(s, AV_LOG_ERROR, \"Too many RTSP redirects\\n\");\n+            err = AVERROR(EIO);\n+            goto fail2;\n+        }\n         char *new_url = av_strdup(reply->location);\n         if (!new_url) {\n             err = AVERROR(ENOMEM);\n             goto fail2;\n         }\n"
+    ]
+  ],
+  "62294b6a8ad2370e1435bb9985ebe6b53be14c2b": [
+    [
+      "@@ -1078,7 +1078,8 @@ int ff_filter_frame(AVFilterLink *link, AVFrame *frame)\n             strcmp(link->dst->filter->name, \"idet\") &&\n             strcmp(link->dst->filter->name, \"null\") &&\n             strcmp(link->dst->filter->name, \"scale\") &&\n-            strcmp(link->dst->filter->name, \"libplacebo\")) {\n+            strcmp(link->dst->filter->name, \"libplacebo\") &&\n+            strcmp(link->dst->filter->name, \"hqdn3d\")) {\n             av_assert1(frame->format        == link->format);\n             av_assert1(frame->width         == link->w);\n             av_assert1(frame->height        == link->h);\n",
+      "@@ -1078,6 +1078,7 @@ int ff_filter_frame(AVFilterLink *link, AVFrame *frame)\n             strcmp(link->dst->filter->name, \"idet\") &&\n             strcmp(link->dst->filter->name, \"null\") &&\n-            strcmp(link->dst->filter->name, \"scale\")) {\n+            strcmp(link->dst->filter->name, \"scale\") &&\n+            strcmp(link->dst->filter->name, \"hqdn3d\")) {\n             av_assert1(frame->format        == link->format);\n             av_assert1(frame->width         == link->w);\n             av_assert1(frame->height        == link->h);\n"
+    ]
+  ]
+}
+  '';
+  };
+  nativeSourceSpec = pkgs.writeText "calibre-native-source.json" (builtins.toJSON nativeSourceFacts);
+  nativeSourceGuard = pkgs.writeText "calibre-native-source-guard.py" ''
+    import hashlib, json, pathlib, re, sys
+    if sys.flags.optimize:
+        raise RuntimeError('CALIBRE_NATIVE_SOURCE_OPTIMIZED')
+    spec_file, root = map(pathlib.Path, sys.argv[1:])
+    assert spec_file.stat().st_size <= 65536, 'CALIBRE_NATIVE_SOURCE_SPEC_BOUND'
+    spec = json.loads(spec_file.read_text())
+    assert spec['schemaVersion'] == 1, 'CALIBRE_NATIVE_SOURCE_SCHEMA'
+    assert re.fullmatch('[0-9a-f]{40}', spec['sourceRevision']), 'CALIBRE_NATIVE_SOURCE_REVISION'
+    files = spec['sourceSha256']
+    assert 1 <= len(files) <= 64, 'CALIBRE_NATIVE_SOURCE_COUNT'
+    used = 0
+    for name, expected in files.items():
+        relative = pathlib.Path(name)
+        assert not relative.is_absolute() and '..' not in relative.parts, 'CALIBRE_NATIVE_SOURCE_PATH'
+        path = root / relative
+        assert path.is_file() and not path.is_symlink(), 'CALIBRE_NATIVE_SOURCE_FILE'
+        assert path.stat().st_size <= 2097152, 'CALIBRE_NATIVE_SOURCE_FILE_BOUND'
+        raw = path.read_bytes()
+        used += len(raw)
+        assert used <= 16777216, 'CALIBRE_NATIVE_SOURCE_GROUP_BOUND'
+        assert hashlib.sha256(raw).hexdigest() == expected, 'CALIBRE_NATIVE_SOURCE_DRIFT'
+    print('CALIBRE_NATIVE_SOURCE_FIXED', len(files))
+  '';
   # Temporary: the vendor FFmpeg 7.1.2 predates same-ABI security fixes.
   # Retire when the unmodified vendor eight-library group passes this contract.
   nativeFfmpeg = (pkgs.ffmpeg_7.override {
@@ -47,6 +128,16 @@ let
     withXcbShape = true; withXcbShm = true; withXcbxfixes = true;
     libiconv = pkgs.libiconvReal;
   }).overrideAttrs (old: {
+    src = pkgs.fetchFromGitHub {
+      owner = "FFmpeg"; repo = "FFmpeg"; name = "ffmpeg";
+      rev = nativeSourceFacts.sourceRevision;
+      hash = "sha256-trLrw4misl9NvXgXrr44Wc1ImPvcPX/KzDyFRsrj8mU=";
+    };
+    patches = old.patches ++ nativeSecurity.patches;
+    patchFlags = [ "-p1" "--fuzz=0" ];
+    postPatch = (old.postPatch or "") + ''
+      ${pkgs.python3}/bin/python3 -I -B ${nativeSourceGuard} ${nativeSourceSpec} .
+    '';
     configureFlags = old.configureFlags ++ [ "--disable-decoder=truemotion1" ];
   });
   # Measured canonical 9.17 source group. All filename, role and dependency
@@ -158,6 +249,7 @@ let
   nativeDescriptor = {
     schemaVersion = 1;
     sourceVersion = "7.1.2";
+    securityBackports = nativeSourceFacts // { inherit (nativeSecurity) advisories commits; };
     version = nativeFfmpeg.version;
     minimumVersion = "7.1.5";
     families = nativeFfmpeg.meta.pkgConfigModules;
@@ -540,6 +632,9 @@ in
     { system.build = {
       calibreRuntimeAssets = runtimeAssets;
       calibreRuntimeNativeSpec = nativeSpec;
+      calibreRuntimeNativeSourceSpec = nativeSourceSpec;
+      calibreRuntimeNativeSourceGuard = nativeSourceGuard;
+      calibreRuntimeNativePackage = nativeFfmpeg;
       calibreRuntimeNativeGuard = nativeGuard;
       calibreRuntimeNativeBundle = nativeBundle;
     }; }
