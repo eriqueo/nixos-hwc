@@ -9,6 +9,7 @@ let
   spec = {
     schemaVersion = 1;
     pythonVersion = "3.11.18";
+    environment = { IN_DOCKER = "Yes"; PYTHONUNBUFFERED = "1"; PYTHONDONTWRITEBYTECODE = "1"; };
     sourceImage = "docker.io/mrusse08/soularr@sha256:894210817cd89dd410fa603be2744ca81c593b9eaa542639a7894f2df008a788";
     baseImage = "docker.io/library/python@sha256:6d10e720318bd84cc3d88af92bb5a47189222e17620a2fd214da6445e4afb679";
     appFiles = {
@@ -68,10 +69,11 @@ let
     };
   };
   guard = ''
-    import hashlib, importlib.metadata, json, sys
+    import hashlib, importlib.metadata, json, os, sys
     from pathlib import Path
-    def verify(spec, app, inputs, version):
+    def verify(spec, app, inputs, version, environment):
         assert spec['schemaVersion'] == 1 and version == spec['pythonVersion'], 'SOULARR_RUNTIME_VERSION'
+        assert all(environment.get(name) == value for name, value in spec['environment'].items()), 'SOULARR_RUNTIME_ENVIRONMENT'
         for name, digest in spec['appFiles'].items():
             path = app / name
             assert path.is_file() and not path.is_symlink() and path.stat().st_size <= 131072, 'SOULARR_APP_BOUND'
@@ -83,7 +85,7 @@ let
         for entry in spec['preservedPackages']:
             assert importlib.metadata.version(entry['name']) == entry['version'], 'SOULARR_PACKAGE_VERSION'
     if __name__ == '__main__':
-        verify(json.loads(Path(sys.argv[1]).read_text()), Path('/app'), Path('/tmp/hwc-soularr'), sys.version.split()[0])
+        verify(json.loads(Path(sys.argv[1]).read_text()), Path('/app'), Path('/tmp/hwc-soularr'), sys.version.split()[0], os.environ)
   '';
   guardSource = pkgs.writeText "soularr-runtime-input-guard.py" guard;
   manifest = spec // { framing = framing.manifest; };
@@ -100,6 +102,7 @@ let
     recipe = ''
       FROM ${spec.sourceImage} AS app-source
       FROM ${spec.baseImage}
+      ENV ${lib.concatStringsSep " " (lib.mapAttrsToList (name: value: "${name}=${value}") spec.environment)}
       COPY --from=app-source /app/soularr.py /app/run.sh /app/
     '' + copies + ''
       COPY inputs/ /tmp/hwc-soularr/
@@ -110,7 +113,6 @@ let
       RUN python3 -B /app/soularr.py --help && ps aux >/dev/null && tini --version
       RUN rm -rf /tmp/hwc-soularr
       WORKDIR /app
-      ENV PYTHONDONTWRITEBYTECODE=1
       ENTRYPOINT ["tini", "-g", "--"]
       CMD ["/app/run.sh"]
     '';

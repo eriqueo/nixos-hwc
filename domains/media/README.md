@@ -26,7 +26,8 @@ apps. These preserve app writes while blocking other users from all config copie
 Soularr's existing index also emits its immutable minimal runtime context. It keeps
 the same CLI, scheduler and runtime packages while updating Python, HTTP and trust
 inputs. Startup requires a prebuilt image; verification checks the emitted recipe
-and rejects missing wiring or altered inputs before any image build writes.
+and rejects missing wiring, lost container-mode flags or altered inputs before
+any image build writes.
 
 Immich uses the versioned shared database-role contract and restarts with its provisioner when credentials or provisioning code change.
 
@@ -119,6 +120,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Preserve Soularr's inherited container-mode and unbuffered-output flags in the minimal image; reject their removal in the emitted-recipe and input-guard checks.
 
 - 2026-11-05: Emit a minimal same-CLI Soularr runtime with pinned Python3.11.18, HTTP/trust wheels and scheduler tools. Reuse the paired framing adapter, preserve Tini group shutdown, guard app/input hashes and check actual recipe wiring. Runtime adoption requires separate current-data qualification.
 

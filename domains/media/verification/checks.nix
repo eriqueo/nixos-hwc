@@ -32,6 +32,8 @@ in pkgs.runCommand "soularr-runtime-security" { nativeBuildInputs = [ pkgs.pytho
       assert 'uninstall --yes pip setuptools wheel' in text
       assert 'ENTRYPOINT ["tini", "-g", "--"]' in text and 'CMD ["/app/run.sh"]' in text
       assert 'WORKDIR /app' in text and 'soularr.py --help && ps aux' in text
+      assert 'IN_DOCKER=' + spec['environment']['IN_DOCKER'] in text
+      assert 'PYTHONUNBUFFERED=' + spec['environment']['PYTHONUNBUFFERED'] in text
       assert 'WEBUI' not in text and 'EXPOSE' not in text
       assert spec['framing']['modules']['httpClient']['sourceSha256'] in text
       assert spec['framing']['modules']['urllib3']['patchedSha256'] in text
@@ -39,6 +41,7 @@ in pkgs.runCommand "soularr-runtime-security" { nativeBuildInputs = [ pkgs.pytho
   for old in ['COPY --from=app-source /app/soularr.py /app/run.sh /app/',
               'RUN python3 -B /tmp/hwc-soularr/guard.py /tmp/hwc-soularr/manifest.json',
               '--no-index --no-deps --no-compile', 'ENTRYPOINT ["tini", "-g", "--"]',
+              'IN_DOCKER=' + spec['environment']['IN_DOCKER'],
               spec['framing']['modules']['urllib3']['patchedSha256']]:
       assert old in recipe
       try: wiring(recipe.replace(old, 'omitted-integration'))
@@ -55,17 +58,19 @@ in pkgs.runCommand "soularr-runtime-security" { nativeBuildInputs = [ pkgs.pytho
           fixture['appFiles'][name] = hashlib.sha256(raw).hexdigest()
       versions = {x['name']: x['version'] for x in spec['preservedPackages']}
       with patch('importlib.metadata.version', side_effect=versions.__getitem__):
-          api['verify'](fixture, app, context / 'inputs', spec['pythonVersion'])
-          for kind in ['schema', 'version', 'app', 'missing', 'input', 'package']:
+          api['verify'](fixture, app, context / 'inputs', spec['pythonVersion'], spec['environment'])
+          for kind in ['schema', 'version', 'app', 'missing', 'input', 'package', 'environment']:
               bad = copy.deepcopy(fixture)
               version = spec['pythonVersion']
+              environment = dict(spec['environment'])
               if kind == 'schema': bad['schemaVersion'] = 0
               if kind == 'version': version = '3.11.0'
               if kind == 'app': bad['appFiles']['soularr.py'] = '0' * 64
               if kind == 'missing': bad['wheels'][0]['filename'] = 'missing.whl'
               if kind == 'input': bad['debs'][-1]['sha256'] = '0' * 64
               if kind == 'package': bad['preservedPackages'][-1]['version'] = 'wrong'
-              try: api['verify'](bad, app, context / 'inputs', version)
+              if kind == 'environment': environment.pop('IN_DOCKER')
+              try: api['verify'](bad, app, context / 'inputs', version, environment)
               except (AssertionError, FileNotFoundError): pass
               else: raise AssertionError('invalid runtime input passed: ' + kind)
       assert all((app / name).read_bytes() == ('owned fixture ' + name).encode() for name in fixture['appFiles'])
