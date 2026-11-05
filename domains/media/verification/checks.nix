@@ -1328,6 +1328,17 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   assert v['config'] + ':/config' in v['volumes']
   program=commands(recipe)[0][0]
   assert 'FROZEN_HTTP_SOURCE_CODE_DRIFT' in program
+  import types
+  shape_node=next(n for n in ast.parse(program).body if isinstance(n,ast.FunctionDef) and n.name=='shape')
+  shapes={'types':types}
+  exec(compile(ast.Module(body=[shape_node],type_ignores=[]),'<actual-source-parity>','exec'),shapes)
+  nested=compile('value=1','<vendor-module>','exec',optimize=2)
+  root_code=compile('pass','<same-root>','exec',optimize=2)
+  vendor=root_code.replace(co_consts=((nested,),))
+  source_code=root_code.replace(co_consts=((nested.replace(co_filename='<source-module>'),),))
+  assert shapes['shape'](vendor)==shapes['shape'](source_code),'NESTED_CODE_FILENAME_PARITY'
+  changed=root_code.replace(co_consts=((nested.replace(co_firstlineno=nested.co_firstlineno+1),),))
+  assert shapes['shape'](vendor)!=shapes['shape'](changed),'NESTED_CODE_POSITION_DRIFT_ACCEPTED'
   bootstrap=next(ast.literal_eval(n.value) for n in ast.parse(program).body if isinstance(n,ast.Assign)
       and any(isinstance(t,ast.Name) and t.id=='bootstrap' for t in n.targets))
   # Execute the emitted bootstrap with an opaque frozen entry point. The
