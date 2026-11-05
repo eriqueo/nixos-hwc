@@ -222,9 +222,20 @@ rec {
         loader = http.client.__loader__
         assert type(loader).__name__ == 'FrozenByteCodeLoader', 'FROZEN_HTTP_LOADER_DRIFT'
         def shape(code):
+            # Python 3.14 can nest annotation code inside container constants.
+            # Normalize recursively, including positions, as in the qualified
+            # whole-module baseline; filenames are the only excluded field.
+            if isinstance(code, tuple):
+                return tuple(shape(value) for value in code)
+            if isinstance(code, frozenset):
+                return frozenset(shape(value) for value in code)
+            if isinstance(code, slice):
+                return ('slice', shape(code.start), shape(code.stop), shape(code.step))
+            if not isinstance(code, types.CodeType):
+                return code
             return (code.co_argcount, code.co_posonlyargcount, code.co_kwonlyargcount,
                 code.co_nlocals, code.co_stacksize, code.co_flags, code.co_code,
-                tuple(shape(c) if isinstance(c, types.CodeType) else c for c in code.co_consts),
+                shape(code.co_consts),
                 code.co_names, code.co_varnames, code.co_name, code.co_qualname,
                 code.co_firstlineno, code.co_linetable, code.co_exceptiontable,
                 code.co_freevars, code.co_cellvars)
