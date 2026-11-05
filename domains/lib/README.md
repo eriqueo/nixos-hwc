@@ -77,7 +77,7 @@ re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
 
-- 2026-11-05: Integrate the qualified frozen library bundle with early source selection and shared Books verification.
+- 2026-11-05: Integrate the qualified frozen library bundle with early source selection, shared Books verification and opaque-importer probes.
 
 - 2026-11-05: Reuse the bounded patch transformer for inherited Nix patches as well as security groups; reject unsafe names and empty or excessive edits.
 
