@@ -48,6 +48,14 @@ Frigate and Immich ML derive same-app images with the shared Starlette Host pars
 Frigate additionally selects a paired stdlib/urllib3 framing recipe; its actual
 streaming model client and current-data qualification own deployment acceptance.
 
+Calibre's canonical runtime also exports a bounded, same-ABI FFmpeg repair. Its
+eight-library source table owns filenames, roles and existing ELF dependencies.
+The portable Nix-built group keeps all measured source features, validates every
+input before copying, and checks fresh native loads before and after replacement.
+Books derives this distribution through the existing pure asset API. The existing
+Calibre security check rejects missing native wiring and changed inputs; these
+source checks do not establish deployment or data compatibility.
+
 Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
 selection. Its image build exercises the actual GUI import and fork_job worker.
 
@@ -120,6 +128,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Calibre owns the shared FFmpeg7.1.5 source/context repair for its same-ABI eight-library group. Preserve the vendor frozen archive and HTTP bootstrap. Bind native inputs to the image identity and reject byte, ELF, feature or command drift. Deployment requires separate image and current-data qualification.
 
 - 2026-11-05: Retain and hash-check the Books app's version marker with its source. The inherited init copies that marker to its config cache, so the new native base must not supply the newer app's identity.
 
