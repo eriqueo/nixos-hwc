@@ -165,6 +165,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-05: Bind the SSL installer root to the existing Python runtime owner, preserving the guard's single-component proof-path contract.
+
 - 2026-11-05: Keep distro SSL proof under its Python runtime directory so the installer works with all container capabilities dropped.
 
 - 2026-11-05: Preserve the measured Ubuntu SSL preimage mode0644 in both shared consumers; keep the frozen extension's mode0755 contract separate.

@@ -1270,7 +1270,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   assert system_ssl['native']['pythonVersion']==system_spec['pythonVersion']
   assert system_ssl['native']['opensslVersion']=='3.5.5'
   assert system_ssl['native']['original']['mode']==0o644
-  assert 'privateCa' not in system_ssl and system_ssl['rootPath']=='/' and system_ssl['trustKind']=='system-default'
+  assert 'privateCa' not in system_ssl and system_ssl['rootPath']==system_spec['runtimeRoot'] and system_ssl['trustKind']=='system-default'
   assert (context/'system-python/ssl/lib/_ssl.so').read_bytes()==(system_context/'ssl/lib/_ssl.so').read_bytes()
   source_api={'__name__':'test_system_python'}
   source_guard=(system_context/'guard.py').read_text()
