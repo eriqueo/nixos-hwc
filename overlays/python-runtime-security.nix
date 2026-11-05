@@ -263,7 +263,7 @@ in
 assert spec.schemaVersion == 1;
 {
   # The container retains its existing source/result hashes and protocol shape.
-  pythonHttpFramingBackport = { inherit (spec) upstreamCommits replacements; };
+  pythonHttpFramingBackport = { inherit (spec) upstreamCommits replacements distroSources; };
   # Local urllib3 adaptation reuses the controlled stdlib predicates. This is
   # not an upstream urllib3 release; image callers must qualify both modules.
   pythonUrllib3FramingBackport = {

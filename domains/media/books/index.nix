@@ -134,8 +134,7 @@ let
     modules = {
       httpClient = {
         path = "/usr/lib/python${pythonMinor}/http/client.py";
-        sourceSha256 = "3fb2bf964bf8553a404bffdc47d2483832fb402128021bab650c452fc5b41bbb";
-        patchedSha256 = "ef5f8f91c6251955735aeddaf5aa1cdd2efceff5f74eb78508e4b8885bef98a0";
+        inherit (pkgs.pythonHttpFramingBackport.distroSources."ubuntu-3.14.4-1ubuntu0.2") sourceSha256 patchedSha256;
         replacements = pkgs.pythonHttpFramingBackport.replacements;
       };
       urllib3 = {
@@ -310,13 +309,14 @@ let
       RUN dpkg --unpack ${debPaths} && dpkg --configure --pending && test -z "$(dpkg --audit)" && mkdir /tmp/hwc-books-empty-sources && touch /tmp/hwc-books-empty.list && apt-get -o Dir::Etc::sourcelist=/tmp/hwc-books-empty.list -o Dir::Etc::sourceparts=/tmp/hwc-books-empty-sources check
       RUN rm -rf /app/lazylibrarian && mv /tmp/hwc-books-app /app/lazylibrarian && ln -s ${assets.rootPath} /app/calibre
       RUN python3 -B /tmp/hwc-books/guard.py ${spec.commands.apply} /tmp/hwc-books/manifest.json /app/lazylibrarian
-    '' + framing.recipe + ''
+    '' + framing.recipe + config.system.build.calibreRuntimeSystemPythonRecipe.text + ''
       RUN buildTmp=$(mktemp -d /tmp/hwc-books-calibre.XXXXXX) && trap 'rm -rf "$buildTmp"' EXIT && export CALIBRE_CONFIG_DIRECTORY="$buildTmp/config" XDG_CACHE_HOME="$buildTmp/cache" && ${assets.rootPath}/calibre_postinstall && calibre-debug --version && calibredb --version && ebook-convert --version && ebook-meta --version
       RUN rm -rf /tmp/hwc-books /tmp/hwc-books-empty.list /tmp/hwc-books-empty-sources
     '';
   };
   runtimeContext = pkgs.runCommand "books-runtime-context" {} ''
     mkdir -p "$out/inputs/native"
+    cp -r ${config.system.build.calibreRuntimeSystemPythonContext} "$out/system-python"
     cp ${runtime.dockerfile} "$out/Dockerfile"
     cp ${manifestSource} "$out/inputs/manifest.json"
     cp ${guardSource} "$out/inputs/guard.py"

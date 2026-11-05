@@ -12,6 +12,14 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Calibre's existing producer also exports one shared Ubuntu Python repair for
+Selkies and the Books candidate. It keeps the distro interpreter and packages,
+rebuilds only the SSL extension against matched headers, and validates five
+source preimages before writing a private image layer. Books retains its paired
+HTTP/urllib3 guard; the shared installer accepts its exact fixed HTTP postimage.
+Both images verify the resulting modules in fresh processes. Current-data and
+live release qualification remain separate gates.
+
 Calibre stages its four-library source bundle into the existing early frozen loader. Parent and fork-worker probes check the selected modules and POP command controls. Books verifies the shared manifest, source sizes, hashes and file modes. Image and current-data qualification remain separate release gates.
 
 The native YouTube transcript wrapper resolves yt-dlp through the checked HTTP
@@ -152,6 +160,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Share guarded distro Python source and native SSL repairs across Selkies and Books, using the common source catalog and matched Ubuntu SDK.
 
 - 2026-11-05: Resolve each original module’s own frozen loader before comparing its source code; reject reuse of the HTTP loader.
 
