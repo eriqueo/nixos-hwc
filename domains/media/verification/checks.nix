@@ -1076,6 +1076,8 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   assert ssl_spec['patch']['hash']=='sha256-golYkxggS4HEq/zTjv3TeI3AVKuqTqtKXCBrU+0Ky4E='
   assert ssl_spec['original']['needed']==['libc.so.6','libcrypto.so.3','libssl.so.3']
   assert ssl_spec['rpath']=='$ORIGIN/..'
+  assert ssl_spec['apiConstantChanges']=={'_OPENSSL_API_VERSION':{'original':[3,5,0,8,0],'rebuilt':[3,5,0,9,0]}}
+  assert ssl_spec['apiSha256']!=ssl_spec['original']['apiSha256']
   guard={};exec(compile(pathlib.Path(ssl['guard']).read_text(),'<actual-ssl-source-guard>','exec',optimize=0),guard)
   with tempfile.TemporaryDirectory() as directory:
       root=pathlib.Path(directory);value=copy.deepcopy(ssl_spec)
