@@ -131,6 +131,7 @@ let
           -I${pkgs.python314}/include/python3.14 \
           -I${pkgs.python314}/include/python3.14/internal \
           -I${lib.getDev pkgs.openssl_3_5}/include \
+          -I${lib.getDev pkgs.bluez}/include \
           Modules/_ssl.c -L${lib.getLib pkgs.openssl_3_5}/lib -lssl -lcrypto -o _ssl.so
         runHook postBuild
       '';

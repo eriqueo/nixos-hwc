@@ -1065,6 +1065,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
       return (value['patchFlags']==['-p1','--fuzz=0'] and value['patchCount']==1
           and value['guard']+' '+value['spec']+' .' in value['postPatch']
           and 'Modules/_ssl.c' in value['build'] and '-shared -fPIC' in value['build']
+          and '-bluez-' in value['build']
           and '-lssl -lcrypto' in value['build'] and '-lpython' not in value['build'])
   assert ssl_wired(ssl)
   for key in ['postPatch','build']:
