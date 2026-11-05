@@ -129,6 +129,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-05: Translate Nix's bzip2 dependency name to the bundled vendor name during FFmpeg packaging. The actual three required BZ2 symbols exist in the retained library. Keep the existing dependency allowlist and reject unknown alias destinations.
+
 - 2026-11-05: Calibre owns the shared FFmpeg7.1.5 source/context repair for its same-ABI eight-library group. Preserve the vendor frozen archive and HTTP bootstrap. Bind native inputs to the image identity and reject byte, ELF, feature or command drift. Deployment requires separate image and current-data qualification.
 
 - 2026-11-05: Retain and hash-check the Books app's version marker with its source. The inherited init copies that marker to its config cache, so the new native base must not supply the newer app's identity.

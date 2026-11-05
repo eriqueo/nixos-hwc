@@ -1207,7 +1207,7 @@ in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python
   for kind in ["positive", "schema", "descriptor", "missing-second", "corrupt-second",
                "source-hash", "source-mode", "unexpected", "link", "manifest-link",
                "path", "soname", "rpath", "dependency", "minimum-version",
-               "candidate-version", "feature-loss", "installed-hash", "snapshot"]:
+               "candidate-version", "feature-loss", "installed-hash", "snapshot", "dependency-alias"]:
       with tempfile.TemporaryDirectory() as name:
           folder = Path(name)
           root, inputs = folder / "installed", folder / "inputs"
@@ -1241,6 +1241,9 @@ in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python
           elif kind == "dependency": files[second]["needed"].append("libunexpected.so.1")
           elif kind == "minimum-version":
               spec["minimumVersion"] = "7.1.6"; manifest["descriptor"] = copy.deepcopy(spec)
+          elif kind == "dependency-alias":
+              spec["dependencyAliases"] = {"libbz2.so.1": "libunexpected.so.1"}
+              manifest["descriptor"] = copy.deepcopy(spec)
           (inputs / "manifest.json").write_text(json.dumps(manifest))
           if kind == "manifest-link":
               (inputs / "manifest.json").rename(inputs / "manifest-real.json")
@@ -1264,7 +1267,8 @@ in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python
                       "source-hash": "CALIBRE_NATIVE_SOURCE_HASH", "source-mode": "CALIBRE_NATIVE_SOURCE_MODE",
                       "soname": "CALIBRE_NATIVE_ABI_RPATH", "rpath": "CALIBRE_NATIVE_ABI_RPATH",
                       "dependency": "CALIBRE_NATIVE_DEPENDENCY", "minimum-version": "CALIBRE_NATIVE_VERSION",
-                      "candidate-version": "CALIBRE_NATIVE_SELECTED_VERSION", "feature-loss": "CALIBRE_NATIVE_FEATURE_LOST:decoders"}
+                      "candidate-version": "CALIBRE_NATIVE_SELECTED_VERSION", "feature-loss": "CALIBRE_NATIVE_FEATURE_LOST:decoders",
+                      "dependency-alias": "CALIBRE_NATIVE_DEPENDENCY_ALIAS"}
           if kind in expected: assert error == expected[kind], (kind, error)
           if not should_pass:
               after = {p.name: (p.read_bytes(), stat.S_IMODE(p.stat().st_mode)) for p in root.iterdir()}
