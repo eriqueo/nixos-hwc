@@ -62,12 +62,13 @@ the build. Navidrome selects its original seven patch inputs from that owner.
 The inherited Chromium extension keeps its exact function and declaration with
 branch-specific context, so the complete Nix and security pipeline uses zero fuzz.
 
-The same Calibre index exports an artifact-only native SSL constructor. It builds
-one upstream-patched module with measured Python/OpenSSL headers and a portable
-ELF manifest. Its socket ABI includes the configured Bluetooth SDK headers.
-Its source guard rejects source, header and ABI drift. The existing
-security check exercises those guards and missing build wiring. Runtime images
-remain unchanged until the isolated original-path TLS consumer qualifies it.
+The same Calibre index builds and installs one upstream-patched native SSL module
+with measured Python/OpenSSL headers and a portable ELF manifest. Its socket ABI
+includes the configured Bluetooth SDK headers. Its source guard rejects source,
+header and ABI drift. The shared distribution carries one guarded proof directory.
+The frozen parent and worker verify the installed module, API and private CA.
+Books checks that same guard and proof through the additive nativeSsl asset API.
+The security checks reject invalid inputs before writes and missing image wiring.
 Its API contract permits only the truthful build-header version update; all
 other native members and constants must match the measured vendor API.
 
@@ -143,6 +144,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Wire the qualified native SSL artifact into Calibre's shared distribution. Preserve its file mode and owner; share one installed guard with Books and exercise the frozen parent/worker API and private CA. Add failed-input and missing-wiring controls; deployment and current-data acceptance remain separate.
 
 - 2026-11-05: Bind the native SSL API to the measured build-header metadata difference. The vendor used3.5.8 headers with3.5.9 libraries; the rebuild reports3.5.9 and preserves every other member and constant.
 

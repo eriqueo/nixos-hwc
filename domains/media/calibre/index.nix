@@ -23,19 +23,25 @@ let
       CALIBRE_CONFIG_DIRECTORY = "/tmp/hwc-frozen-config";
       XDG_CACHE_HOME = "/tmp/hwc-frozen-cache";
     };
-    consumerVerification = ''
+    consumerVerification = sslRuntimeProof + ''
+      native_ssl = native_ssl_proof()
       import calibre.gui2
       from calibre.constants import is_running_from_develop
       from calibre.utils.ipc.simple_worker import fork_job
       assert not is_running_from_develop, 'CALIBRE_GUI_DEVELOP_MODE'
-      worker = "def prove():\n import http.client\n from calibre.constants import is_running_from_develop\n return (is_running_from_develop,http.client.__file__,bool(http.client._is_legal_chunk_size(b'a')),bool(http.client._is_legal_chunk_size(b'+a')))\n"
+      worker = ${builtins.toJSON (sslRuntimeProof + ''
+        def prove():
+            import http.client
+            from calibre.constants import is_running_from_develop
+            return (is_running_from_develop,http.client.__file__,bool(http.client._is_legal_chunk_size(b"a")),bool(http.client._is_legal_chunk_size(b"+a")),native_ssl_proof())
+      '')}
       actual = fork_job(worker, 'prove', timeout=15, no_output=True, module_is_source_code=True)['result']
-      assert actual == (False, str(path), True, False), 'CALIBRE_WORKER_HTTP_SELECTION'
+      assert actual == (False, str(path), True, False, native_ssl), 'CALIBRE_WORKER_HTTP_SELECTION'
     '';
   };
   # Temporary: the vendor native SSL predates CPython's compromised-key distrust.
   # Retire when the unmodified vendor passes the TLS/API/GUI/worker contract.
-  # Artifact-only until the original-path, fresh-process consumer qualifies it.
+  # Original-path fresh-process qualification precedes shared image adoption.
   sslDescriptor = {
     schemaVersion = 1;
     pythonVersion = httpBackport.manifest.pythonVersion;
@@ -173,6 +179,156 @@ let
         PYSSL
       '';
     };
+  sslGuard = pkgs.writeText "calibre-native-ssl-guard.py" ''
+    import hashlib, importlib.util, json, os, pathlib, shutil, stat, sys
+
+    if not __debug__:
+        raise AssertionError("CALIBRE_SSL_OPTIMIZED_GUARD")
+
+    def canonical(value):
+        return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+
+    def read(path, maximum):
+        identity = path.lstat()
+        assert stat.S_ISREG(identity.st_mode) and 0 < identity.st_size <= maximum, "CALIBRE_SSL_FILE_TYPE_BOUND"
+        return path.read_bytes()
+
+    def sha(raw):
+        return hashlib.sha256(raw).hexdigest()
+
+    def target(spec, root):
+        assert root.is_dir() and not root.is_symlink(), "CALIBRE_SSL_ROOT"
+        relative = pathlib.Path(spec["native"]["original"]["path"]).relative_to(spec["rootPath"])
+        assert ".." not in relative.parts, "CALIBRE_SSL_TARGET_PATH"
+        path = root / relative
+        assert all(not p.is_symlink() for p in path.parents if p.is_relative_to(root)), "CALIBRE_SSL_TARGET_PARENT"
+        return path
+
+    def metadata(spec, manifest):
+        native = spec["native"]
+        assert spec["schemaVersion"] == manifest["schemaVersion"] == native["schemaVersion"] == 1, "CALIBRE_SSL_SCHEMA"
+        assert manifest["descriptor"] == native, "CALIBRE_SSL_DESCRIPTOR"
+        file = manifest["file"]
+        assert file["needed"] == native["original"]["needed"] and file["rpath"] == native["rpath"] and not file["soname"], "CALIBRE_SSL_ELF_METADATA"
+        assert 0 < file["bytes"] <= native["limits"]["fileBytes"], "CALIBRE_SSL_FILE_BOUND"
+        assert pathlib.Path(spec["proofDirectory"]).name == spec["proofDirectory"], "CALIBRE_SSL_PROOF_PATH"
+
+    def package(spec, directory):
+        manifest = json.loads(read(directory / "manifest.json", spec["native"]["limits"]["manifestBytes"]))
+        metadata(spec, manifest)
+        library = directory / "lib"
+        assert library.is_dir() and not library.is_symlink() and {p.name for p in library.iterdir()} == {"_ssl.so"}, "CALIBRE_SSL_PACKAGE_SET"
+        raw = read(library / "_ssl.so", spec["native"]["limits"]["fileBytes"])
+        assert len(raw) == manifest["file"]["bytes"] and sha(raw) == manifest["file"]["sha256"], "CALIBRE_SSL_PACKAGE_HASH"
+        return manifest
+
+    def installed(spec, root):
+        proof = root / spec["proofDirectory"]
+        assert proof.is_dir() and not proof.is_symlink() and stat.S_IMODE(proof.stat().st_mode) == 0o555, "CALIBRE_SSL_PROOF_ROOT"
+        assert {p.name for p in proof.iterdir()} == {"guard.py", "spec.json", "manifest.json"}, "CALIBRE_SSL_PROOF_SET"
+        raw = {name: read(proof / name, spec["native"]["limits"]["manifestBytes"]) for name in ["guard.py", "spec.json", "manifest.json"]}
+        assert all(stat.S_IMODE((proof / name).stat().st_mode) == 0o444 for name in raw), "CALIBRE_SSL_PROOF_MODE"
+        assert sha(raw["guard.py"]) == spec["guardSha256"], "CALIBRE_SSL_GUARD_HASH"
+        assert json.loads(raw["spec.json"]) == spec, "CALIBRE_SSL_RUNTIME_SPEC"
+        manifest = json.loads(raw["manifest.json"])
+        metadata(spec, manifest)
+        path = target(spec, root)
+        raw = read(path, spec["native"]["limits"]["fileBytes"])
+        assert len(raw) == manifest["file"]["bytes"] and sha(raw) == manifest["file"]["sha256"], "CALIBRE_SSL_INSTALLED_HASH"
+        assert stat.S_IMODE(path.stat().st_mode) == spec["native"]["original"]["mode"], "CALIBRE_SSL_INSTALLED_MODE"
+        cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
+        assert sha(read(cert, 65536)) == spec["privateCa"]["sha256"], "CALIBRE_SSL_PRIVATE_CA_HASH"
+        return manifest
+
+    def install(spec, directory, root, guard_file):
+        # Image-local, non-retriable: validate every input before the first write.
+        manifest = package(spec, directory)
+        path = target(spec, root)
+        original = spec["native"]["original"]
+        raw = read(path, spec["native"]["limits"]["fileBytes"])
+        assert len(raw) == original["bytes"] and sha(raw) == original["sha256"], "CALIBRE_SSL_ORIGINAL_HASH"
+        identity = path.stat()
+        assert stat.S_IMODE(identity.st_mode) == original["mode"], "CALIBRE_SSL_ORIGINAL_MODE"
+        guard = read(guard_file, spec["native"]["limits"]["manifestBytes"])
+        assert sha(guard) == spec["guardSha256"], "CALIBRE_SSL_GUARD_HASH"
+        cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
+        assert sha(read(cert, 65536)) == spec["privateCa"]["sha256"], "CALIBRE_SSL_PRIVATE_CA_HASH"
+        proof = root / spec["proofDirectory"]
+        assert not proof.exists() and not proof.is_symlink(), "CALIBRE_SSL_EXISTING_PROOF"
+        shutil.copyfile(directory / "lib/_ssl.so", path)
+        assert (path.stat().st_uid, path.stat().st_gid, stat.S_IMODE(path.stat().st_mode)) == (identity.st_uid, identity.st_gid, original["mode"]), "CALIBRE_SSL_OWNER_MODE"
+        proof.mkdir(mode=0o755)
+        for name, raw in [("guard.py", guard), ("spec.json", canonical(spec)), ("manifest.json", canonical(manifest))]:
+            (proof / name).write_bytes(raw)
+            (proof / name).chmod(0o444)
+        proof.chmod(0o555)
+        installed(spec, root)
+
+    def runtime(spec, root):
+        import _ssl, ssl
+        manifest = installed(spec, root)
+        assert list(sys.version_info[:3]) == spec["native"]["pythonVersion"], "CALIBRE_SSL_RUNTIME_PYTHON"
+        assert list(ssl.OPENSSL_VERSION_INFO) == spec["native"]["apiConstantChanges"]["_OPENSSL_API_VERSION"]["rebuilt"], "CALIBRE_SSL_RUNTIME_OPENSSL"
+        assert pathlib.Path(importlib.util.find_spec("_ssl").origin) == target(spec, root), "CALIBRE_SSL_RUNTIME_SELECTION"
+        members, constants = sorted(dir(_ssl)), {}
+        for name in members:
+            value = getattr(_ssl, name)
+            if name.isupper() and (isinstance(value, (str, int, bool)) or value is None
+                or isinstance(value, tuple) and all(isinstance(item, int) for item in value)):
+                constants[name] = value
+        api = dict(nativeModuleMembers=members, nativeModuleConstants=constants)
+        api_sha = sha(canonical(api))
+        assert api_sha == spec["native"]["apiSha256"], "CALIBRE_SSL_RUNTIME_API"
+        original = json.loads(canonical(api))
+        for name, change in spec["native"]["apiConstantChanges"].items():
+            assert original["nativeModuleConstants"][name] == change["rebuilt"], "CALIBRE_SSL_DECLARED_API_CHANGE"
+            original["nativeModuleConstants"][name] = change["original"]
+        assert sha(canonical(original)) == spec["native"]["original"]["apiSha256"], "CALIBRE_SSL_OTHER_API_DRIFT"
+        from calibre.utils.https import HTTPSConnection
+        cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
+        connection = HTTPSConnection("localhost", cert_file=str(cert), disable_x509_strict_checking=True)
+        try:
+            roots = sorted(sha(value) for value in connection._context.get_ca_certs(binary_form=True))
+            assert roots == spec["privateCa"]["derSha256"] and connection._context.verify_mode == ssl.CERT_REQUIRED and connection._context.check_hostname, "CALIBRE_SSL_PRIVATE_CA_CONTEXT"
+        finally:
+            connection.close()
+        return dict(moduleSha256=manifest["file"]["sha256"], apiSha256=api_sha, privateCaDerSha256=roots)
+
+    if __name__ == "__main__":
+        spec_file, directory, root = map(pathlib.Path, sys.argv[1:])
+        spec = json.loads(read(spec_file, 16384))
+        install(spec, directory, root, pathlib.Path(__file__))
+  '';
+  sslRuntimeDescriptor = {
+    schemaVersion = 1;
+    native = sslDescriptor;
+    rootPath = builtins.dirOf calibrePython;
+    proofDirectory = ".hwc-native-ssl";
+    guardSha256 = builtins.hashString "sha256" sslGuard.text;
+    privateCa = {
+      path = "${builtins.dirOf calibrePython}/resources/calibre-ebook-root-CA.crt";
+      sha256 = "1030790c23900573ed4a8c4234113133bf6a0c13ccc7eb7d12ba3bdddcb9f2b3";
+      derSha256 = [ "7a3613ab1b927acaa1c302d2055614ff0a2cc144b2575cd7e65c40b2a2c011c7" ];
+    };
+  };
+  sslRuntimeSpec = pkgs.writeText "calibre-native-ssl-runtime.json" (builtins.toJSON sslRuntimeDescriptor);
+  sslRuntimeProof = ''
+    def native_ssl_proof():
+        import hashlib, json, pathlib
+        spec = json.loads(${builtins.toJSON (builtins.toJSON sslRuntimeDescriptor)})
+        root = pathlib.Path(spec["rootPath"])
+        guard = root / spec["proofDirectory"] / "guard.py"
+        if not (guard.is_file() and not guard.is_symlink() and guard.stat().st_size <= 16384):
+            raise AssertionError("CALIBRE_SSL_GUARD_BOUND")
+        raw = guard.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != spec["guardSha256"]:
+            raise AssertionError("CALIBRE_SSL_GUARD_HASH")
+        namespace = {"__name__": "calibre_native_ssl"}
+        exec(compile(raw, str(guard), "exec", optimize=0), namespace)
+        return namespace["runtime"](spec, root)
+  '';
+  sslStaging = "/tmp/hwc-calibre-native-ssl";
+  sslInputHash = builtins.hashString "sha256" (sslRuntimeSpec.text + sslGuard.text + toString sslPackage);
   # Upstream7.1 maintenance keeps RELEASE7.1.5; bind its exact revision
   # and complete post-patch source separately from the library version.
   nativeSourceFacts = builtins.fromJSON ''
@@ -730,12 +886,15 @@ let
     recipe = ''
       FROM lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378
       # Native inputs ${nativeInputHash}
+      # Native SSL inputs ${sslInputHash}
       COPY native ${nativeStaging}
+      COPY native-ssl ${sslStaging}
       COPY client.py /tmp/hwc-calibre-http/client.py
     '' + nativeCommand nativeDescriptor.commands.verify
       + nativeCommand nativeDescriptor.commands.apply
       + nativeCommand nativeDescriptor.commands.installed
-      + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache ${nativeStaging}\n";
+      + "RUN python3 -I -B ${sslStaging}/guard.py ${sslStaging}/spec.json ${sslStaging} ${sslRuntimeDescriptor.rootPath}\n"
+      + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache ${nativeStaging} ${sslStaging}\n";
   };
   runtimeManifest = pkgs.writeText "calibre-http-framing.json" (builtins.toJSON httpBackport.manifest);
   # Pure asset API: Books can reuse this qualified distribution without enabling
@@ -752,6 +911,12 @@ let
       inputHash = nativeInputHash;
       bundleInput = builtins.unsafeDiscardStringContext (toString nativeBundle);
     };
+    nativeSsl = {
+      schemaVersion = 1;
+      spec = sslRuntimeDescriptor;
+      inputHash = sslInputHash;
+      bundleInput = builtins.unsafeDiscardStringContext (toString sslPackage);
+    };
   });
   runtimeContext = pkgs.runCommand "calibre-runtime-context" {} ''
     mkdir -p "$out"
@@ -762,6 +927,10 @@ let
     cp ${nativeSpec} "$out/native/spec.json"
     cp ${nativeGuard} "$out/native/guard.py"
     cp -r ${nativeBundle}/lib ${nativeBundle}/manifest.json "$out/native/"
+    mkdir -p "$out/native-ssl"
+    cp ${sslRuntimeSpec} "$out/native-ssl/spec.json"
+    cp ${sslGuard} "$out/native-ssl/guard.py"
+    cp -r ${sslPackage}/lib ${sslPackage}/manifest.json "$out/native-ssl/"
   '';
 in
 {
@@ -772,7 +941,7 @@ in
     enable = lib.mkEnableOption "Calibre ebook management container";
     # Critical library state: upgrade this immutable vendor image only after
     # current-data startup and compatible-code recovery checks pass.
-    image = lib.mkOption { type = lib.types.str; default = runtime.image; description = "Qualified Calibre 9.17.0 with frozen HTTP framing and same-ABI FFmpeg repairs"; };
+    image = lib.mkOption { type = lib.types.str; default = runtime.image; description = "Qualified Calibre 9.17.0 with HTTP framing, native SSL and same-ABI FFmpeg repairs"; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; description = "Network mode"; };
     gpu.enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable GPU support for Calibre"; };
     ports = {
@@ -802,6 +971,8 @@ in
       calibreRuntimeSslSpec = sslSpec;
       calibreRuntimeSslSourceGuard = sslSourceGuard;
       calibreRuntimeSslPackage = sslPackage;
+      calibreRuntimeSslRuntimeSpec = sslRuntimeSpec;
+      calibreRuntimeSslGuard = sslGuard;
     }; }
     (lib.mkIf cfg.enable {
       system.build.calibreRuntimeImageRecipe = runtime.dockerfile;

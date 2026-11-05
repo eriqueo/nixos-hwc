@@ -28,10 +28,10 @@ assert withoutDesktop.system.build.calibreRuntimeAssets.text == assets.text;
 assert builtins.getContext assets.text == {};
 assert !(builtins.tryEval (builtins.deepSeq invalidBinding.virtualisation.oci-containers.containers.books.environment true)).success;
 pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pkgs.dpkg ]; } ''
-  python3 - ${binding} ${c.system.build.booksRuntimeImageContext} ${c.system.build.booksRuntimeInputGuard} ${assets} <<'PYBOOKS'
+  python3 - ${binding} ${c.system.build.booksRuntimeImageContext} ${c.system.build.booksRuntimeInputGuard} ${assets} ${c.system.build.calibreRuntimeImageContext} <<'PYBOOKS'
   import copy, hashlib, json, pathlib, runpy, stat, sys, tempfile
   binding = json.loads(pathlib.Path(sys.argv[1]).read_text())
-  context, guard, asset_file = map(pathlib.Path, sys.argv[2:])
+  context, guard, asset_file, calibre_context = map(pathlib.Path, sys.argv[2:])
   spec = json.loads((context / 'inputs/manifest.json').read_text())
   provider = json.loads(asset_file.read_text())
   recipe = (context / 'Dockerfile').read_text()
@@ -132,11 +132,39 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       for path in [hook / 'http/client.py', hook / 'site.py', hook / 'http-framing.json']: path.chmod(0o444)
       (hook / 'http').chmod(0o555)
       hook.chmod(0o555)
+      ssl_value = fixture['calibre']['nativeSsl']['spec']
+      ssl_input = root / 'ssl-input'
+      import shutil
+      shutil.copytree(calibre_context / 'native-ssl', ssl_input)
+      module = calibre / pathlib.Path(ssl_value['native']['original']['path']).relative_to(ssl_value['rootPath'])
+      module.write_bytes(b'owned-original-ssl-fixture'); module.chmod(0o755)
+      ssl_value['native']['original'].update(sha256=sha(module.read_bytes()),bytes=module.stat().st_size)
+      cert = calibre / pathlib.Path(ssl_value['privateCa']['path']).relative_to(ssl_value['rootPath'])
+      cert.parent.mkdir(parents=True); cert.write_bytes(b'owned-private-ca-fixture')
+      ssl_value['privateCa']['sha256']=sha(cert.read_bytes())
+      ssl_manifest=json.loads((ssl_input/'manifest.json').read_text());ssl_manifest['descriptor']=ssl_value['native']
+      (ssl_input/'manifest.json').chmod(0o644)
+      (ssl_input/'manifest.json').write_text(json.dumps(ssl_manifest))
+      ssl_api={'__name__':'test_calibre_ssl'}
+      exec(compile((ssl_input/'guard.py').read_bytes(),'<actual-ssl-installer>','exec',optimize=0),ssl_api)
+      ssl_api['install'](ssl_value,ssl_input,calibre,ssl_input/'guard.py')
       native = context / 'inputs/native'
       def verify(value):
           api['verify'](value, app, native, calibre, hook, fixture['pythonVersion'], fixture['pythonPackages'], api['metadata'])
       try:
           verify(fixture)
+          # Corrupt the actual shared DLL: removing the Books call to the
+          # canonical installed guard must reopen this exact fixture.
+          preserved=module.read_bytes();module.write_bytes(b'corrupt-installed-ssl')
+          try: verify(fixture)
+          except AssertionError as error: assert str(error)=='CALIBRE_SSL_INSTALLED_HASH'
+          else: raise AssertionError('Books accepted changed shared SSL module')
+          omission="namespace['installed'](native_ssl['spec'], calibre)"
+          guard_source=guard.read_text();assert guard_source.count(omission)==1
+          omitted_api={'__name__':'test_omitted_ssl'}
+          exec(compile(guard_source.replace(omission,'pass # omitted shared SSL verification'),'<omitted-books-ssl>','exec',optimize=0),omitted_api)
+          omitted_api['verify'](fixture,app,native,calibre,hook,fixture['pythonVersion'],fixture['pythonPackages'],api['metadata'])
+          module.write_bytes(preserved);verify(fixture)
           # Reproduce the actual image COPY destination's mode before the
           # recipe restores it. The unmodified guard must reject that root.
           hook.chmod(0o755)
@@ -1036,6 +1064,7 @@ calibre-security-wiring = let
       build = c.system.build.calibreRuntimeSslPackage.buildPhase;
       patchFlags = c.system.build.calibreRuntimeSslPackage.patchFlags;
       patchCount = builtins.length c.system.build.calibreRuntimeSslPackage.patches;
+      runtime = (builtins.fromJSON c.system.build.calibreRuntimeAssets.text).nativeSsl;
     };
     contextTransforms = map (patch: { path = toString patch; command = patch.buildCommand; })
       (builtins.filter (patch: builtins.isAttrs patch
@@ -1105,6 +1134,51 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   context=pathlib.Path(sys.argv[3])
   manifest=json.loads((context/'manifest.json').read_text())
   assert (context/'Dockerfile').read_text()==recipe
+  ssl_context=context/'native-ssl';ssl_runtime=ssl['runtime'];ssl_runtime_spec=ssl_runtime['spec']
+  assert json.loads((ssl_context/'spec.json').read_text())==ssl_runtime_spec
+  assert ssl_runtime_spec['native']==ssl_spec
+  assert hashlib.sha256((ssl_context/'guard.py').read_bytes()).hexdigest()==ssl_runtime_spec['guardSha256']
+  ssl_api={'__name__':'test_ssl_installer'}
+  exec(compile((ssl_context/'guard.py').read_bytes(),'<actual-ssl-installer>','exec',optimize=0),ssl_api)
+  try:exec(compile((ssl_context/'guard.py').read_bytes(),'<optimized-ssl-guard>','exec',optimize=2),{'__name__':'test_optimized_ssl'})
+  except AssertionError as error:assert str(error)=='CALIBRE_SSL_OPTIMIZED_GUARD'
+  else:raise AssertionError('SSL_OPTIMIZED_GUARD_SEED')
+  ssl_api['package'](ssl_runtime_spec,ssl_context)
+  import shutil
+  for kind in ['none','payload','source','mode','guard','proof','ca','needed','link']:
+      with tempfile.TemporaryDirectory() as directory:
+          root=pathlib.Path(directory);distribution=root/'calibre';inputs=root/'inputs'
+          shutil.copytree(ssl_context,inputs);value=copy.deepcopy(ssl_runtime_spec)
+          path=distribution/pathlib.Path(value['native']['original']['path']).relative_to(value['rootPath'])
+          path.parent.mkdir(parents=True);path.write_bytes(b'owned-original-ssl');path.chmod(0o755)
+          value['native']['original'].update(sha256=hashlib.sha256(path.read_bytes()).hexdigest(),bytes=path.stat().st_size)
+          cert=distribution/pathlib.Path(value['privateCa']['path']).relative_to(value['rootPath'])
+          cert.parent.mkdir(parents=True);cert.write_bytes(b'owned-private-ca')
+          value['privateCa']['sha256']=hashlib.sha256(cert.read_bytes()).hexdigest()
+          incoming=inputs/'lib/_ssl.so'
+          if kind=='payload':incoming.chmod(0o644);incoming.write_bytes(b'corrupt-payload')
+          elif kind=='source':value['native']['original']['sha256']='0'*64
+          elif kind=='mode':path.chmod(0o444)
+          elif kind=='guard':(inputs/'guard.py').chmod(0o644);(inputs/'guard.py').write_bytes(b'corrupt-guard')
+          elif kind=='proof':(distribution/value['proofDirectory']).mkdir()
+          elif kind=='ca':value['privateCa']['sha256']='0'*64
+          elif kind=='link':incoming.unlink();incoming.symlink_to(path)
+          metadata=json.loads((inputs/'manifest.json').read_text());metadata['descriptor']=value['native']
+          if kind=='needed':metadata['file']['needed'].append('libpython3.14.so')
+          (inputs/'manifest.json').chmod(0o644);(inputs/'manifest.json').write_text(json.dumps(metadata))
+          before={str(p.relative_to(distribution)):(p.read_bytes(),p.stat().st_mode) for p in distribution.rglob('*') if p.is_file()}
+          try:ssl_api['install'](value,inputs,distribution,inputs/'guard.py')
+          except AssertionError:
+              assert kind!='none',kind
+              after={str(p.relative_to(distribution)):(p.read_bytes(),p.stat().st_mode) for p in distribution.rglob('*') if p.is_file()}
+              assert after==before,'SSL_FAILED_INPUT_CHANGED_ORIGINAL:'+kind
+          else:
+              assert kind=='none','SSL_BAD_INPUT_ACCEPTED:'+kind
+              ssl_api['installed'](value,distribution)
+              path.write_bytes(b'corrupt-installed')
+              try:ssl_api['installed'](value,distribution)
+              except AssertionError:pass
+              else:raise AssertionError('SSL_INSTALLED_HASH_SEED')
   assert manifest['schemaVersion']==1 and manifest['pythonVersion']==[3,14,8]
   assert manifest['frozenBundle']=='/opt/calibre/lib/calibre-extensions/python-lib.bypy.frozen'
   assert manifest['frozenBundleSha256']=='558037f93bef7df037ff1c38519680ed1083263b9e86b38407c4e819a2acffb2'
@@ -1142,12 +1216,37 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           and any(isinstance(t,ast.Name) and t.id=='bootstrap' for t in n.targets)]
       gui=any(isinstance(n,ast.Import) and any(a.name=='calibre.gui2' for a in n.names) for n in verify.body)
       worker=any(isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='fork_job' for n in ast.walk(verify))
+      def ssl_probe_wired(body):
+          tree=ast.parse(body)
+          definitions=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='native_ssl_proof']
+          calls=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='native_ssl_proof']
+          if len(definitions)!=1 or len(calls)!=1:return False
+          assignments=[n.value for n in ast.walk(definitions[0]) if isinstance(n,ast.Assign)
+              and any(isinstance(t,ast.Name) and t.id=='spec' for t in n.targets)]
+          return len(assignments)==1 and json.loads(ast.literal_eval(assignments[0].args[0]))==ssl_runtime_spec
+      workers=[ast.literal_eval(n.value) for n in verify.body if isinstance(n,ast.Assign)
+          and any(isinstance(t,ast.Name) and t.id=='worker' for t in n.targets)]
+      ssl_copy='COPY native-ssl /tmp/hwc-calibre-native-ssl'
+      ssl_install='RUN python3 -I -B /tmp/hwc-calibre-native-ssl/guard.py /tmp/hwc-calibre-native-ssl/spec.json /tmp/hwc-calibre-native-ssl '+ssl_runtime_spec['rootPath']
+      ssl_wiring=(ssl_copy in text and ssl_install in text and '# Native SSL inputs '+ssl_runtime['inputHash'] in text
+          and text.index(ssl_copy)<text.index(ssl_install)<text.index('def native_ssl_proof')
+          and ssl_probe_wired(emitted[1][0]) and len(workers)==1 and ssl_probe_wired(workers[0]))
       return (binding['selected']==binding['container']==wanted and binding['pull']=='never'
           and 'ENV '+manifest['selectionVariable']+'='+manifest['rootPath'] in text
           and all(x[1]==0 and x[2]==manifest for x in emitted)
           and len(bootstraps)==1 and hashlib.sha256(bootstraps[0].encode()).hexdigest()==manifest['bootstrapSha256']
-          and gui and worker)
+          and gui and worker and ssl_wiring)
   assert wired(v,recipe)
+  for before,after in [('COPY native-ssl /tmp/hwc-calibre-native-ssl','# omitted SSL copy'),
+      ('RUN python3 -I -B /tmp/hwc-calibre-native-ssl/guard.py','# omitted SSL installer'),
+      ('native_ssl = native_ssl_proof()','native_ssl = None'),
+      ('native_ssl_proof())','None)')]:
+      omitted=recipe.replace(before,after)
+      assert omitted!=recipe
+      # Rebind the selected image so this fails on its missing consumer wiring.
+      rebound_ssl=copy.deepcopy(v)
+      rebound_ssl['selected']=rebound_ssl['container']='localhost/calibre-runtime:9.17.0-http-framing-'+hashlib.sha256(omitted.encode()).hexdigest()[:12]
+      assert not wired(rebound_ssl,omitted),'SSL_RUNTIME_WIRING_SEED:'+before
   def rebound(text):
       binding=copy.deepcopy(v)
       binding['selected']=binding['container']='localhost/calibre-runtime:9.17.0-http-framing-'+hashlib.sha256(text.encode()).hexdigest()[:12]

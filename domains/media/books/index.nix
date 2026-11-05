@@ -221,6 +221,13 @@ let
         assert json.loads((hook / 'http-framing.json').read_text()) == http, 'BOOKS_CALIBRE_MANIFEST'
         assert all(stat.S_IMODE(folder.stat().st_mode) == 0o555 for folder in [hook, hook / 'http']), 'BOOKS_CALIBRE_ROOT_MODE'
         assert all(stat.S_IMODE(path.stat().st_mode) == 0o444 for path in [hook / 'site.py', hook / 'http/client.py', hook / 'http-framing.json']), 'BOOKS_CALIBRE_FILE_MODE'
+        native_ssl = provider['nativeSsl']
+        assert native_ssl['schemaVersion'] == 1 and native_ssl['spec']['rootPath'] == provider['rootPath'], 'BOOKS_CALIBRE_SSL_API'
+        guard = calibre / native_ssl['spec']['proofDirectory'] / 'guard.py'
+        assert read_hash(guard, 16384) == native_ssl['spec']['guardSha256'], 'BOOKS_CALIBRE_SSL_GUARD'
+        namespace = {'__name__': 'books_calibre_ssl'}
+        exec(compile(guard.read_bytes(), str(guard), 'exec', optimize=0), namespace)
+        namespace['installed'](native_ssl['spec'], calibre)
 
     def apply_request_options(spec, app):
         files = app_files(app)
