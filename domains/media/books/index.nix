@@ -17,6 +17,9 @@ let
     baseImage = "lscr.io/linuxserver/lazylibrarian@sha256:589139e7eb33faa87b090efd098f63f3c75a0ea2fb4986209f418e663ff5d324";
     app = {
       databaseVersion = 89;
+      # The inherited init copies this marker into the persistent config cache.
+      # Keep it with the retained application, rather than the new native base.
+      versionMarkerSha256 = "19bffcb65bfd2240adcdfd2aeacb0348ca0a93bdeab399e7d822ffd2c5f3f90c";
       fileCount = 384;
       sourceDistributionSha256 = "fa4a02dedc8a707323fb9ab5fbcb1a67bcc29c01d8ef0e4873075b0739e84bdd";
       patchedDistributionSha256 = "3f5545e1fc8a32d36fdb5fc7111f46f39126472ffc54f9e1c2ce3a43c11cf26c";
@@ -279,12 +282,14 @@ let
       ENV ${lib.concatStringsSep " " (lib.mapAttrsToList (name: value: "${name}=${lib.escapeShellArg value}") environment)}
       RUN test ! -e ${assets.rootPath} && test ! -e ${assets.http.rootPath} && test ! -e /app/calibre
       COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/
+      COPY --from=app-source /defaults/version.txt /defaults/version.txt
       COPY --from=calibre-source ${assets.rootPath}/ ${assets.rootPath}/
       COPY --from=calibre-source ${assets.http.rootPath}/ ${assets.http.rootPath}/
       COPY inputs/ /tmp/hwc-books/
       # COPY creates the destination root as 0755; restore the donor hook's
       # immutable directory modes before its input guard validates them.
       RUN chmod 0555 ${assets.http.rootPath} ${assets.http.rootPath}/http
+      RUN echo '${spec.app.versionMarkerSha256}  /defaults/version.txt' | sha256sum -c -
       RUN python3 -B /tmp/hwc-books/guard.py ${spec.commands.verify} /tmp/hwc-books/manifest.json /tmp/hwc-books-app /tmp/hwc-books/native ${assets.rootPath} ${assets.http.rootPath}
       RUN dpkg --unpack ${debPaths} && dpkg --configure --pending && test -z "$(dpkg --audit)" && mkdir /tmp/hwc-books-empty-sources && touch /tmp/hwc-books-empty.list && apt-get -o Dir::Etc::sourcelist=/tmp/hwc-books-empty.list -o Dir::Etc::sourceparts=/tmp/hwc-books-empty-sources check
       RUN rm -rf /app/lazylibrarian && mv /tmp/hwc-books-app /app/lazylibrarian && ln -s ${assets.rootPath} /app/calibre
