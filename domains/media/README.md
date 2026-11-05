@@ -59,6 +59,8 @@ source checks do not establish deployment or data compatibility.
 The native source pins upstream7.1 maintenance plus complete advisory groups
 from the shared helper. Zero-fuzz patching and exact final source hashes guard
 the build. Navidrome selects its original seven patch inputs from that owner.
+The inherited Chromium extension keeps its exact function and declaration with
+branch-specific context, so the complete Nix and security pipeline uses zero fuzz.
 
 Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
 selection. Its image build exercises the actual GUI import and fork_job worker.
@@ -132,6 +134,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Preserve the inherited Chromium FFmpeg extension under strict patch matching; assert its two file postimages and exercise the complete27-patch pipeline.
 
 - 2026-11-05: Pin Calibre's FFmpeg7.1 maintenance source and complete security backports; check source/transform failures and preserve Navidrome patch identities through the shared catalog.
 

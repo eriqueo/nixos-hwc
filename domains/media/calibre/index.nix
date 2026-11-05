@@ -65,9 +65,26 @@ let
     "libavutil/encryption_info.c": "012a2b4d31c2f5311ea97e16b19c77ecc2c25d44f712bf5c69f8b82334ca7075",
     "libavutil/encryption_info.h": "782fcd91eee6cce50eb6336d6311c4c113a38f1d8f21e6cc1eb616cb1cac653b",
     "libavutil/hdr_dynamic_metadata.c": "70876a30e7ac083375382ea48df91ff1c0e5590f13a8957ffbb058139cba417b",
-    "libavutil/tests/encryption_info.c": "336c641861b4b735cbbf1dbb3bcdea8a90db6e43d19107d43eb0170d2f80de67"
+    "libavutil/tests/encryption_info.c": "336c641861b4b735cbbf1dbb3bcdea8a90db6e43d19107d43eb0170d2f80de67",
+    "libavformat/avformat.h": "352ccf1aa9f92ebdf05a3d7d7d9493b9c9371e6b8320984341e1b20785e6a377",
+    "libavformat/mux_utils.c": "902aeff13cb7c922d697e431bc0a28ec677b3514b2354c960bfad11e478482bf"
   }
 }
+  '';
+  # The Nix Chromium extension is retained. Its historical patch matched7.1
+  # only with fuzz2; adapt context and check the exact same function bytes.
+  # Retire when the Nix patch applies to this source with --fuzz=0.
+  nativeNixPatchContext = builtins.fromJSON ''
+[
+  [
+    "@@ -1128,6 +1128,10 @@\n  */\n int64_t    av_stream_get_end_pts(const AVStream *st);\n \n+// Chromium: We use the internal field first_dts vvv\n+int64_t    av_stream_get_first_dts(const AVStream *st);\n+// Chromium: We use the internal field first_dts ^^^\n+\n #define AV_PROGRAM_RUNNING 1\n \n /**\n",
+    "@@ -1202,6 +1202,10 @@\n \n struct AVCodecParserContext *av_stream_get_parser(const AVStream *s);\n \n+// Chromium: We use the internal field first_dts vvv\n+int64_t    av_stream_get_first_dts(const AVStream *st);\n+// Chromium: We use the internal field first_dts ^^^\n+\n #define AV_PROGRAM_RUNNING 1\n \n /**\n"
+  ],
+  [
+    "@@ -37,6 +37,13 @@\n         return AV_NOPTS_VALUE;\n }\n \n+// Chromium: We use the internal field first_dts vvv\n+int64_t av_stream_get_first_dts(const AVStream *st)\n+{\n+  return cffstream(st)->first_dts;\n+}\n+// Chromium: We use the internal field first_dts ^^^\n+\n int avformat_query_codec(const AVOutputFormat *ofmt, enum AVCodecID codec_id,\n                          int std_compliance)\n {\n",
+    "@@ -29,6 +29,13 @@\n #include \"avio.h\"\n #include \"internal.h\"\n #include \"mux.h\"\n+\n+// Chromium: We use the internal field first_dts vvv\n+int64_t av_stream_get_first_dts(const AVStream *st)\n+{\n+  return cffstream(st)->first_dts;\n+}\n+// Chromium: We use the internal field first_dts ^^^\n \n int avformat_query_codec(const AVOutputFormat *ofmt, enum AVCodecID codec_id,\n                          int std_compliance)\n"
+  ]
+]
   '';
   nativeSecurity = helpers.selectFfmpegSecurityBackports {
     advisories = [ "CVE-2026-107676" "CVE-2026-107678" "CVE-2026-107695" "CVE-2026-107696" "CVE-2026-107697" "CVE-2026-64830" "CVE-2026-64833" "CVE-2026-64834" "CVE-2026-64835" "CVE-2026-65703" "CVE-2026-65704" "CVE-2026-65705" "CVE-2026-65706" "CVE-2026-66036" "CVE-2026-66038" "CVE-2026-66039" "CVE-2026-70628" "CVE-2026-70629" "CVE-2026-70630" "CVE-2026-70631" "CVE-2026-70632" ];
@@ -133,7 +150,12 @@ let
       rev = nativeSourceFacts.sourceRevision;
       hash = "sha256-trLrw4misl9NvXgXrr44Wc1ImPvcPX/KzDyFRsrj8mU=";
     };
-    patches = old.patches ++ nativeSecurity.patches;
+    patches = map (patch:
+      if lib.hasSuffix "-add-av_stream_get_first_dts-for-chromium.patch" (toString patch)
+      then helpers.adaptFfmpegPatchContext {
+        upstream = patch; edits = nativeNixPatchContext; name = "chromium-first-dts";
+      } else patch
+    ) old.patches ++ nativeSecurity.patches;
     patchFlags = [ "-p1" "--fuzz=0" ];
     postPatch = (old.postPatch or "") + ''
       ${pkgs.python3}/bin/python3 -I -B ${nativeSourceGuard} ${nativeSourceSpec} .

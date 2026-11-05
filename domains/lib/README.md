@@ -32,6 +32,7 @@ The same helper owns immutable FFmpeg patch facts and ordered advisory groups
 for Calibre and Navidrome. It rejects unknown groups and context edits outside
 the selected patches. Bounded context transforms preserve upstream security
 hunks while adapting older branch context.
+Inherited distribution patches use the same transformer and source checks.
 
 `mkContainer` also accepts `{ kind = "named"; names = [ ... ]; }` for explicit bridge membership. Legacy media/host/VPN callers retain their network arguments.
 
@@ -73,6 +74,8 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+
+- 2026-11-05: Reuse the bounded patch transformer for inherited Nix patches as well as security groups; reject unsafe names and empty or excessive edits.
 
 - 2026-11-05: Share FFmpeg security inputs and prerequisite groups; keep Navidrome's existing patch identities and support guarded Calibre7.1 context transforms.
 
