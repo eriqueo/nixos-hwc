@@ -161,7 +161,7 @@ workspace/media/
 
 ## Changelog
 
-- 2026-11-05: Share guarded distro Python source and native SSL repairs across Selkies and Books, using the common source catalog and matched Ubuntu SDK.
+- 2026-11-05: Share guarded distro Python source and native SSL repairs across Selkies and Books, using the common source catalog and matched Ubuntu SDK; keep patch and compiler commands on separate lines.
 
 - 2026-11-05: Resolve each original module’s own frozen loader before comparing its source code; reject reuse of the HTTP loader.
 

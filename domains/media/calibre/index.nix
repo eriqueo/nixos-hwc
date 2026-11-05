@@ -122,7 +122,7 @@ let
         version = spec["pythonVersion"] if runtime else spec.get("compilerPythonVersion", spec["pythonVersion"])
         assert spec["schemaVersion"] == 1 and list(sys.version_info[:3]) == version, "CALIBRE_STDLIB_VERSION"
         assert len(spec["modules"]) == spec["limits"]["modules"] and 1 <= len(spec["modules"]) <= 5, "CALIBRE_STDLIB_MODULE_BOUND"
-        assert len(spec["patches"]) == spec["limits"].get("patches", 4) and len({p["advisory"] for p in spec["patches"]}) == len(spec["patches"]), "CALIBRE_STDLIB_PATCH_SET"
+        assert len(spec["patches"]) == spec["limits"].get("patches", 4) and len({p.get("id", p["advisory"]) for p in spec["patches"]}) == len(spec["patches"]), "CALIBRE_STDLIB_PATCH_SET"
         assert 1 <= len(spec["patches"]) <= 8, "CALIBRE_STDLIB_PATCH_BOUND"
         if "runtimeRoot" in spec:
             assert pathlib.Path(spec["runtimeRoot"]).is_absolute() and pathlib.Path(spec["proofFile"]).name == spec["proofFile"], "SYSTEM_PYTHON_METADATA_PATH"
@@ -657,7 +657,8 @@ let
     patches = (builtins.fromJSON ''
 [
   {
-    "advisory": "CVE-2026-87910-prerequisite",
+    "advisory": "CVE-2026-87910",
+    "id": "gh-151558",
     "url": "https://github.com/python/cpython/commit/79c06bd5c6afa3c440d50faf7ee1b147c8832b4c.patch",
     "includes": [
       "Lib/tarfile.py"
@@ -666,7 +667,8 @@ let
     "raw": true
   },
   {
-    "advisory": "CVE-2026-12345-prerequisite",
+    "advisory": "CVE-2026-12345",
+    "id": "gh-154307",
     "url": "https://github.com/python/cpython/commit/856c8119ea9d8f574dd56cf64afe19ee2e460c8b.patch",
     "includes": [
       "Lib/tempfile.py"
@@ -694,7 +696,7 @@ let
       cp source/Lib/${entry.file} source/original/${entry.file}
     '') (builtins.attrValues distroFacts.modules)}
   '' + lib.concatMapStringsSep "\n" (patch:
-    "${pkgs.patch}/bin/patch ${lib.escapeShellArgs distroFacts.patchFlags} -d source -i ${patch}") distroPatches + ''
+    "${pkgs.patch}/bin/patch ${lib.escapeShellArgs distroFacts.patchFlags} -d source -i ${patch}") distroPatches + "\n" + ''
     ${pkgs.python314.interpreter} -I -B ${stdlibSourceGuard} ${distroFacts.commands.finish} ${distroSpec} source "$out"
   '');
   distroSslDescriptor = sslDescriptor // {
