@@ -418,8 +418,10 @@ let
       linkArgs = [ "-L${lib.getLib pkgs.openssl_3_5}/lib" "-lssl" "-lcrypto" ];
       buildInputs = [ pkgs.openssl_3_5 ];
     };
+  sslTrustKinds = { private = "calibre-private"; system = "system-default"; };
   sslGuard = pkgs.writeText "calibre-native-ssl-guard.py" ''
     import hashlib, importlib.util, json, os, pathlib, shutil, stat, sys
+    TRUST_KINDS = ${builtins.toJSON sslTrustKinds}
 
     if not __debug__:
         raise AssertionError("CALIBRE_SSL_OPTIMIZED_GUARD")
@@ -447,9 +449,9 @@ let
         native = spec["native"]
         # Schema1 private-CA descriptors originally omitted this tag. Remove
         # the read fallback when no release/recovery image uses that format.
-        kind = spec.get("trustKind", "calibre-private")
-        assert kind in {"calibre-private", "system-default"}, "PYTHON_SSL_TRUST_KIND"
-        assert ("privateCa" in spec) == (kind == "calibre-private"), "PYTHON_SSL_TRUST_SHAPE"
+        kind = spec.get("trustKind", TRUST_KINDS["private"])
+        assert kind in set(TRUST_KINDS.values()), "PYTHON_SSL_TRUST_KIND"
+        assert ("privateCa" in spec) == (kind == TRUST_KINDS["private"]), "PYTHON_SSL_TRUST_SHAPE"
         assert spec["schemaVersion"] == manifest["schemaVersion"] == native["schemaVersion"] == 1, "CALIBRE_SSL_SCHEMA"
         assert manifest["descriptor"] == native, "CALIBRE_SSL_DESCRIPTOR"
         file = manifest["file"]
@@ -467,7 +469,7 @@ let
         return manifest
 
     def check_private_ca(spec, root):
-        if spec.get("trustKind", "calibre-private") == "calibre-private":
+        if spec.get("trustKind", TRUST_KINDS["private"]) == TRUST_KINDS["private"]:
             cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
             assert sha(read(cert, 65536)) == spec["privateCa"]["sha256"], "CALIBRE_SSL_PRIVATE_CA_HASH"
 
@@ -532,7 +534,7 @@ let
             original["nativeModuleConstants"][name] = change["original"]
         assert sha(canonical(original)) == spec["native"]["original"]["apiSha256"], "CALIBRE_SSL_OTHER_API_DRIFT"
         roots = []
-        if spec.get("trustKind", "calibre-private") == "calibre-private":
+        if spec.get("trustKind", TRUST_KINDS["private"]) == TRUST_KINDS["private"]:
             from calibre.utils.https import HTTPSConnection
             cert = root / pathlib.Path(spec["privateCa"]["path"]).relative_to(spec["rootPath"])
             connection = HTTPSConnection("localhost", cert_file=str(cert), disable_x509_strict_checking=True)
@@ -555,7 +557,7 @@ let
     schemaVersion = 1;
     native = sslDescriptor;
     rootPath = builtins.dirOf calibrePython;
-    trustKind = "calibre-private";
+    trustKind = sslTrustKinds.private;
     proofDirectory = ".hwc-native-ssl";
     guardSha256 = builtins.hashString "sha256" sslGuard.text;
     privateCa = {
@@ -749,7 +751,7 @@ let
     schemaVersion = 1;
     native = distroSslDescriptor;
     rootPath = "/";
-    trustKind = "system-default";
+    trustKind = sslTrustKinds.system;
     proofDirectory = ".hwc-system-python-ssl";
     guardSha256 = builtins.hashString "sha256" sslGuard.text;
   };
