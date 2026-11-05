@@ -12,6 +12,9 @@ let
     sha256 = httpSourceSha256;
   };
   httpBackport = helpers.mkFrozenPythonHttpFramingBackport {
+    sourceLibraries = stdlibFacts;
+    sourceStaging = "/tmp/hwc-calibre-stdlib";
+    httpBytes = 59792;
     python = calibrePython;
     pythonVersion = calibrePythonVersion;
     frozenBundle = "/opt/calibre/lib/calibre-extensions/python-lib.bypy.frozen";
@@ -24,25 +27,25 @@ let
       CALIBRE_CONFIG_DIRECTORY = "/tmp/hwc-frozen-config";
       XDG_CACHE_HOME = "/tmp/hwc-frozen-cache";
     };
-    consumerVerification = sslRuntimeProof + ''
+    consumerVerification = stdlibRuntimeProof + sslRuntimeProof + ''
       native_ssl = native_ssl_proof()
+      libraries = stdlib_proof()
       import calibre.gui2
       from calibre.constants import is_running_from_develop
       from calibre.utils.ipc.simple_worker import fork_job
       assert not is_running_from_develop, 'CALIBRE_GUI_DEVELOP_MODE'
-      worker = ${builtins.toJSON (sslRuntimeProof + ''
+      worker = ${builtins.toJSON (stdlibRuntimeProof + sslRuntimeProof + ''
         def prove():
             import http.client
             from calibre.constants import is_running_from_develop
-            return (is_running_from_develop,http.client.__file__,bool(http.client._is_legal_chunk_size(b"a")),bool(http.client._is_legal_chunk_size(b"+a")),native_ssl_proof())
+            return (is_running_from_develop,http.client.__file__,bool(http.client._is_legal_chunk_size(b"a")),bool(http.client._is_legal_chunk_size(b"+a")),native_ssl_proof(),stdlib_proof())
       '')}
       actual = fork_job(worker, 'prove', timeout=15, no_output=True, module_is_source_code=True)['result']
-      assert actual == (False, str(path), True, False, native_ssl), 'CALIBRE_WORKER_HTTP_SELECTION'
+      assert actual == (False, str(path), True, False, native_ssl, libraries), 'CALIBRE_WORKER_HTTP_SELECTION'
     '';
   };
   # Temporary: frozen3.14.8 lacks these upstream library repairs. Retire only
   # after unmodified vendor modules pass the safety/GUI/worker/data contract.
-  # Artifact-only here; the early loader is wired after this bundle qualifies.
   stdlibFacts = {
     schemaVersion = 1;
     pythonVersion = calibrePythonVersion;
@@ -80,6 +83,33 @@ let
         includes = [ "Lib/poplib.py" ]; hash = "sha256-ZfHY+/hyZHnhIjvt8rjpxxXaLl7K2d+khl7EA3OpGwQ="; }
     ];
   };
+  stdlibRuntimeProof = ''
+    def stdlib_proof():
+        import hashlib, importlib, json
+        from pathlib import Path
+        root = Path(${builtins.toJSON httpBackport.manifest.rootPath})
+        spec = json.loads(${builtins.toJSON (builtins.toJSON stdlibFacts)})
+        assert json.loads((root / 'stdlib.json').read_text()) == spec, 'CALIBRE_STDLIB_MANIFEST'
+        result = []
+        for name, entry in spec['modules'].items():
+            module = importlib.import_module(name)
+            target = root / entry['file']
+            assert module.__file__ == str(target), 'CALIBRE_STDLIB_SELECTION'
+            assert target.stat().st_size == entry['bytes'] and hashlib.sha256(target.read_bytes()).hexdigest() == entry['sha256'], 'CALIBRE_STDLIB_BYTES'
+            result.append((name, module.__file__, entry['sha256']))
+        import poplib
+        probe = object.__new__(poplib.POP3)
+        probe._debugging = 0
+        probe.encoding = 'utf-8'
+        sent = []
+        probe._putline = sent.append
+        for control in ['\r', '\n', '\0', '\t', '\x7f']:
+            try: probe._putcmd('USER safe' + control + 'unsafe')
+            except ValueError: pass
+            else: raise AssertionError('CALIBRE_POP_CONTROL')
+        assert not sent, 'CALIBRE_POP_TRANSPORT'
+        return result
+  '';
   stdlibSpec = pkgs.writeText "calibre-stdlib-source.json" (builtins.toJSON stdlibFacts);
   stdlibPatches = map (entry: pkgs.fetchpatch { inherit (entry) url includes hash; }) stdlibFacts.patches;
   stdlibSourceGuard = pkgs.writeText "calibre-stdlib-source-guard.py" ''
@@ -1015,12 +1045,13 @@ let
       # Native SSL inputs ${sslInputHash}
       COPY native ${nativeStaging}
       COPY native-ssl ${sslStaging}
+      COPY stdlib /tmp/hwc-calibre-stdlib
       COPY client.py /tmp/hwc-calibre-http/client.py
     '' + nativeCommand nativeDescriptor.commands.verify
       + nativeCommand nativeDescriptor.commands.apply
       + nativeCommand nativeDescriptor.commands.installed
       + "RUN python3 -I -B ${sslStaging}/guard.py ${sslStaging}/spec.json ${sslStaging} ${sslRuntimeDescriptor.rootPath}\n"
-      + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache ${nativeStaging} ${sslStaging}\n";
+      + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache /tmp/hwc-calibre-stdlib ${nativeStaging} ${sslStaging}\n";
   };
   runtimeManifest = pkgs.writeText "calibre-http-framing.json" (builtins.toJSON httpBackport.manifest);
   # Pure asset API: Books can reuse this qualified distribution without enabling
@@ -1031,6 +1062,7 @@ let
     python = calibrePython;
     rootPath = builtins.dirOf calibrePython;
     http = httpBackport.manifest;
+    stdlib = stdlibFacts;
     native = {
       schemaVersion = 1;
       descriptor = nativeDescriptor;
@@ -1049,6 +1081,7 @@ let
     cp ${runtime.dockerfile} "$out/Dockerfile"
     cp ${httpSource} "$out/client.py"
     cp ${runtimeManifest} "$out/manifest.json"
+    cp -r ${stdlibPackage} "$out/stdlib"
     mkdir -p "$out/native"
     cp ${nativeSpec} "$out/native/spec.json"
     cp ${nativeGuard} "$out/native/guard.py"

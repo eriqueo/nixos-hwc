@@ -134,12 +134,20 @@ rec {
   mkFrozenPythonHttpFramingBackport =
     { python, pythonVersion, frozenBundle, frozenBundleSha256, sourcePath
     , sourceSha256, rootPath, selectionVariable, environment ? {}
-    , consumerVerification ? "" }:
+    , consumerVerification ? "", sourceLibraries, sourceStaging, httpBytes }:
     let
       shared = pkgs.pythonFrozenFramingBackport;
+      sourceModules = { "http.client" = {
+        path = rootPath + "/http/client.py";
+        sha256 = shared.nativeSources.${sourceSha256};
+        bytes = httpBytes;
+      }; } // lib.mapAttrs (name: entry: {
+        path = rootPath + "/" + entry.file;
+        inherit (entry) sha256 bytes;
+      }) sourceLibraries.modules;
       # The vendor source hook also enables application development mode.
       # Restore its frozen loader before any app import, while retaining the
-      # environment for native child launchers. Only http.client is replaced.
+      # environment for native child launchers. Select only the qualified source table.
       bootstrap = ''
         def _hwc_bootstrap(namespace):
             import sys
@@ -149,12 +157,22 @@ rec {
             original = importer.find_spec('site', None)
             if original is None or type(original.loader).__name__ != 'FrozenByteCodeLoader':
                 raise RuntimeError('FROZEN_HTTP_SITE_LOADER_DRIFT')
-            if 'http.client' in sys.modules:
-                raise RuntimeError('FROZEN_HTTP_EARLY_IMPORT')
+            import hashlib
+            from pathlib import Path
+            source_modules = ${builtins.toJSON sourceModules}
+            for source_name, entry in source_modules.items():
+                if source_name in sys.modules:
+                    raise RuntimeError('FROZEN_STDLIB_EARLY_IMPORT:' + source_name)
+                source_path = Path(entry['path'])
+                if not source_path.is_file() or source_path.is_symlink() or source_path.stat().st_size != entry['bytes']:
+                    raise RuntimeError('FROZEN_STDLIB_SOURCE_TYPE_SIZE:' + source_name)
+                if hashlib.sha256(source_path.read_bytes()).hexdigest() != entry['sha256']:
+                    raise RuntimeError('FROZEN_STDLIB_SOURCE_HASH:' + source_name)
             class HttpFinder:
                 def find_spec(self, fullname, path=None, target=None):
-                    if fullname == 'http.client':
-                        return spec_from_file_location(fullname, ${builtins.toJSON (rootPath + "/http/client.py")})
+                    entry = source_modules.get(fullname)
+                    if entry is not None:
+                        return spec_from_file_location(fullname, entry['path'])
                     return None
             sys.meta_path.insert(0, HttpFinder())
             name = namespace['__name__']
@@ -176,8 +194,10 @@ rec {
         import hashlib, json, sys, types
         from pathlib import Path
         import http.client
+        if not __debug__:
+            raise RuntimeError('FROZEN_STDLIB_OPTIMIZED_INSTALLER')
         spec = json.loads(sys.argv[1])
-        assert spec['schemaVersion'] == 1, 'FROZEN_HTTP_VERSION'
+        assert spec['schemaVersion'] == 1, 'FROZEN_HTTP_VERSION' 
         source = Path(spec['sourcePath'])
         assert source.stat().st_size <= 262144, 'FROZEN_HTTP_SOURCE_BOUND'
         raw = source.read_bytes()
@@ -211,6 +231,27 @@ rec {
         original = loader.get_code('http.client')
         expected = compile(raw, original.co_filename, 'exec', dont_inherit=True, optimize=2)
         assert shape(original) == shape(expected), 'FROZEN_HTTP_SOURCE_CODE_DRIFT'
+        libraries = json.loads(${builtins.toJSON (builtins.toJSON sourceLibraries)})
+        staging = Path(${builtins.toJSON sourceStaging})
+        assert (staging / 'manifest.json').stat().st_size <= libraries['limits']['manifestBytes'], 'FROZEN_STDLIB_MANIFEST_BOUND'
+        assert json.loads((staging / 'manifest.json').read_text()) == libraries, 'FROZEN_STDLIB_MANIFEST_DRIFT'
+        prepared = {}
+        for name, entry in libraries['modules'].items():
+            for folder, size, digest_key in [('original', 'originalBytes', 'originalSha256'), ('lib', 'bytes', 'sha256')]:
+                candidate = staging / folder / entry['file']
+                assert candidate.is_file() and not candidate.is_symlink(), 'FROZEN_STDLIB_INPUT_TYPE'
+                assert candidate.stat().st_size == entry[size] <= libraries['limits']['fileBytes'], 'FROZEN_STDLIB_INPUT_SIZE'
+                content = candidate.read_bytes()
+                assert hashlib.sha256(content).hexdigest() == entry[digest_key], 'FROZEN_STDLIB_INPUT_HASH'
+                if folder == 'original':
+                    code = loader.get_code(name)
+                    assert shape(code) == shape(compile(content, code.co_filename, 'exec', dont_inherit=True, optimize=2)), 'FROZEN_STDLIB_SOURCE_CODE_DRIFT'
+                else:
+                    compile(content, '<frozen/' + entry['file'] + '>', 'exec', dont_inherit=True, optimize=2)
+                    prepared[entry['file']] = content
+        assert len(prepared) == libraries['limits']['modules'], 'FROZEN_STDLIB_GROUP_COUNT'
+        assert sum(map(len, prepared.values())) + len(output) <= libraries['limits']['groupBytes'], 'FROZEN_STDLIB_GROUP_BOUND'
+        assert len(output) == ${toString httpBytes}, 'FROZEN_HTTP_RESULT_SIZE'
         bootstrap = ${builtins.toJSON bootstrap}
         assert hashlib.sha256(bootstrap.encode()).hexdigest() == spec['bootstrapSha256'], 'FROZEN_HTTP_BOOTSTRAP_DRIFT'
         compile(bootstrap, '<frozen-bootstrap>', 'exec', dont_inherit=True, optimize=2)
@@ -222,6 +263,13 @@ rec {
         path = folder / 'client.py'
         path.write_bytes(output)
         path.chmod(0o444)
+        for filename, content in prepared.items():
+            target = root / filename
+            target.write_bytes(content)
+            target.chmod(0o444)
+        library_proof = root / 'stdlib.json'
+        library_proof.write_text(json.dumps(libraries, sort_keys=True) + '\n')
+        library_proof.chmod(0o444)
         site = root / 'site.py'
         site.write_text(bootstrap)
         site.chmod(0o444)
