@@ -7,10 +7,16 @@ soularr-config-security = let
   service = c.systemd.services.soularr-config;
   containerService = c.systemd.services.podman-soularr;
   updater = c.system.build.soularrConfigUpdater;
+  privatePaths = map (name: "${c.hwc.paths.apps.root}/${name}") [
+    "lidarr" "radarr" "sonarr" "prowlarr" "readarr" "soularr"
+  ] ++ [ "${c.hwc.paths.apps.root}/soularr/data" ];
   fixture = pkgs.writeText "soularr-config-security.json" (builtins.toJSON {
     command = service.serviceConfig.ExecStart;
     readiness = map toString (lib.toList containerService.serviceConfig.ExecStartPre);
     keyFile = c.age.secrets.lidarr-api-key.path;
+    inherit privatePaths;
+    privateRules = lib.filter (rule:
+      builtins.any (path: lib.hasInfix " ${path} " rule) privatePaths) c.systemd.tmpfiles.rules;
   });
 in
 assert service.serviceConfig.User == "eric" && service.serviceConfig.Group == "users";
@@ -25,10 +31,23 @@ assert containerService.serviceConfig.TimeoutStartSec == "30s";
 assert c.virtualisation.oci-containers.containers.soularr.image == c.hwc.media.soularr.image;
 pkgs.runCommand "soularr-config-security" { nativeBuildInputs = [ pkgs.python3 ]; } ''
   python3 - ${fixture} ${updater} ${pkgs.bash}/bin/bash <<'PY'
-  import configparser, grp, http.server, json, os, pathlib, re, runpy, subprocess, sys, tempfile, threading
+  import configparser, grp, http.server, json, os, pathlib, re, runpy, shlex, subprocess, sys, tempfile
   from unittest.mock import patch
   fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
   updater, bash = sys.argv[2:]
+  def private_directories(rules):
+      parsed = [shlex.split(rule) for rule in rules]
+      for path in fixture['privatePaths']:
+          entries = [fields for fields in parsed if len(fields) >= 5 and fields[1] == path]
+          assert len(entries) == 1 and entries[0][0] == 'd', 'one producer must own each private directory'
+          assert entries[0][2:5] == ['0750', '1000', '100'], 'private parent must preserve the app writer identity'
+  private_directories(fixture['privateRules'])
+  for invalid in [fixture['privateRules'][1:],
+                  fixture['privateRules'] + fixture['privateRules'][:1],
+                  [rule.replace(' 0750 ', ' 0755 ') for rule in fixture['privateRules']]]:
+      try: private_directories(invalid)
+      except AssertionError: pass
+      else: raise AssertionError('missing, duplicated or public directory integration passed')
   def wiring(command):
       assert updater in command.split(), 'production must invoke the tested updater'
   wiring(fixture['command'])

@@ -21,6 +21,8 @@ runtime catalog while retaining its original application and native dependencies
 Its bounded Eric/secrets seeder writes atomically with mode0440. Container startup
 requires seeding; Lidarr readiness passes its header through an anonymous FD.
 The check exercises each composed startup script and resets failed-input fixtures.
+`directories.nix` owns the private parent directories for Soularr and the five arr
+apps. These preserve app writes while blocking other users from all config copies.
 
 Immich uses the versioned shared database-role contract and restarts with its provisioner when credentials or provisioning code change.
 
@@ -113,6 +115,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Keep private arr/Soularr app parents and Soularr's data directory in the single directory producer. Remove the duplicate Soularr data rule, declare Readarr's existing config directory, and check composed rules without changing arr startup or config files.
 
 - 2026-11-05: Keep Soularr's composed ExecStartPre scripts distinct in its credential-argument check, bound container startup against the OCI module's unlimited default, and initialize each failed-input fixture independently.
 

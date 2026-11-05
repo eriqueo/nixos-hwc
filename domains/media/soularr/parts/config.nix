@@ -147,10 +147,6 @@ in
 {
   config = lib.mkIf cfg.enable {
     system.build.soularrConfigUpdater = updater;
-    systemd.tmpfiles.rules = [
-      "d ${soularrRoot} 0750 eric users -"
-      "d ${soularrRoot}/data 0750 eric users -"
-    ];
     systemd.services.soularr-config = {
       description = "Update Soularr credentials and preserve saved settings";
       wantedBy = [ "podman-soularr.service" ];
