@@ -17,6 +17,18 @@ runtime catalog while retaining its original application and native dependencies
 
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
+`soularr/` preserves saved INI choices while updating managed addresses and keys.
+Its bounded Eric/secrets seeder writes atomically with mode0440. Container startup
+requires seeding; Lidarr readiness passes its header through an anonymous FD.
+The check exercises each composed startup script and resets failed-input fixtures.
+`directories.nix` owns the private parent directories for Soularr and the five arr
+apps. These preserve app writes while blocking other users from all config copies.
+Soularr's existing index also emits its immutable minimal runtime context. It keeps
+the same CLI, scheduler and runtime packages while updating Python, HTTP and trust
+inputs. Startup requires a prebuilt image; verification checks the emitted recipe
+and rejects missing wiring, lost container-mode flags or altered inputs before
+any image build writes.
+
 Immich uses the versioned shared database-role contract and restarts with its provisioner when credentials or provisioning code change.
 
 Immich managed database credentials use the shared data capability and preserve its internal media paths.
@@ -33,8 +45,16 @@ Its Python framing replacements and upstream references come from
 Frigate uses explicit NVIDIA CDI access and no-new-privileges; its configuration contract rejects privileged mode.
 
 Frigate and Immich ML derive same-app images with the shared Starlette Host parser backport.
+Frigate additionally selects a paired stdlib/urllib3 framing recipe; its actual
+streaming model client and current-data qualification own deployment acceptance.
+
+Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
+selection. Its image build exercises the actual GUI import and fork_job worker.
 
 `immich-container/` keeps its pinned Ubuntu CA distrust policy even after host NSS removes the same roots. Its exact local runtime images must be built before activation.
+Its ML HTTP derivative inherits the existing TLS/Pillow/Starlette base and
+installs only fixed-hash Requests/urllib3 wheels plus shared framing guards.
+Wheel guards accept standard ZIP permission metadata and reject links and escapes.
 
 `youtube/` runs the transcripts site with captions-first extraction and a bounded Deepgram audio fallback, using the generated `deepgram-api-key` mount.
 
@@ -73,8 +93,8 @@ media/
 ├── recyclarr/               # *arr quality profile sync; preserves Radarr executable rejection
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
-├── calibre/                 # Immutable Calibre 9.17 image; existing library/config paths
-├── books/                   # LazyLibrarian
+├── calibre/                 # Calibre 9.17 frozen HTTP source repair; existing library/config paths
+├── books/                   # LazyLibrarian; private config parent in directories.nix
 │
 ├── immich-container/        # Photo management, pinned runtime/library contexts
 ├── immich-native/           # Photo management (native NixOS)
@@ -100,6 +120,28 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Protect Books credentials, user hashes and saved backups with the existing private-parent descriptor. Preserve file contents, app writer identity and container startup; include Books in composed private-rule checks.
+
+- 2026-11-05: Preserve Soularr's inherited container-mode and unbuffered-output flags in the minimal image; reject their removal in the emitted-recipe and input-guard checks.
+
+- 2026-11-05: Emit a minimal same-CLI Soularr runtime with pinned Python3.11.18, HTTP/trust wheels and scheduler tools. Reuse the paired framing adapter, preserve Tini group shutdown, guard app/input hashes and check actual recipe wiring. Runtime adoption requires separate current-data qualification.
+
+- 2026-11-05: Keep private arr/Soularr app parents and Soularr's data directory in the single directory producer. Remove the duplicate Soularr data rule, declare Readarr's existing config directory, and check composed rules without changing arr startup or config files.
+
+- 2026-11-05: Keep Soularr's composed ExecStartPre scripts distinct in its credential-argument check, bound container startup against the OCI module's unlimited default, and initialize each failed-input fixture independently.
+
+- 2026-11-05: Preserve Soularr preferences and restrict credential files on every seed. Remove keys from readiness process arguments and test the actual seeder and curl wiring, including failed-input and reverted-integration cases.
+
+- 2026-11-05: Accept wheel entries with permissions but no Unix type bits; retain fail-before-write path and link checks.
+
+- 2026-11-05: Add an offline Immich ML HTTP derivative and preserve its previous security base. Share urllib3 source identities with Frigate while retaining Frigate's emitted recipe.
+
+- 2026-11-05: Fix Calibre's HTTP hook enabling development icon builds; restore the frozen importer mode and verify actual GUI and native worker startup before image adoption.
+
+- 2026-11-04: Add a Calibre 9.17 runtime context that selects one hash-bound CPython HTTP source through the vendor frozen importer. Preserve the archive, app, data paths and credentials; require a prebuilt image and guard actual selection and optimized-launcher failures.
+
+- 2026-11-04: Add Frigate's paired HTTP response framing backport and actual emitted-builder drift/integration checks; retain its app, model, native inputs and data paths.
 
 - 2026-11-04: Select the checked native yt-dlp launcher for transcript subprocesses; retain their provider, output and credential settings.
 

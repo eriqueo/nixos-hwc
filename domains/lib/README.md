@@ -20,6 +20,13 @@ any domain (media, networking, data, etc.) can use them without depending on the
 timeout for native CRM and MCP units. The caller owns its service dependencies.
 
 `mkContainer.nix` also owns the hash-guarded Starlette Host parser backport shared by Frigate and Immich ML.
+Its paired HTTP framing builder returns one manifest and recipe fragment. It
+checks both stdlib/urllib3 sources and results before writing either module.
+Its frozen-Python builder checks the whole vendor archive and exact original
+module code before adding an immutable HTTP source and site bootstrap through
+the vendor importer. The bootstrap restores normal application mode and keeps
+the narrow HTTP selection in native child processes.
+Embedded guards use explicit compilation without optimization.
 
 `mkContainer` also accepts `{ kind = "named"; names = [ ... ]; }` for explicit bridge membership. Legacy media/host/VPN callers retain their network arguments.
 
@@ -61,6 +68,12 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+
+- 2026-11-05: Restore frozen application mode before selecting the HTTP backport; retain the original site code and check bootstrap identity and narrow selection.
+
+- 2026-11-04: Add an exact-source frozen HTTP backport recipe for Calibre; preserve the vendor archive and guard optimized launchers before writes.
+
+- 2026-11-04: Add a paired, bounded HTTP framing image builder selected by Frigate; share grammar while retaining caller-owned source hashes and actual-client qualification.
 
 - 2026-11-04: Share bounded HTTP readiness between CRM and the MCP gateway so dependent services wait for a real response.
 

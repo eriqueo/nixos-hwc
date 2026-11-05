@@ -34,14 +34,20 @@ let
   networkingEnabled = name:
     lib.attrByPath [ "hwc" "networking" name "enable" ] false config;
 
-  mkDir = path: "d ${path} 0755 1000 100 -";
+  mkDirMode = mode: path: "d ${path} ${mode} 1000 100 -";
+  mkDir = mkDirMode "0755";
+  mkPrivateDir = mkDirMode "0750";
   mkRootDir = path: "d ${path} 0755 root root -";
 
   appRoot = name: "${appsRoot}/${name}";
   appConfig = name: "${(appRoot name)}/config";
 
-  mkConfigDirs = names:
-    lib.concatMap (name: lib.optionals (mediaEnabled name) [ (mkDir (appConfig name)) ]) names;
+  # Each app has one descriptor. Private parents protect credentials even when
+  # the app rewrites a config leaf with a vendor-default public mode.
+  mkConfigDirs = apps:
+    lib.concatLists (lib.mapAttrsToList (name: privateParent:
+      lib.optionals (mediaEnabled name) ([ (mkDir (appConfig name)) ]
+        ++ lib.optional privateParent (mkPrivateDir (appRoot name)))) apps);
 in
 {
   config = {
@@ -94,31 +100,32 @@ in
       ])
 
       # Container config roots (/opt)
-      (lib.optionals (appsRoot != null) ([ (mkRootDir appsRoot) ] ++ mkConfigDirs [
-        "audiobookshelf"
-        "beets"
-        "books"
-        "calibre"
-        "mousehole"
-        "jellyfin"
-        "lidarr"
-        "navidrome"
-        "organizr"
-        "prowlarr"
-        "qbittorrent"
-        "radarr"
-        "recyclarr"
-        "sabnzbd"
-        "sonarr"
-        "soularr"
-      ]))
+      (lib.optionals (appsRoot != null) ([ (mkRootDir appsRoot) ] ++ mkConfigDirs {
+        audiobookshelf = false;
+        beets = false;
+        books = true;
+        calibre = false;
+        mousehole = false;
+        jellyfin = false;
+        lidarr = true;
+        navidrome = false;
+        organizr = false;
+        prowlarr = true;
+        qbittorrent = false;
+        radarr = true;
+        readarr = true;
+        recyclarr = false;
+        sabnzbd = false;
+        sonarr = true;
+        soularr = true;
+      }))
 
       # Containers with non-standard config layouts
       (lib.optionals (appsRoot != null && networkingEnabled "gluetun") [
         (mkDir (appRoot "gluetun"))
       ])
       (lib.optionals (appsRoot != null && mediaEnabled "soularr") [
-        (mkDir "${(appRoot "soularr")}/data")
+        (mkPrivateDir "${(appRoot "soularr")}/data")
       ])
       (lib.optionals (appsRoot != null && mediaEnabled "tdarr") [
         (mkDir "${(appRoot "tdarr")}/server")

@@ -21,5 +21,25 @@
   "nativeSources": {
     "d12e0060428b8389389db2244f9e1bd7fccae1450d43f74bce91b782498c300a": "2ee986606ccf4a612b2f5b014dfbaefa2b0dc4e895b589b2412d553b05641b7b",
     "016aa7664201a82f0f37ddfb11ed662dd1f07aa23c9470c6a3cb3278aa479230": "5e44bfa58a697ea5dfbe46cadf0628ef0371e3444d8b1a253f7482e62ade78fe"
-  }
+  },
+  "urllib3Sources": {
+    "2.8.0": {
+      "sourceSha256": "0e4559c737914d4f8f941dca9ecfaf6caec6792258302bffec7b8b41dae3c71a",
+      "patchedSha256": "dcec06f8eea936941e81ba8ab6479a0c0ee136829df0058abff7bfb5c9394ea9"
+    }
+  },
+  "urllib3Replacements": [
+    [
+      "from http.client import HTTPMessage as _HttplibHTTPMessage",
+      "from http.client import _is_legal_content_length, _is_legal_chunk_size\nfrom http.client import HTTPMessage as _HttplibHTTPMessage"
+    ],
+    [
+      "                lengths = {int(val) for val in content_length.split(\",\")}",
+      "                values = [value.strip(\" \\t\") for value in content_length.split(\",\")]\n                if not all(_is_legal_content_length(value) for value in values):\n                    raise InvalidHeader(\"Content-Length contained a non-decimal value\")\n                lengths = {int(value) for value in values}"
+    ],
+    [
+      "        line = line.split(b\";\", 1)[0]\n        try:\n            self.chunk_left = int(line, 16)",
+      "        line = line.split(b\";\", 1)[0].rstrip()\n        try:\n            if not _is_legal_chunk_size(line):\n                raise ValueError(\"invalid chunk size\")\n            self.chunk_left = int(line, 16)"
+    ]
+  ]
 }

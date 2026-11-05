@@ -2,6 +2,250 @@
 { lib, pkgs, repoRoot, self }:
 {
 
+soularr-runtime-security = let
+  c = self.nixosConfigurations.hwc-home.config;
+  container = c.virtualisation.oci-containers.containers.soularr;
+  fixture = pkgs.writeText "soularr-runtime-binding.json" (builtins.toJSON {
+    selected = container.image;
+    configured = c.hwc.media.soularr.image;
+    preStart = c.systemd.services.podman-soularr.preStart;
+    ports = container.ports;
+  });
+in pkgs.runCommand "soularr-runtime-security" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${c.system.build.soularrRuntimeImageContext} ${c.system.build.soularrRuntimeInputGuard} <<'PY'
+  import copy, hashlib, json, pathlib, runpy, tempfile
+  from unittest.mock import patch
+  import sys
+  binding = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  context, guard = map(pathlib.Path, sys.argv[2:])
+  spec = json.loads((context / 'inputs/manifest.json').read_text())
+  recipe = (context / 'Dockerfile').read_text()
+  assert binding['selected'] == binding['configured'] and binding['selected'].startswith('localhost/soularr-runtime:')
+  assert binding['ports'] == [] and binding['selected'] in binding['preStart']
+  assert 'image exists' in binding['preStart'] and 'exit 1' in binding['preStart']
+  def wiring(text):
+      assert 'FROM ' + spec['sourceImage'] + ' AS app-source' in text
+      assert 'FROM ' + spec['baseImage'] + '\n' in text
+      assert 'COPY --from=app-source /app/soularr.py /app/run.sh /app/' in text
+      assert 'RUN python3 -B /tmp/hwc-soularr/guard.py /tmp/hwc-soularr/manifest.json' in text
+      assert '--no-index --no-deps --no-compile' in text and 'pip check' in text
+      assert 'uninstall --yes pip setuptools wheel' in text
+      assert 'ENTRYPOINT ["tini", "-g", "--"]' in text and 'CMD ["/app/run.sh"]' in text
+      assert 'WORKDIR /app' in text and 'soularr.py --help && ps aux' in text
+      assert 'IN_DOCKER=' + spec['environment']['IN_DOCKER'] in text
+      assert 'PYTHONUNBUFFERED=' + spec['environment']['PYTHONUNBUFFERED'] in text
+      assert 'WEBUI' not in text and 'EXPOSE' not in text
+      assert spec['framing']['modules']['httpClient']['sourceSha256'] in text
+      assert spec['framing']['modules']['urllib3']['patchedSha256'] in text
+  wiring(recipe)
+  for old in ['COPY --from=app-source /app/soularr.py /app/run.sh /app/',
+              'RUN python3 -B /tmp/hwc-soularr/guard.py /tmp/hwc-soularr/manifest.json',
+              '--no-index --no-deps --no-compile', 'ENTRYPOINT ["tini", "-g", "--"]',
+              'IN_DOCKER=' + spec['environment']['IN_DOCKER'],
+              spec['framing']['modules']['urllib3']['patchedSha256']]:
+      assert old in recipe
+      try: wiring(recipe.replace(old, 'omitted-integration'))
+      except AssertionError: pass
+      else: raise AssertionError('omitted runtime integration passed')
+  assert (context / 'inputs/guard.py').read_bytes() == guard.read_bytes()
+  api = runpy.run_path(str(guard))
+  with tempfile.TemporaryDirectory() as directory:
+      app = pathlib.Path(directory)
+      fixture = copy.deepcopy(spec)
+      for name in fixture['appFiles']:
+          raw = ('owned fixture ' + name).encode()
+          (app / name).write_bytes(raw)
+          fixture['appFiles'][name] = hashlib.sha256(raw).hexdigest()
+      versions = {x['name']: x['version'] for x in spec['preservedPackages']}
+      with patch('importlib.metadata.version', side_effect=versions.__getitem__):
+          api['verify'](fixture, app, context / 'inputs', spec['pythonVersion'], spec['environment'])
+          for kind in ['schema', 'version', 'app', 'missing', 'input', 'package', 'environment']:
+              bad = copy.deepcopy(fixture)
+              version = spec['pythonVersion']
+              environment = dict(spec['environment'])
+              if kind == 'schema': bad['schemaVersion'] = 0
+              if kind == 'version': version = '3.11.0'
+              if kind == 'app': bad['appFiles']['soularr.py'] = '0' * 64
+              if kind == 'missing': bad['wheels'][0]['filename'] = 'missing.whl'
+              if kind == 'input': bad['debs'][-1]['sha256'] = '0' * 64
+              if kind == 'package': bad['preservedPackages'][-1]['version'] = 'wrong'
+              if kind == 'environment': environment.pop('IN_DOCKER')
+              try: api['verify'](bad, app, context / 'inputs', version, environment)
+              except (AssertionError, FileNotFoundError): pass
+              else: raise AssertionError('invalid runtime input passed: ' + kind)
+      assert all((app / name).read_bytes() == ('owned fixture ' + name).encode() for name in fixture['appFiles'])
+  print('Soularr emitted runtime binding, source guards and omitted-integration negatives pass')
+  PY
+  touch "$out"
+'';
+
+soularr-config-security = let
+  c = self.nixosConfigurations.hwc-home.config;
+  service = c.systemd.services.soularr-config;
+  containerService = c.systemd.services.podman-soularr;
+  updater = c.system.build.soularrConfigUpdater;
+  privatePaths = map (name: "${c.hwc.paths.apps.root}/${name}") [
+    "books" "lidarr" "radarr" "sonarr" "prowlarr" "readarr" "soularr"
+  ] ++ [ "${c.hwc.paths.apps.root}/soularr/data" ];
+  fixture = pkgs.writeText "soularr-config-security.json" (builtins.toJSON {
+    command = service.serviceConfig.ExecStart;
+    readiness = map toString (lib.toList containerService.serviceConfig.ExecStartPre);
+    keyFile = c.age.secrets.lidarr-api-key.path;
+    inherit privatePaths;
+    privateRules = lib.filter (rule:
+      builtins.any (path: lib.hasInfix " ${path} " rule) privatePaths) c.systemd.tmpfiles.rules;
+  });
+in
+assert service.serviceConfig.User == "eric" && service.serviceConfig.Group == "users";
+assert service.serviceConfig.SupplementaryGroups == [ "secrets" ];
+assert service.serviceConfig.UMask == "0077" && service.serviceConfig.TimeoutStartSec == "30s";
+assert lib.elem c.age.secrets.lidarr-api-key.file service.restartTriggers;
+assert lib.elem c.age.secrets.slskd-api-key.file service.restartTriggers;
+assert lib.elem "soularr-config.service" containerService.after;
+assert lib.elem "soularr-config.service" containerService.requires;
+assert lib.elem service.serviceConfig.ExecStart containerService.restartTriggers;
+assert containerService.serviceConfig.TimeoutStartSec == "30s";
+assert c.virtualisation.oci-containers.containers.soularr.image == c.hwc.media.soularr.image;
+pkgs.runCommand "soularr-config-security" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${fixture} ${updater} ${pkgs.bash}/bin/bash <<'PY'
+  import configparser, grp, http.server, json, os, pathlib, re, runpy, shlex, subprocess, sys, tempfile
+  from unittest.mock import patch
+  fixture = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  updater, bash = sys.argv[2:]
+  def private_directories(rules):
+      parsed = [shlex.split(rule) for rule in rules]
+      for path in fixture['privatePaths']:
+          entries = [fields for fields in parsed if len(fields) >= 5 and fields[1] == path]
+          assert len(entries) == 1 and entries[0][0] == 'd', 'one producer must own each private directory'
+          assert entries[0][2:5] == ['0750', '1000', '100'], 'private parent must preserve the app writer identity'
+  private_directories(fixture['privateRules'])
+  for invalid in [fixture['privateRules'][1:],
+                  fixture['privateRules'] + fixture['privateRules'][:1],
+                  [rule.replace(' 0750 ', ' 0755 ') for rule in fixture['privateRules']]]:
+      try: private_directories(invalid)
+      except AssertionError: pass
+      else: raise AssertionError('missing, duplicated or public directory integration passed')
+  def wiring(command):
+      assert updater in command.split(), 'production must invoke the tested updater'
+  wiring(fixture['command'])
+  try:
+      wiring(fixture['command'].replace(updater, '/omitted-integration'))
+  except AssertionError:
+      pass
+  else:
+      raise AssertionError('omitted updater integration passed')
+  api = runpy.run_path(updater)
+  with tempfile.TemporaryDirectory() as directory:
+      root = pathlib.Path(directory)
+      config = root / 'config.ini'
+      lidarr, slskd = root / 'lidarr-key', root / 'slskd-key'
+      lidarr.write_text('private-dummy-lidarr\n'); slskd.write_text('private-dummy-slskd\n')
+      spec = {'path': str(config), 'group': grp.getgrgid(os.getgid()).gr_name,
+              'services': {'Lidarr': {'url': 'http://lidarr:8686', 'keyFile': str(lidarr)},
+                           'Slskd': {'url': 'http://gluetun:5030', 'keyFile': str(slskd)}}}
+      specpath = root / 'inputs.json'; specpath.write_text(json.dumps(spec))
+      original = ('; saved comment\n[Lidarr]\nhost_url : http://old\napi_key = old\n'
+                  'download_dir = /saved/music\n\n[Slskd]\napi_key = old\n'
+                  '\n[General]\ninterval = 901\n\n[SavedChoice]\ncustom_option = preserve-this\n')
+      def invoke():
+          return subprocess.run([sys.executable, updater, str(specpath)], capture_output=True, timeout=10)
+      config.write_text(original); config.chmod(0o644)
+      result = invoke(); assert result.returncode == 0, result.stderr
+      output = config.read_text(); parser = configparser.RawConfigParser(); parser.read_string(output)
+      assert '; saved comment\n' in output and 'host_url : http://lidarr:8686' in output
+      assert parser['General']['interval'] == '901' and parser['SavedChoice']['custom_option'] == 'preserve-this'
+      assert parser['Lidarr']['download_dir'] == '/saved/music'
+      assert parser['Slskd']['download_dir'] == '/downloads/music'
+      assert parser['Slskd']['api_key'] == 'private-dummy-slskd'
+      assert config.stat().st_mode & 0o777 == 0o440
+      inode = config.stat().st_ino
+      assert invoke().returncode == 0 and config.read_text() == output and config.stat().st_ino == inode
+      # Missing/invalid SECOND key, invalid INI, oversized file and symlink all
+      # fail through the real CLI before changing the original or leaking input.
+      for bad in ['missing', 'newline', 'ini', 'size', 'link', 'multiline']:
+          if config.exists(): config.chmod(0o600)
+          config.write_text(original)
+          slskd.write_text('private-dummy-slskd\n')
+          if bad == 'missing': slskd.unlink()
+          if bad == 'newline': slskd.write_text('sensitive-value\nInjected: value\n')
+          if bad == 'ini': config.write_text('[Bad]\nsensitive-value\n')
+          if bad == 'size': config.write_text('x' * (1024 * 1024 + 1))
+          if bad == 'multiline': config.write_text(original.replace('api_key = old', 'api_key = old\n  sensitive-value', 1))
+          target = None
+          if bad == 'link':
+              target = root / 'untouched'; target.write_text(original)
+              config.unlink(); config.symlink_to(target)
+          before, metadata = config.read_bytes(), config.lstat()
+          result = invoke()
+          assert result.returncode != 0 and b'sensitive-value' not in result.stderr
+          assert config.read_bytes() == before and config.lstat().st_ino == metadata.st_ino
+          assert not list(root.glob('.config-*'))
+          if config.is_symlink(): config.unlink()
+      # Concurrent edit is preserved and own temporary file is removed.
+      config.write_text(original); slskd.write_text('private-dummy-slskd\n')
+      real_fsync = os.fsync
+      def concurrent_edit(fd):
+          real_fsync(fd); config.write_text(original + '; concurrent user edit\n')
+      with patch('os.fsync', side_effect=concurrent_edit):
+          try: api['update'](spec)
+          except api['ConfigError'] as error: assert str(error) == 'SOULARR_CONFIG_CHANGED'
+          else: raise AssertionError('concurrent edit overwritten')
+      assert config.read_text().endswith('; concurrent user edit\n') and not list(root.glob('.config-*'))
+      config.unlink(); assert invoke().returncode == 0
+      parser.read_string(config.read_text()); assert parser['General']['interval'] == '300'
+      assert config.stat().st_mode & 0o777 == 0o440
+
+      readiness_scripts = [pathlib.Path(path).read_text() for path in fixture['readiness']]
+      readiness_scripts = [script for script in readiness_scripts if '--header @<(' in script]
+      assert len(readiness_scripts) == 1, 'the composed container must select exactly one guarded readiness script'
+      ready = readiness_scripts[0]
+      assert '--max-time 2' in ready and 'attempt <= 6' in ready
+      assert '--header @<(' in ready and 'RANDOM % 500' in ready
+      # Hold an actual HTTP GET while inspecting only that bash's descendants.
+      observations = []
+      key = lidarr.read_text().strip()
+      class Handler(http.server.BaseHTTPRequestHandler):
+          def log_message(self, *args): pass
+          def do_GET(self):
+              try:
+                  assert self.headers.get('X-Api-Key') == key
+                  pending = [process.pid]; seen = set(); found = False
+                  while pending:
+                      pid = pending.pop()
+                      if pid in seen: continue
+                      seen.add(pid)
+                      proc = pathlib.Path('/proc') / str(pid)
+                      try:
+                          pending.extend(map(int, (proc / 'task' / str(pid) / 'children').read_text().split()))
+                          argv = (proc / 'cmdline').read_bytes().split(b'\0')
+                          if argv and pathlib.Path(os.fsdecode(argv[0])).name == 'curl':
+                              found = True
+                              observations.append(key.encode() not in b'\0'.join(argv))
+                      except FileNotFoundError: pass
+                  assert found
+                  self.send_response(200); self.end_headers()
+              except Exception:
+                  observations.append(False); self.send_response(500); self.end_headers()
+      server = http.server.HTTPServer(('127.0.0.1', 0), Handler)
+      endpoint = 'http://127.0.0.1:' + str(server.server_port) + '/api/v1/system/status'
+      ready = ready.replace('http://localhost:8686/api/v1/system/status', endpoint).replace(fixture['keyFile'], str(lidarr))
+      script = root / 'ready.sh'; script.write_text(ready)
+      process = subprocess.Popen([bash, str(script)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      server.timeout = 5; server.handle_request()
+      stdout, stderr = process.communicate(timeout=5)
+      assert process.returncode == 0 and observations == [True] and key.encode() not in stdout + stderr
+      # Reverting just the FD integration must be detected by the same observer.
+      mutant, count = re.subn(r'--header @<\([^\n]+\)', '--header "X-Api-Key: ' + key + '"', ready)
+      assert count == 1
+      observations.clear(); script.write_text(mutant)
+      process = subprocess.Popen([bash, str(script)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      server.handle_request(); process.communicate(timeout=5); server.server_close()
+      assert process.returncode == 0 and observations == [False], 'inline argv regression escaped observer'
+  print('Actual seeder preserves settings, fails closed and stays private; actual curl FD wiring and argv regression proved')
+  PY
+  touch "$out"
+'';
+
 transcripts-deepgram = let
   c = self.nixosConfigurations.hwc-home.config;
   service = c.systemd.services.transcripts;
@@ -262,7 +506,7 @@ assert c.virtualisation.oci-containers.containers.frigate.pull == "never";
 assert lib.hasInfix "FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c" frigate;
 assert lib.hasInfix "image exists ${lib.escapeShellArg expectedFrigate}" c.systemd.services.podman-frigate.preStart;
 pkgs.runCommand "starlette-host-backport-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-  python3 - ${c.system.build.frigateRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.frigateRuntimeImageContext} <<'PYTEST'
+  python3 - ${c.system.build.frigateRuntimeImageRecipe} ${c.system.build.immichMlBaseRuntimeImageRecipe} ${c.system.build.frigateRuntimeImageContext} <<'PYTEST'
   import base64, hashlib, json, pathlib, shlex, sys
   expected = [('0.47.3', 'ce16c619c99e45507a3aebedf47c2807c8122bd9396e21f7cd48636f9715fa8c', '5c163e52df0a615c7860136b30d010c48696c0774011db8879a3299e025ed441'),
               ('0.50.0', 'dde752330006431c7ebc1ccb948a95825be5bd6b8c03839133cdee59899c3030', '77253c43dce33af8b92b1b76794c6b39205419a520663246dfba595e4c76b283')]
@@ -293,6 +537,83 @@ pkgs.runCommand "starlette-host-backport-wiring" { nativeBuildInputs = [ pkgs.py
           actual = hashlib.sha256((context / directory / p['file']).read_bytes()).digest()
           assert actual == base64.b64decode(p['hash'].removeprefix('sha256-')), p['name']
   PYTEST
+  touch "$out"
+'';
+
+frigate-http-framing = let
+  host = self.nixosConfigurations.hwc-home;
+  c = host.config;
+  shared = builtins.fromJSON (builtins.readFile (repoRoot + "/overlays/python-http-framing.json"));
+in
+assert host.pkgs.pythonHttpFramingBackport == {
+  inherit (shared) upstreamCommits replacements;
+};
+pkgs.runCommand "frigate-http-framing" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${c.system.build.frigateRuntimeImageContext} <<'PY'
+  import copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
+  context = pathlib.Path(sys.argv[1])
+  recipe = (context / 'Dockerfile').read_text()
+  manifest = json.loads((context / 'manifest.json').read_text())['pythonHttpBackport']
+  assert manifest['schemaVersion'] == 1 and set(manifest['modules']) == {'httpClient', 'urllib3'}
+  assert len(manifest['stdlibUpstreamCommits']) == 2
+  assert manifest['modules']['httpClient']['path'] == '/usr/lib/python3.11/http/client.py'
+  assert manifest['modules']['urllib3']['path'] == '/usr/local/lib/python3.11/dist-packages/urllib3/response.py'
+  def emitted(value, expected):
+    matches = []
+    for line in value.splitlines():
+      if not line.startswith('RUN '):
+        continue
+      args = shlex.split(line[4:])
+      if '-c' in args and 'HTTP_BACKPORT_PAIR' in args[args.index('-c') + 1]:
+        assert args[:3] == ['python3', '-B', '-c'] and len(args) == 5
+        assert json.loads(args[4]) == expected
+        compile(args[3], '<actual-image-builder>', 'exec')
+        matches.append((line, args[3]))
+    assert len(matches) == 1, 'HTTP_BACKPORT_INTEGRATION_MISSING'
+    return matches[0]
+  line, program = emitted(recipe, manifest)
+  without_integration = '\n'.join(value for value in recipe.splitlines() if value != line)
+  try:
+    emitted(without_integration, manifest)
+  except AssertionError:
+    pass
+  else:
+    raise AssertionError('OMITTED_BACKPORT_ACCEPTED')
+  # Run the actual emitted builder. A bad second module must fail before the
+  # first file changes. This tests the guard; actual image tests own success.
+  sha = lambda value: hashlib.sha256(value).hexdigest()
+  cases = {'source': 'HTTP_SOURCE_DRIFT', 'result': 'HTTP_RESULT_DRIFT',
+    'hunk': 'HTTP_HUNK_DRIFT', 'pair': 'HTTP_BACKPORT_PAIR', 'bound': 'HTTP_SOURCE_BOUND'}
+  for kind, code in cases.items():
+    with tempfile.TemporaryDirectory(prefix='http-builder-guard-') as folder:
+      root = pathlib.Path(folder)
+      fixture = copy.deepcopy(manifest)
+      originals = {}
+      for name, suffix in [('httpClient', 'http/client.py'), ('urllib3', 'urllib3/response.py')]:
+        path = root / suffix
+        path.parent.mkdir(parents=True)
+        original = b'sentinel=1\n'
+        path.write_bytes(original)
+        originals[path] = original
+        fixture['modules'][name] = {'path': str(path), 'sourceSha256': sha(original),
+          'patchedSha256': sha(b'sentinel=2\n'), 'replacements': [['sentinel=1', 'sentinel=2']]}
+      second = fixture['modules']['urllib3']
+      if kind == 'source':
+        second['sourceSha256'] = '0' * 64
+      elif kind == 'result':
+        second['patchedSha256'] = '0' * 64
+      elif kind == 'hunk':
+        second['replacements'] = [['missing_sentinel', 'sentinel=2']]
+      elif kind == 'pair':
+        del fixture['modules']['urllib3']
+      elif kind == 'bound':
+        path = pathlib.Path(second['path'])
+        originals[path] = b'x' * 262145
+        path.write_bytes(originals[path])
+      result = subprocess.run([sys.executable, '-B', '-c', program, json.dumps(fixture)], capture_output=True, timeout=10)
+      assert result.returncode != 0 and code.encode() in result.stderr, kind
+      assert all(path.read_bytes() == original for path, original in originals.items()), 'PARTIAL_PAIR_WRITE:' + kind
+  PY
   touch "$out"
 '';
 
@@ -359,23 +680,96 @@ assert lib.assertMsg (lib.hasPrefix "localhost/immich-runtime:2.5.6-node24.22.1-
 assert c.virtualisation.oci-containers.containers.immich-server.image == cfg.images.server;
 assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
 pkgs.runCommand "immich-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-  python3 - ${fixture} ${c.system.build.immichServerRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.seerrRuntimeImageRecipe} <<'PY'
-  import hashlib, json, pathlib, re, sys
+  python3 - ${fixture} ${c.system.build.immichServerRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageRecipe} ${c.system.build.seerrRuntimeImageRecipe} ${c.system.build.immichMlBaseRuntimeImageRecipe} ${c.system.build.immichMlRuntimeImageContext} <<'PY'
+  import ast, copy, hashlib, json, pathlib, re, shlex, subprocess, sys, tempfile, zipfile
   spec = json.loads(pathlib.Path(sys.argv[1]).read_text())
-  server, ml, seerr = [pathlib.Path(p).read_text() for p in sys.argv[2:]]
+  server, ml, seerr, base = [pathlib.Path(p).read_text() for p in sys.argv[2:6]]
+  context = pathlib.Path(sys.argv[6])
   sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
   assert spec['server'] == 'localhost/immich-runtime:2.5.6-node24.22.1-' + sha(server)[:12]
   assert spec['ml'] == 'localhost/immich-ml-runtime:2.5.6-' + sha(ml)[:12]
-  for recipe in [server, ml]:
+  for recipe in [server, base]:
       sources = re.findall(r'^FROM (\S+)', recipe, re.M)
       assert len(sources) == 2 and all(re.search(r'@sha256:[0-9a-f]{64}$', s) for s in sources)
   assert 'ENV NODE_VERSION=24.22.1' in server
-  assert '--only-upgrade' in ml and 'libssl3=3.0.2-0ubuntu1.30' in ml and 'openssl=3.0.2-0ubuntu1.30' in ml
-  assert 'ca-certificates=20260816ubuntu0.22.04.1' in ml
-  assert '--checksum=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1' in ml
-  assert '--no-index --no-deps' in ml and 'certifi-2026.10.23' in ml
-  assert 'emSign Root CA - C1' in ml and 'emSign ECC Root CA - C3' in ml
-  assert 'update-ca-certificates --fresh' in ml
+  assert '--only-upgrade' in base and 'libssl3=3.0.2-0ubuntu1.30' in base and 'openssl=3.0.2-0ubuntu1.30' in base
+  assert 'ca-certificates=20260816ubuntu0.22.04.1' in base
+  assert '--checksum=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1' in base
+  assert '--no-index --no-deps' in base and 'certifi-2026.10.23' in base
+  assert 'emSign Root CA - C1' in base and 'emSign ECC Root CA - C3' in base
+  assert 'update-ca-certificates --fresh' in base
+  # The previous consumed producer stays byte-identical and is the new parent.
+  base_image='localhost/immich-ml-runtime:2.5.6-'+sha(base)[:12]
+  assert base_image=='localhost/immich-ml-runtime:2.5.6-9e53cacc2f21'
+  manifest=json.loads((context/'manifest.json').read_text())
+  assert manifest['schemaVersion']==1 and manifest['baseImage']==base_image
+  assert manifest['sitePackages']=='/opt/venv/lib/python3.11/site-packages'
+  assert manifest['wheelDirectory']=='/tmp/hwc-http'
+  assert set(manifest['wheels'])=={'requests','urllib3'}
+  assert {k:v['version'] for k,v in manifest['wheels'].items()}=={'requests':'2.33.0','urllib3':'2.8.0'}
+  assert (context/'Dockerfile').read_text()==ml
+  for entry in manifest['wheels'].values():
+      assert hashlib.sha256((context/'wheels'/entry['filename']).read_bytes()).hexdigest()==entry['sha256']
+  def emitted(text):
+      installers=[];framing=[]
+      for line in text.splitlines():
+          if not line.startswith('RUN '):continue
+          argv=shlex.split(line[4:])
+          if '-c' not in argv:continue
+          assert argv[:3]==['/opt/venv/bin/python','-B','-c']
+          if 'ML_HTTP_PACKAGE_PAIR' in argv[3]:
+              module=ast.parse(argv[3]);invoke=module.body[-1].value
+              assert invoke.func.id=='exec' and invoke.args[0].func.id=='compile'
+              assert next(x.value.value for x in invoke.args[0].keywords if x.arg=='optimize')==0
+              assert json.loads(ast.literal_eval(module.body[1].value.elts[1]))==manifest
+              installers.append(ast.literal_eval(invoke.args[0].args[0]))
+          elif 'HTTP_BACKPORT_PAIR' in argv[3]:
+              assert json.loads(argv[4])==manifest['framing'];framing.append(line)
+      return installers,framing
+  def wired(text):
+      try:
+          install,framing=emitted(text)
+          return (re.findall(r'^FROM (\S+)',text,re.M)==[base_image] and len(install)==len(framing)==1
+              and 'COPY wheels/ /tmp/hwc-http/' in text)
+      except (AssertionError,ValueError,StopIteration):return False
+  assert wired(ml)
+  for marker in ['ML_HTTP_PACKAGE_PAIR','HTTP_BACKPORT_PAIR']:
+      omitted='\n'.join(line for line in ml.splitlines() if marker not in line)+'\n'
+      assert omitted!=ml and not wired(omitted),'ML_HTTP_INTEGRATION_SEED:'+marker
+  assert not wired(ml.replace('FROM '+base_image,'FROM unrelated-base'))
+  installer=emitted(ml)[0][0]
+  # Execute the emitted installer on disposable package owners and real wheels.
+  # A bad second input must leave the entire original tree intact.
+  for failure in ['none','missing-second','corrupt-second','escape-second','link-second']:
+      with tempfile.TemporaryDirectory() as directory:
+          root=pathlib.Path(directory);site=root/'site';inputs=root/'wheels';site.mkdir();inputs.mkdir()
+          value=copy.deepcopy(manifest);value['sitePackages']=str(site);value['wheelDirectory']=str(inputs)
+          for name,entry in value['wheels'].items():
+              (site/name).mkdir();(site/name/'sentinel').write_text('original-'+name)
+              (site/(name+'-'+entry['originalVersion']+'.dist-info')).mkdir()
+              (inputs/entry['filename']).write_bytes((context/'wheels'/entry['filename']).read_bytes())
+          second=value['wheels']['urllib3'];path=inputs/second['filename']
+          if failure=='missing-second':path.unlink()
+          elif failure=='corrupt-second':path.write_bytes(b'corrupt')
+          elif failure=='escape-second':
+              with zipfile.ZipFile(path,'w') as archive:archive.writestr('../escape','wrong-owner')
+              second['sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+          elif failure=='link-second':
+              with zipfile.ZipFile(path,'w') as archive:
+                  link=zipfile.ZipInfo('urllib3/escape');link.external_attr=0o120777<<16
+                  archive.writestr(link,'wrong-owner')
+              second['sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+          before={str(p.relative_to(site)):p.read_bytes() for p in site.rglob('*') if p.is_file()}
+          harness="import importlib.metadata,json,pathlib,sys,types;spec=json.loads(sys.argv[1]);root=pathlib.Path(spec['sitePackages']);importlib.metadata.distribution=lambda n:types.SimpleNamespace(version=spec['wheels'][n]['originalVersion'],locate_file=lambda _:root,files=[pathlib.Path(n)/'sentinel']);exec(compile("+repr(installer)+",'<actual-installer>','exec',optimize=0),{'__name__':'__main__'})"
+          result=subprocess.run([sys.executable,'-OO','-c',harness,json.dumps(value)],capture_output=True,timeout=10)
+          after={str(p.relative_to(site)):p.read_bytes() for p in site.rglob('*') if p.is_file()}
+          if failure=='none':
+              assert result.returncode==0,(failure,result.stderr)
+              assert before.keys().isdisjoint(after) and all((site/name/'__init__.py').is_file() for name in value['wheels'])
+          else:
+              assert result.returncode!=0 and after==before,(failure,result.stderr)
+              wanted={'missing-second':b'FileNotFoundError','corrupt-second':b'ML_HTTP_WHEEL_DRIFT','escape-second':b'ML_HTTP_ARCHIVE_PATH','link-second':b'ML_HTTP_ARCHIVE_TYPE'}[failure]
+              assert wanted in result.stderr,(failure,result.stderr)
   # Security backports preserve the accepted same-app Node recipe prefix.
   assert sha(seerr.split('# Security backports', 1)[0].replace(' AS seerr-base', "")) == 'b9482a37e259fcd93442be29ae2b1cfce0653bc5e738e68fab403a84297953ea'
   assert spec['seerr'] == 'localhost/seerr-runtime:3.1.0-node22.23.4-' + sha(seerr)[:12]
@@ -387,11 +781,12 @@ immich-shared-brotli-wiring = let
   c = self.nixosConfigurations.hwc-home.config;
   cfg = c.hwc.media.immich;
   serverContext = c.system.build.immichServerRuntimeImageContext;
-  mlContext = c.system.build.immichMlRuntimeImageContext;
+  mlContext = c.system.build.immichMlBaseRuntimeImageContext;
   libraries = c.system.build.immichPillowBrotliLibraries;
   manifest = builtins.fromJSON c.system.build.immichRuntimeSecurityManifest.text;
   server = c.system.build.immichServerRuntimeImageRecipe.text;
-  ml = c.system.build.immichMlRuntimeImageRecipe.text;
+  ml = c.system.build.immichMlBaseRuntimeImageRecipe.text;
+  finalMl = c.system.build.immichMlRuntimeImageRecipe.text;
 in
 assert lib.assertMsg (lib.hasInfix "COPY ${manifest.brotli.filename} /tmp/hwc-brotli.deb" server
   && lib.hasInfix "dpkg -i /tmp/hwc-brotli.deb" server
@@ -399,7 +794,8 @@ assert lib.assertMsg (lib.hasInfix "COPY ${manifest.brotli.filename} /tmp/hwc-br
   && lib.hasInfix "RUN chmod ${manifest.pillowLibraryMode}" ml)
   "Immich recipes must consume both corrected shared Brotli inputs";
 assert cfg.images.server == "localhost/immich-runtime:2.5.6-node24.22.1-${builtins.substring 0 12 (builtins.hashString "sha256" server)}";
-assert cfg.images.machineLearning == "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}";
+assert cfg.images.machineLearning == "localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" finalMl)}";
+assert lib.hasPrefix "FROM localhost/immich-ml-runtime:2.5.6-${builtins.substring 0 12 (builtins.hashString "sha256" ml)}\n" finalMl;
 assert c.virtualisation.oci-containers.containers.immich-server.image == cfg.images.server;
 assert c.virtualisation.oci-containers.containers.immich-machine-learning.image == cfg.images.machineLearning;
 assert c.virtualisation.oci-containers.containers.immich-server.pull == "never";
@@ -441,14 +837,136 @@ calibre-security-wiring = let
     volumes = c.virtualisation.oci-containers.containers.calibre.volumes;
     library = toString c.hwc.media.calibre.library;
     config = "${c.hwc.paths.apps.root}/calibre/config";
+    pull = c.virtualisation.oci-containers.containers.calibre.pull;
+    preStart = c.systemd.services.podman-calibre.preStart;
   });
 in pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-  python3 - ${binding} <<'PYTEST'
-  import json,sys
-  v=json.load(open(sys.argv[1]))
-  assert v['selected'] == v['container'] == 'lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378'
+  python3 - ${binding} ${c.system.build.calibreRuntimeImageRecipe} ${c.system.build.calibreRuntimeImageContext} <<'PYTEST'
+  import ast, copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
+  v=json.loads(pathlib.Path(sys.argv[1]).read_text())
+  recipe=pathlib.Path(sys.argv[2]).read_text()
+  context=pathlib.Path(sys.argv[3])
+  manifest=json.loads((context/'manifest.json').read_text())
+  assert (context/'Dockerfile').read_text()==recipe
+  assert manifest['schemaVersion']==1 and manifest['pythonVersion']==[3,14,8]
+  assert manifest['frozenBundle']=='/opt/calibre/lib/calibre-extensions/python-lib.bypy.frozen'
+  assert manifest['frozenBundleSha256']=='558037f93bef7df037ff1c38519680ed1083263b9e86b38407c4e819a2acffb2'
+  assert manifest['selectionVariable']=='CALIBRE_DEVELOP_FROM' and manifest['rootPath']=='/opt/hwc-calibre-http'
+  assert manifest['sourcePath']=='/tmp/hwc-calibre-http/client.py'
+  raw=(context/'client.py').read_bytes()
+  assert hashlib.sha256(raw).hexdigest()==manifest['sourceSha256']
+  source=raw.decode()
+  for old,new in manifest['replacements']:
+      assert source.count(old)==1
+      source=source.replace(old,new)
+  assert hashlib.sha256(source.encode()).hexdigest()==manifest['patchedSha256']
+  assert recipe.startswith('FROM lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378\n')
+  def commands(text):
+      result=[]
+      for line in text.splitlines():
+          if not line.startswith('RUN ') or '/opt/calibre/calibre-debug' not in line: continue
+          argv=shlex.split(line[4:]); at=argv.index('/opt/calibre/calibre-debug')
+          assert argv[at+1]=='-c'
+          module=ast.parse(argv[at+2]); invoke=module.body[-1].value
+          assert isinstance(invoke,ast.Call) and invoke.func.id=='exec'
+          compiler=invoke.args[0]
+          assert compiler.func.id=='compile'
+          optimize=next(x.value.value for x in compiler.keywords if x.arg=='optimize')
+          body=ast.literal_eval(compiler.args[0])
+          selected=json.loads(ast.literal_eval(module.body[1].value.elts[1]))
+          result.append((body,optimize,selected))
+      return result
+  def wired(binding,text):
+      wanted='localhost/calibre-runtime:9.17.0-http-framing-'+hashlib.sha256(text.encode()).hexdigest()[:12]
+      emitted=commands(text)
+      if len(emitted)!=2: return False
+      builder=ast.parse(emitted[0][0]); verify=ast.parse(emitted[1][0])
+      bootstraps=[ast.literal_eval(n.value) for n in builder.body if isinstance(n,ast.Assign)
+          and any(isinstance(t,ast.Name) and t.id=='bootstrap' for t in n.targets)]
+      gui=any(isinstance(n,ast.Import) and any(a.name=='calibre.gui2' for a in n.names) for n in verify.body)
+      worker=any(isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='fork_job' for n in ast.walk(verify))
+      return (binding['selected']==binding['container']==wanted and binding['pull']=='never'
+          and 'ENV '+manifest['selectionVariable']+'='+manifest['rootPath'] in text
+          and all(x[1]==0 and x[2]==manifest for x in emitted)
+          and len(bootstraps)==1 and hashlib.sha256(bootstraps[0].encode()).hexdigest()==manifest['bootstrapSha256']
+          and gui and worker)
+  assert wired(v,recipe)
+  def rebound(text):
+      binding=copy.deepcopy(v)
+      binding['selected']=binding['container']='localhost/calibre-runtime:9.17.0-http-framing-'+hashlib.sha256(text.encode()).hexdigest()[:12]
+      return binding
+  omitted=recipe.replace('ENV '+manifest['selectionVariable']+'='+manifest['rootPath'], '# omitted source selection')
+  assert not wired(rebound(omitted),omitted)
+  optimized=recipe.replace('optimize=0','optimize=2')
+  assert not wired(rebound(optimized),optimized)
+  for before,after in [('import calibre.gui2','pass # omitted GUI import'),
+      ("actual = fork_job(worker,", "actual = omitted_worker(worker,")]:
+      omitted=recipe.replace(before,after)
+      assert omitted!=recipe and not wired(rebound(omitted),omitted)
+  wrong=copy.deepcopy(v);wrong['container']='lscr.io/linuxserver/calibre@sha256:b198fc03a6abc6be7e251a9958e50e74634b00e447c7b25e92c191c8077ba378'
+  assert not wired(wrong,recipe)
+  assert ' image exists ' in v['preStart'] and v['selected'] in v['preStart']
+  assert 'podman build' not in v['preStart']
   assert v['library'] + ':/books' in v['volumes']
   assert v['config'] + ':/config' in v['volumes']
+  program=commands(recipe)[0][0]
+  assert 'FROZEN_HTTP_SOURCE_CODE_DRIFT' in program
+  bootstrap=next(ast.literal_eval(n.value) for n in ast.parse(program).body if isinstance(n,ast.Assign)
+      and any(isinstance(t,ast.Name) and t.id=='bootstrap' for t in n.targets))
+  # Execute the emitted bootstrap with an opaque frozen entry point. The
+  # observer checks importer mode, precise selection and original site metadata.
+  harness="""import sys,types
+  class FrozenByteCodeLoader:
+      def get_filename(self,name): return '/vendor/site.pyc'
+      def get_code(self,name): return compile("def main(): return 'original-vendor-entry'",'/vendor/site.pyc','exec')
+  class BypyFrozenImporter:
+      develop_mode_path='/opt/hwc-calibre-http'
+      def find_spec(self,name,path): return types.SimpleNamespace(loader=FrozenByteCodeLoader())
+  importer=BypyFrozenImporter()
+  sys.meta_path.insert(0,importer)
+  namespace={'__name__':'__main__'}
+  exec(compile(BOOTSTRAP,'<emitted-bootstrap>','exec',optimize=2),namespace)
+  assert importer.develop_mode_path is None, 'MODE_NOT_RESTORED'
+  assert namespace['__name__']=='__main__' and namespace['__file__']=='/vendor/site.pyc'
+  assert namespace['main']()=='original-vendor-entry'
+  assert namespace['__spec__'].loader is namespace['__loader__']
+  finder=sys.meta_path[0]
+  assert finder.find_spec('http.client').origin=='/opt/hwc-calibre-http/http/client.py', 'HTTP_SELECTION_MISSING'
+  assert finder.find_spec('calibre') is None and finder.find_spec('urllib.request') is None
+  """
+  for variant,source in [('actual',bootstrap),
+      ('develop-mode',bootstrap.replace('importer.develop_mode_path = None','pass')),
+      ('selection',bootstrap.replace("fullname == 'http.client'", "fullname == 'missing.client'")),
+      ('vendor-entry',bootstrap.replace("exec(original.loader.get_code('site'), namespace)",'pass'))]:
+      result=subprocess.run([sys.executable,'-c',harness.replace('BOOTSTRAP',repr(source))],capture_output=True,timeout=10)
+      assert (result.returncode==0)==(variant=='actual'), (variant,result.stderr)
+      if variant!='actual': assert b'AssertionError' in result.stderr or b'KeyError' in result.stderr or b'AttributeError' in result.stderr
+  sha=lambda b:hashlib.sha256(b).hexdigest()
+  for kind,code in [('source','FROZEN_HTTP_SOURCE_DRIFT'),('result','FROZEN_HTTP_RESULT_DRIFT'),
+      ('hunk','FROZEN_HTTP_HUNK_DRIFT'),('bound','FROZEN_HTTP_SOURCE_BOUND'),('bundle','FROZEN_HTTP_ARCHIVE_DRIFT')]:
+      with tempfile.TemporaryDirectory() as d:
+          root=pathlib.Path(d); original=root/'client.py'; archive=root/'bundle'; output=root/'selected'
+          original.write_bytes(b'sentinel=1\n');archive.write_bytes(b'fixture-bundle')
+          spec=copy.deepcopy(manifest)
+          spec.update(sourcePath=str(original),sourceSha256=sha(original.read_bytes()),
+              patchedSha256=sha(b'sentinel=2\n'),replacements=[['sentinel=1','sentinel=2']],
+              frozenBundle=str(archive),frozenBundleSha256=sha(archive.read_bytes()),rootPath=str(output))
+          if kind=='source':spec['sourceSha256']='0'*64
+          elif kind=='result':spec['patchedSha256']='0'*64
+          elif kind=='hunk':spec['replacements']=[['missing-sentinel','sentinel=2']]
+          elif kind=='bound':original.write_bytes(b'x'*262145)
+          elif kind=='bundle':spec['frozenBundleSha256']='0'*64
+          before=original.read_bytes()
+          def execute(optimize):
+              command='import sys;sys.argv='+repr(['fixture',json.dumps(spec)])+';exec(compile('+repr(program)+',"<frozen-http>","exec",optimize='+str(optimize)+'),{"__name__":"__main__"})'
+              return subprocess.run([sys.executable,'-OO','-c',command],capture_output=True,timeout=10)
+          result=execute(0)
+          assert result.returncode!=0 and code.encode() in result.stderr,kind
+          assert not output.exists() and original.read_bytes()==before,'PARTIAL_FROZEN_WRITE:'+kind
+          if kind=='source':
+              seeded=execute(2)
+              assert seeded.returncode==0 and output.exists(),'OPTIMIZED_GUARD_SEED_NOT_EXERCISED'
+  print('actual Calibre recipe/context/selection and optimized-launcher drift guards pass; actual image consumer remains a runtime qualification')
   PYTEST
   touch "$out"
 '';
