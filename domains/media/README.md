@@ -56,6 +56,10 @@ Books derives this distribution through the existing pure asset API. The existin
 Calibre security check rejects missing native wiring and changed inputs; these
 source checks do not establish deployment or data compatibility.
 
+The native source pins upstream7.1 maintenance plus complete advisory groups
+from the shared helper. Zero-fuzz patching and exact final source hashes guard
+the build. Navidrome selects its original seven patch inputs from that owner.
+
 Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
 selection. Its image build exercises the actual GUI import and fork_job worker.
 
@@ -128,6 +132,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Pin Calibre's FFmpeg7.1 maintenance source and complete security backports; check source/transform failures and preserve Navidrome patch identities through the shared catalog.
 
 - 2026-11-05: Translate Nix's bzip2 dependency name to the bundled vendor name during FFmpeg packaging. The actual three required BZ2 symbols exist in the retained library. Keep the existing dependency allowlist and reject unknown alias destinations.
 

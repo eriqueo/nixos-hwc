@@ -28,6 +28,11 @@ the vendor importer. The bootstrap restores normal application mode and keeps
 the narrow HTTP selection in native child processes.
 Embedded guards use explicit compilation without optimization.
 
+The same helper owns immutable FFmpeg patch facts and ordered advisory groups
+for Calibre and Navidrome. It rejects unknown groups and context edits outside
+the selected patches. Bounded context transforms preserve upstream security
+hunks while adapting older branch context.
+
 `mkContainer` also accepts `{ kind = "named"; names = [ ... ]; }` for explicit bridge membership. Legacy media/host/VPN callers retain their network arguments.
 
 Standalone HM fleet fallback covers hwc-home, hwc-work and hwc-xps; dependency-update commands use hwc-home.
@@ -68,6 +73,8 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+
+- 2026-11-05: Share FFmpeg security inputs and prerequisite groups; keep Navidrome's existing patch identities and support guarded Calibre7.1 context transforms.
 
 - 2026-11-05: Restore frozen application mode before selecting the HTTP backport; retain the original site code and check bootstrap identity and narrow selection.
 

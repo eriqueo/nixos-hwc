@@ -1,43 +1,14 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.navidrome;
+  helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   # Temporary upstream FFmpeg security backports for RTSP, SFTP, DASH,
   # HDR metadata and PSSH handling. Remove when the pinned source contains
   # these fixes and the finite protocol/native/data contracts pass.
   runtimeFfmpeg = pkgs.ffmpeg-headless.overrideAttrs (old: {
-    patches = old.patches ++ [
-      (pkgs.fetchurl {
-        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/eb9cef3ef1f6adac1e701e3f5f06739a0fcb0c97.patch";
-        hash = "sha256-89nXK7WjusxfLXexFWGRK///1KCZHVhHv/ejnpfQ8gw=";
-      })
-      (pkgs.fetchurl {
-        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/2b822b7fb6ed195546bc9fd9bdb794e98222bdce.patch";
-        hash = "sha256-TqQb9dlUMsvItoIxMsuRwktg8fgydihkC7oG1aMbjLY=";
-      })
-      (pkgs.fetchurl {
-        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/ed27bfcbbbc0872c0195eaf4dd2c0c93b9f1778e.patch";
-        hash = "sha256-k8mKaeJaSHUJ9VYe3bRwRaAMf778eu8/uY1sE1kdTZA=";
-      })
-      (pkgs.fetchurl {
-        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/2c2f6e96e31795ae95a8f8323a493ffbc493111f.patch";
-        hash = "sha256-1JATHLDUYF16yik4tb+aBoXKjAvLt+9hzusSOADIvjc=";
-      })
-      (pkgs.fetchurl {
-        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/969c7eb091989a664cb7bf66a1f02051cc46cb52.patch";
-        hash = "sha256-MvUlNrmlGn9hh9pvtxN/a+Lri97Xl1cIIhlHGyR2m1Y=";
-      })
-      # Retain the stable8.1 library ABI/version metadata; apply every code
-      # and test hunk of the upstream additive append API for the MOV fix.
-      (pkgs.fetchpatch {
-        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/d1434518fbd03789e3e5dc0657a7a9f1123ce074.patch";
-        excludes = [ "doc/APIchanges" "libavutil/version.h" ];
-        hash = "sha256-4UeAbD1Puot0IzOQQVU7Ybs5MWisMEDkmCeYwe3kmv8=";
-      })
-      (pkgs.fetchurl {
-        url = "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/71403a21b02a92b925e26e609e9bd3e48df451cf.patch";
-        hash = "sha256-Pkt4BbUGZ04u0qXVL5eAsTGrdRrcFhfGBaYvHmA5Fbs=";
-      })
-    ];
+    patches = old.patches ++ (helpers.selectFfmpegSecurityBackports {
+      advisories = [ "CVE-2026-107696" "CVE-2026-107675" "CVE-2026-107677" "CVE-2026-107676" "CVE-2026-107678" ];
+    }).patches;
   });
   # Temporary Go overrides: remove when upstream selects x/net >=0.62
   # and chi >=5.4 and the module/native/current-data checks pass.

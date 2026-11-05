@@ -270,6 +270,242 @@ rec {
         + run verify;
     };
 
+  # Temporary shared upstream FFmpeg security inputs. Retire a group when
+  # both pinned sources contain its complete fix and native/data checks pass.
+  # Ordered advisory groups include prerequisites. Callers own context edits.
+  # d143 excludes only API/version metadata to keep the stable library ABI;
+  # every additive API implementation and test hunk remains selected.
+  ffmpegSecurityInputs = builtins.fromJSON ''
+{
+  "eb9cef3ef1f6adac1e701e3f5f06739a0fcb0c97": {
+    "url": "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/eb9cef3ef1f6adac1e701e3f5f06739a0fcb0c97.patch",
+    "hash": "sha256-89nXK7WjusxfLXexFWGRK///1KCZHVhHv/ejnpfQ8gw="
+  },
+  "2b822b7fb6ed195546bc9fd9bdb794e98222bdce": {
+    "url": "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/2b822b7fb6ed195546bc9fd9bdb794e98222bdce.patch",
+    "hash": "sha256-TqQb9dlUMsvItoIxMsuRwktg8fgydihkC7oG1aMbjLY="
+  },
+  "ed27bfcbbbc0872c0195eaf4dd2c0c93b9f1778e": {
+    "url": "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/ed27bfcbbbc0872c0195eaf4dd2c0c93b9f1778e.patch",
+    "hash": "sha256-k8mKaeJaSHUJ9VYe3bRwRaAMf778eu8/uY1sE1kdTZA="
+  },
+  "2c2f6e96e31795ae95a8f8323a493ffbc493111f": {
+    "url": "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/2c2f6e96e31795ae95a8f8323a493ffbc493111f.patch",
+    "hash": "sha256-1JATHLDUYF16yik4tb+aBoXKjAvLt+9hzusSOADIvjc="
+  },
+  "969c7eb091989a664cb7bf66a1f02051cc46cb52": {
+    "url": "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/969c7eb091989a664cb7bf66a1f02051cc46cb52.patch",
+    "hash": "sha256-MvUlNrmlGn9hh9pvtxN/a+Lri97Xl1cIIhlHGyR2m1Y="
+  },
+  "d1434518fbd03789e3e5dc0657a7a9f1123ce074": {
+    "url": "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/d1434518fbd03789e3e5dc0657a7a9f1123ce074.patch",
+    "hash": "sha256-4UeAbD1Puot0IzOQQVU7Ybs5MWisMEDkmCeYwe3kmv8=",
+    "excludes": [
+      "doc/APIchanges",
+      "libavutil/version.h"
+    ]
+  },
+  "71403a21b02a92b925e26e609e9bd3e48df451cf": {
+    "url": "https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/71403a21b02a92b925e26e609e9bd3e48df451cf.patch",
+    "hash": "sha256-Pkt4BbUGZ04u0qXVL5eAsTGrdRrcFhfGBaYvHmA5Fbs="
+  },
+  "a4ddaba8bb7811b1a3afaad59fe6555e720d4754": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/a4ddaba8bb7811b1a3afaad59fe6555e720d4754.patch",
+    "hash": "sha256-0bSt5WwieJImem2aEgbEyxKRQu9LfsQ16Iwh7WJSGMM="
+  },
+  "191715f0232cee64402c3e7733f28ff4061224b6": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/191715f0232cee64402c3e7733f28ff4061224b6.patch",
+    "hash": "sha256-yVynZojqFjWvvqyDsYb4SxtY5uezlxqEyvfCJft4kQo="
+  },
+  "dcf8ce2802bf2be1b0c6b8d4996abca7b669978d": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/dcf8ce2802bf2be1b0c6b8d4996abca7b669978d.patch",
+    "hash": "sha256-zqdSQYFpENWvCrgUrjHBrz/KC1yR63woTN2t4bL4F5g="
+  },
+  "385ac2fadcb4394ec4f65e5c4d3d24003e090f36": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/385ac2fadcb4394ec4f65e5c4d3d24003e090f36.patch",
+    "hash": "sha256-s/OBuhD30OzKjLW5KoOt+UAIIxr30cxiEYNFon/ddVY="
+  },
+  "3c441711a343ccf50196c70a3f0b554b52f8d9de": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/3c441711a343ccf50196c70a3f0b554b52f8d9de.patch",
+    "hash": "sha256-tBYQ48123jg2dhBTIs4m618RumGoSmQ58FkQRnRMt+M="
+  },
+  "c10e7f5dc12367d0dfcc52983d427c6766425fa8": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/c10e7f5dc12367d0dfcc52983d427c6766425fa8.patch",
+    "hash": "sha256-N+5zsizt2j4xLnXKz7WwYqfr0Y+Wf3u6UGKKdjEgQfw="
+  },
+  "3b85fbe89025ea696988488358dfde41a09c53c5": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/3b85fbe89025ea696988488358dfde41a09c53c5.patch",
+    "hash": "sha256-tTMlCNtEZjvxILxIa7RLsJIcGmoEf55wQKKdqoaDZU8="
+  },
+  "52f7983f15678c8a6065327760d7b6eb1c9c84ed": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/52f7983f15678c8a6065327760d7b6eb1c9c84ed.patch",
+    "hash": "sha256-FvtJ27QdjSFQ5ssJJoVnSJHC530oxVmXM32VCsCeLcc="
+  },
+  "a20608d32504d233ab2708f125b86683f1dc23e9": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/a20608d32504d233ab2708f125b86683f1dc23e9.patch",
+    "hash": "sha256-84IoG7Oj+rOyL7tntwktpKkT69NoKZAShl/ZyyAbC+4="
+  },
+  "30a52276f9dff60fe732d8bb8d463e587ff69c94": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/30a52276f9dff60fe732d8bb8d463e587ff69c94.patch",
+    "hash": "sha256-BZjRKm5+eWfsegdP07fF+EY0rxXo96R9QK74oIhMa6I="
+  },
+  "b3c7ebc1edc401fd9881277fdfae93f3f24ceb81": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/b3c7ebc1edc401fd9881277fdfae93f3f24ceb81.patch",
+    "hash": "sha256-L4S7scgt72x9X+iyM7lMOMWcy6QOFGYxM/dIIsQJ9Xg="
+  },
+  "e3d0c719fddd259709c8e275942ab56af3afc35d": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/e3d0c719fddd259709c8e275942ab56af3afc35d.patch",
+    "hash": "sha256-2xKZhyIY87hcsh1n98TGtmpxb8Zkg2t/CuojkT9DcUg="
+  },
+  "62294b6a8ad2370e1435bb9985ebe6b53be14c2b": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/62294b6a8ad2370e1435bb9985ebe6b53be14c2b.patch",
+    "hash": "sha256-qQAf+SXHoBqvm1+YNKRgxF8jCBbhLBnFML+w8t3TU8A="
+  },
+  "7c0b8c8594501dd904ebbb3b45bb3f6e2c745b7d": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/7c0b8c8594501dd904ebbb3b45bb3f6e2c745b7d.patch",
+    "hash": "sha256-LfWtjOMnz6aRmpHMIQp9/UWsbxP/2BYRUBdzM0KxVuM="
+  },
+  "947c57d9e68800dd4d39f110140f8f6c34cedf80": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/947c57d9e68800dd4d39f110140f8f6c34cedf80.patch",
+    "hash": "sha256-MVSOzbzLM0jSg8kVrkYP+XnGVPdK5bE55kwnn1NyoTc="
+  },
+  "02fc47e13f903768b75f7985a2706a6223ab4506": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/02fc47e13f903768b75f7985a2706a6223ab4506.patch",
+    "hash": "sha256-p12WoctnuwSE4bcX1O4zQUgHlqaPMyolFdxB1zD+hIo="
+  },
+  "a5fe21a1a410a680fe93c33b0dd696b7e1c3aea4": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/a5fe21a1a410a680fe93c33b0dd696b7e1c3aea4.patch",
+    "hash": "sha256-yuikpgKcBJPYQz3XImupkfVwKYVlRbOQxjjNGn9ux+g="
+  },
+  "c22667d0fd7916a33fd3e79685b7246fc48f1a62": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/c22667d0fd7916a33fd3e79685b7246fc48f1a62.patch",
+    "hash": "sha256-j634GvWJpKqZ/ERbeoyoHcb9A8K86Wf9xpWtmXX4K3Q="
+  },
+  "3c287af3affe1286350faa69c02bcc5d49de18bb": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/3c287af3affe1286350faa69c02bcc5d49de18bb.patch",
+    "hash": "sha256-wNEvNGiRimYSO1Ps3uTEkTNEw2ELPhO2UoI7NQJ/dQ0="
+  },
+  "16b2049d4d5222db6cd7c031409058571c94f6a9": {
+    "url": "https://github.com/FFmpeg/FFmpeg/commit/16b2049d4d5222db6cd7c031409058571c94f6a9.patch",
+    "hash": "sha256-cToTjhq7SyjEqkX3xqA/+I7zozhjduIOV2prP/bm1Vc="
+  }
+}
+  '';
+  ffmpegSecurityGroups = builtins.fromJSON ''
+{
+  "CVE-2026-107696": [
+    "eb9cef3ef1f6adac1e701e3f5f06739a0fcb0c97"
+  ],
+  "CVE-2026-107675": [
+    "2b822b7fb6ed195546bc9fd9bdb794e98222bdce"
+  ],
+  "CVE-2026-107677": [
+    "ed27bfcbbbc0872c0195eaf4dd2c0c93b9f1778e"
+  ],
+  "CVE-2026-107676": [
+    "2c2f6e96e31795ae95a8f8323a493ffbc493111f"
+  ],
+  "CVE-2026-107678": [
+    "969c7eb091989a664cb7bf66a1f02051cc46cb52",
+    "d1434518fbd03789e3e5dc0657a7a9f1123ce074",
+    "71403a21b02a92b925e26e609e9bd3e48df451cf"
+  ],
+  "CVE-2026-107695": [
+    "a4ddaba8bb7811b1a3afaad59fe6555e720d4754"
+  ],
+  "CVE-2026-107697": [
+    "191715f0232cee64402c3e7733f28ff4061224b6"
+  ],
+  "CVE-2026-64830": [
+    "dcf8ce2802bf2be1b0c6b8d4996abca7b669978d"
+  ],
+  "CVE-2026-64833": [
+    "385ac2fadcb4394ec4f65e5c4d3d24003e090f36"
+  ],
+  "CVE-2026-64834": [
+    "3c441711a343ccf50196c70a3f0b554b52f8d9de"
+  ],
+  "CVE-2026-64835": [
+    "c10e7f5dc12367d0dfcc52983d427c6766425fa8"
+  ],
+  "CVE-2026-65703": [
+    "3b85fbe89025ea696988488358dfde41a09c53c5"
+  ],
+  "CVE-2026-65704": [
+    "52f7983f15678c8a6065327760d7b6eb1c9c84ed"
+  ],
+  "CVE-2026-65705": [
+    "a20608d32504d233ab2708f125b86683f1dc23e9",
+    "30a52276f9dff60fe732d8bb8d463e587ff69c94"
+  ],
+  "CVE-2026-65706": [
+    "b3c7ebc1edc401fd9881277fdfae93f3f24ceb81"
+  ],
+  "CVE-2026-66036": [
+    "e3d0c719fddd259709c8e275942ab56af3afc35d",
+    "62294b6a8ad2370e1435bb9985ebe6b53be14c2b"
+  ],
+  "CVE-2026-66038": [
+    "7c0b8c8594501dd904ebbb3b45bb3f6e2c745b7d"
+  ],
+  "CVE-2026-66039": [
+    "947c57d9e68800dd4d39f110140f8f6c34cedf80"
+  ],
+  "CVE-2026-70628": [
+    "02fc47e13f903768b75f7985a2706a6223ab4506"
+  ],
+  "CVE-2026-70629": [
+    "a5fe21a1a410a680fe93c33b0dd696b7e1c3aea4"
+  ],
+  "CVE-2026-70630": [
+    "c22667d0fd7916a33fd3e79685b7246fc48f1a62"
+  ],
+  "CVE-2026-70631": [
+    "3c287af3affe1286350faa69c02bcc5d49de18bb"
+  ],
+  "CVE-2026-70632": [
+    "16b2049d4d5222db6cd7c031409058571c94f6a9"
+  ]
+}
+  '';
+  selectFfmpegSecurityBackports = { advisories, contextEdits ? {} }:
+    assert advisories != [] && builtins.length advisories <= 32;
+    assert advisories == lib.unique advisories;
+    assert lib.all (id: builtins.hasAttr id ffmpegSecurityGroups) advisories;
+    let
+      commits = lib.unique (lib.concatMap (id: ffmpegSecurityGroups.${id}) advisories);
+      patches = map (commit:
+        let
+          spec = ffmpegSecurityInputs.${commit};
+          upstream = if spec ? excludes then pkgs.fetchpatch spec else pkgs.fetchurl spec;
+          edits = contextEdits.${commit} or [];
+          editFile = pkgs.writeText "ffmpeg-${commit}-context.json" (builtins.toJSON edits);
+        in if edits == [] then upstream else
+          pkgs.runCommand "ffmpeg-${commit}-7.1.patch" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+            python3 -I -B - ${upstream} ${editFile} "$out" <<'PYPATCH'
+            import json, pathlib, sys
+            source, edits, output = map(pathlib.Path, sys.argv[1:])
+            if sys.flags.optimize:
+                raise RuntimeError('FFMPEG_CONTEXT_OPTIMIZED')
+            assert source.stat().st_size <= 131072, 'FFMPEG_CONTEXT_INPUT_BOUND'
+            assert edits.stat().st_size <= 65536, 'FFMPEG_CONTEXT_EDIT_BOUND'
+            text = source.read_text()
+            changes = json.loads(edits.read_text())
+            assert 1 <= len(changes) <= 2, 'FFMPEG_CONTEXT_EDIT_COUNT'
+            for old, new in changes:
+                assert isinstance(old, str) and isinstance(new, str) and old and new, 'FFMPEG_CONTEXT_EDIT_TYPE'
+                assert max(len(old),len(new)) <= 16384 and text.count(old) == 1, 'FFMPEG_CONTEXT_DRIFT'
+                text = text.replace(old,new)
+            assert len(text.encode()) <= 131072, 'FFMPEG_CONTEXT_OUTPUT_BOUND'
+            output.write_text(text)
+            PYPATCH
+          ''
+      ) commits;
+    in
+    assert builtins.length commits <= 32;
+    assert lib.all (commit: lib.elem commit commits) (builtins.attrNames contextEdits);
+    { inherit advisories commits patches; };
+
   mkContainer =
     { name
     , image
