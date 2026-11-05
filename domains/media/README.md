@@ -68,6 +68,8 @@ ELF manifest. Its socket ABI includes the configured Bluetooth SDK headers.
 Its source guard rejects source, header and ABI drift. The existing
 security check exercises those guards and missing build wiring. Runtime images
 remain unchanged until the isolated original-path TLS consumer qualifies it.
+Its API contract permits only the truthful build-header version update; all
+other native members and constants must match the measured vendor API.
 
 Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
 selection. Its image build exercises the actual GUI import and fork_job worker.
@@ -141,6 +143,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Bind the native SSL API to the measured build-header metadata difference. The vendor used3.5.8 headers with3.5.9 libraries; the rebuild reports3.5.9 and preserves every other member and constant.
 
 - 2026-11-05: Supply the socket header dependency declared by the measured Python SDK without changing its configuration or linking Bluetooth into the native SSL module.
 

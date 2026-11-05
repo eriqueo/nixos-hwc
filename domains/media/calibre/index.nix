@@ -66,8 +66,17 @@ let
       bytes = 236768;
       mode = 493;
       needed = [ "libc.so.6" "libcrypto.so.3" "libssl.so.3" ];
+      apiSha256 = "6562f5b125c4e340777b2f7b750a37ed5ceb6818b9786674af803b14bb6c2e5e";
     };
-    apiSha256 = "6562f5b125c4e340777b2f7b750a37ed5ceb6818b9786674af803b14bb6c2e5e";
+    # Vendor reports build headers3.5.8 while actually loading3.5.9. Keep the
+    # rebuilt module's truthful header metadata; every other member/constant
+    # must match the original fingerprint after reversing this one change.
+    apiConstantChanges."_OPENSSL_API_VERSION" = {
+      original = [ 3 5 0 8 0 ];
+      rebuilt = let v = map lib.toInt (lib.splitString "." sslDescriptor.opensslVersion);
+        in [ (builtins.elemAt v 0) (builtins.elemAt v 1) 0 (builtins.elemAt v 2) 0 ];
+    };
+    apiSha256 = "4d9e4f1ec6c62f7aea031f35f0763597449f9bd1dc7b0d6ffe81a71b55b25e20";
     rpath = "$ORIGIN/..";
     limits = { fileBytes = 2097152; manifestBytes = 16384; sourceBytes = 524288; };
   };
