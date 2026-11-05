@@ -9,6 +9,12 @@ books-runtime-security = let
   withoutDesktop = (self.nixosConfigurations.hwc-home.extendModules {
     modules = [ { hwc.media.calibre.enable = lib.mkForce false; } ];
   }).config;
+  invalidBinding = (self.nixosConfigurations.hwc-home.extendModules {
+    modules = [ { system.build.booksRuntimeBinding = lib.mkForce
+      (pkgs.writeText "books-invalid-binding.json" (builtins.toJSON {
+        schemaVersion = 0; image = "invalid"; environment = {};
+      })); } ];
+  }).config;
   binding = pkgs.writeText "books-runtime-binding.json" (builtins.toJSON {
     selected = container.image;
     configured = c.hwc.media.books.image;
@@ -19,6 +25,7 @@ books-runtime-security = let
   });
 in
 assert withoutDesktop.system.build.calibreRuntimeAssets.text == assets.text;
+assert !(builtins.tryEval (builtins.deepSeq invalidBinding.virtualisation.oci-containers.containers.books.environment true)).success;
 pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pkgs.dpkg ]; } ''
   python3 - ${binding} ${c.system.build.booksRuntimeImageContext} ${c.system.build.booksRuntimeInputGuard} ${assets} <<'PYBOOKS'
   import copy, hashlib, json, pathlib, runpy, stat, sys, tempfile

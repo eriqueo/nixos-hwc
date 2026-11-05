@@ -121,6 +121,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-05: Reject unsupported Books runtime binding versions in the actual container helper input; seed the invalid version through the composed Nix configuration.
+
 - 2026-11-05: Emit a same-schema Books runtime with pinned native/Python inputs, shared response framing and a guarded request-options correction. Bake Calibre from its canonical pure asset API instead of downloading a mod at startup. Check input, source and frozen-hook guards plus omitted wiring; image adoption still requires native and current-data qualification.
 
 - 2026-11-05: Protect Books credentials, user hashes and saved backups with the existing private-parent descriptor. Preserve file contents, app writer identity and container startup; include Books in composed private-rule checks.
