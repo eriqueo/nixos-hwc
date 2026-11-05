@@ -121,7 +121,7 @@ workspace/media/
 
 ## Changelog
 
-- 2026-11-05: Restore the Calibre hook directory modes after image COPY creates its destination. Reject the observed writable root and omitted mode restoration before runtime adoption.
+- 2026-11-05: Restore the Calibre hook directory modes after image COPY creates its destination. Reject the observed writable root and omitted mode restoration or validation before checking their order.
 
 - 2026-11-05: Reject unsupported Books runtime binding versions in the actual container helper input; seed the invalid version through the composed Nix configuration.
 
