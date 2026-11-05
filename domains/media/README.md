@@ -94,7 +94,7 @@ media/
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
 ├── calibre/                 # Frozen HTTP repair and pure shared asset API; existing library/config paths
-├── books/                   # Same-schema runtime, guarded native/read-only Calibre inputs, HTTP adapters; private parent in directories.nix
+├── books/                   # Retained app/release marker, guarded native/read-only Calibre inputs, HTTP adapters; private parent in directories.nix
 │
 ├── immich-container/        # Photo management, pinned runtime/library contexts
 ├── immich-native/           # Photo management (native NixOS)
@@ -120,6 +120,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Retain and hash-check the Books app's version marker with its source. The inherited init copies that marker to its config cache, so the new native base must not supply the newer app's identity.
 
 - 2026-11-05: Restore the Calibre hook directory modes after image COPY creates its destination. Reject the observed writable root and omitted mode restoration or validation before checking their order.
 

@@ -42,6 +42,8 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
   canonical = json.dumps(spec, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
   input_marker = '# Qualified inputs ' + hashlib.sha256((canonical + guard.read_text()).encode()).hexdigest()
   hook_modes = 'RUN chmod 0555 ' + provider['http']['rootPath'] + ' ' + provider['http']['rootPath'] + '/http'
+  version_copy = 'COPY --from=app-source /defaults/version.txt /defaults/version.txt'
+  version_guard = "RUN echo '" + spec['app']['versionMarkerSha256'] + "  /defaults/version.txt' | sha256sum -c -"
   assert all(binding['environment'][name] == value for name, value in spec['environment'].items())
   assert binding['environment']['DOCKER_MODS'] == ""
   assert binding['environment'][provider['http']['selectionVariable']] == provider['http']['rootPath']
@@ -51,10 +53,12 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       assert 'FROM ' + provider['image'] + ' AS calibre-source' in text
       assert 'FROM ' + spec['baseImage'] + '\n' in text
       assert 'COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/' in text
+      assert version_copy in text and version_guard in text
       assert 'COPY --from=calibre-source ' + provider['rootPath'] + '/ ' + provider['rootPath'] + '/' in text
       assert 'COPY --from=calibre-source ' + provider['http']['rootPath'] + '/ ' + provider['http']['rootPath'] + '/' in text
       assert 'RUN python3 -B /tmp/hwc-books/guard.py ' + spec['commands']['verify'] + ' /tmp/hwc-books/manifest.json /tmp/hwc-books-app ' in text
       assert hook_modes in text and text.index(hook_modes) < text.index('RUN python3 -B /tmp/hwc-books/guard.py ' + spec['commands']['verify'])
+      assert text.index(version_copy) < text.index(version_guard) < text.index('RUN python3 -B /tmp/hwc-books/guard.py ' + spec['commands']['verify'])
       assert 'RUN python3 -B /tmp/hwc-books/guard.py ' + spec['commands']['apply'] + ' /tmp/hwc-books/manifest.json /app/lazylibrarian' in text
       assert 'rm -rf /app/lazylibrarian && mv /tmp/hwc-books-app /app/lazylibrarian' in text
       assert 'ln -s ' + provider['rootPath'] + ' /app/calibre' in text
@@ -66,7 +70,7 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       assert 'linuxserver/mods' not in text and 'apt-get update' not in text
       assert 'ENTRYPOINT' not in text and 'CMD [' not in text and 'EXPOSE' not in text
   wiring(recipe)
-  for token in [input_marker, hook_modes, 'COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/',
+  for token in [input_marker, hook_modes, version_copy, version_guard, 'COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/',
                 'COPY --from=calibre-source ' + provider['http']['rootPath'] + '/ ' + provider['http']['rootPath'] + '/',
                 '/guard.py ' + spec['commands']['verify'] + ' ',
                 '/guard.py ' + spec['commands']['apply'] + ' ',
