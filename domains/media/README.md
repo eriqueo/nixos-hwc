@@ -20,6 +20,7 @@ runtime catalog while retaining its original application and native dependencies
 `soularr/` preserves saved INI choices while updating managed addresses and keys.
 Its bounded Eric/secrets seeder writes atomically with mode0440. Container startup
 requires seeding; Lidarr readiness passes its header through an anonymous FD.
+The check exercises each composed startup script and resets failed-input fixtures.
 
 Immich uses the versioned shared database-role contract and restarts with its provisioner when credentials or provisioning code change.
 
@@ -112,6 +113,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Keep Soularr's actual composed ExecStartPre scripts distinct in its credential-argument check; initialize every failed-input fixture independently.
 
 - 2026-11-05: Preserve Soularr preferences and restrict credential files on every seed. Remove keys from readiness process arguments and test the actual seeder and curl wiring, including failed-input and reverted-integration cases.
 

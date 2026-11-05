@@ -9,7 +9,7 @@ soularr-config-security = let
   updater = c.system.build.soularrConfigUpdater;
   fixture = pkgs.writeText "soularr-config-security.json" (builtins.toJSON {
     command = service.serviceConfig.ExecStart;
-    readiness = toString containerService.serviceConfig.ExecStartPre;
+    readiness = map toString (lib.toList containerService.serviceConfig.ExecStartPre);
     keyFile = c.age.secrets.lidarr-api-key.path;
   });
 in
@@ -98,7 +98,10 @@ pkgs.runCommand "soularr-config-security" { nativeBuildInputs = [ pkgs.python3 ]
       parser.read_string(config.read_text()); assert parser['General']['interval'] == '300'
       assert config.stat().st_mode & 0o777 == 0o440
 
-      ready = pathlib.Path(fixture['readiness']).read_text()
+      readiness_scripts = [pathlib.Path(path).read_text() for path in fixture['readiness']]
+      readiness_scripts = [script for script in readiness_scripts if '--header @<(' in script]
+      assert len(readiness_scripts) == 1, 'the composed container must select exactly one guarded readiness script'
+      ready = readiness_scripts[0]
       assert '--max-time 2' in ready and 'attempt <= 6' in ready
       assert '--header @<(' in ready and 'RANDOM % 500' in ready
       # Hold an actual HTTP GET while inspecting only that bash's descendants.
