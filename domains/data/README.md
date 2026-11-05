@@ -17,6 +17,8 @@ storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSyn
 Home's Borg policy consumes the existing Syncthing paths for independent document and vault history.
 
 `verification/` contains pure flake checks for this capability; production modules do not import it.
+Its PostgreSQL check covers the composed peer/SCRAM rules on the three reviewed
+hosts and rejects both legacy mode and an injected trust rule.
 
 `databases/` owns schemaVersion2 role provisioning for owned databases and shared table columns, including direct/default privilege reconciliation. It also supplies standard PostgreSQL peer environment settings to native clients; each application declares its scope.
 Decoded credentials use separate raw-password and environment-password types; URI decoding uses a closed encoding enum.
@@ -39,6 +41,8 @@ data/
 ```
 
 ## Changelog
+
+- 2026-11-04: Check Work, Home and laptop peer/SCRAM authentication together; laptop selects the existing mode after private current-data and native-client qualification.
 
 - 2026-11-04: Add Home's synced documents and brain vault to its existing Borg job; check the evaluated source coverage.
 

@@ -2,6 +2,59 @@
 { lib, pkgs, repoRoot, self }:
 {
 
+postgresql-owned-host-auth-wiring = let
+  hosts = [ "hwc-work" "hwc-home" "hwc-laptop" ];
+  binding = c: {
+    mode = c.hwc.data.databases.postgresql.authenticationMode;
+    containerNetwork = c.hwc.data.databases.postgresql.containerNetwork.enable;
+    inherit (c.services.postgresql) authentication identMap;
+  };
+  fixtures = pkgs.writeText "postgresql-owned-host-auth-wiring.json" (builtins.toJSON {
+    current = lib.genAttrs hosts (name: binding self.nixosConfigurations.${name}.config);
+    legacy = lib.genAttrs hosts (name: binding (self.nixosConfigurations.${name}.extendModules {
+      modules = [ { hwc.data.databases.postgresql.authenticationMode = lib.mkForce "legacy-trust"; } ];
+    }).config);
+  });
+in pkgs.runCommand "postgresql-owned-host-auth-wiring" {
+  nativeBuildInputs = [ pkgs.python3 ];
+} ''
+  python - ${fixtures} <<'PY'
+  import json, pathlib, sys
+  fixtures = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  assert len(fixtures['current']) == 3
+  def check(config):
+    assert config['mode'] == 'peer-scram'
+    lines = [line.split() for line in config['authentication'].splitlines()
+      if line.strip() and not line.lstrip().startswith('#')]
+    assert lines[0] == ['local', 'all', 'postgres', 'peer', 'map=postgres']
+    assert ['local', 'all', 'all', 'peer'] in lines
+    assert not any(token in {'trust', 'md5'} for line in lines for token in line)
+    tcp = [line for line in lines if line[0] == 'host']
+    expected = {'127.0.0.1/32', '::1/128'}
+    if config['containerNetwork']:
+      expected.add('10.89.0.0/16')
+    assert {line[3] for line in tcp} == expected
+    assert all(line[:3] == ['host', 'all', 'all'] and line[4:] == ['scram-sha-256'] for line in tcp)
+    assert 'postgres postgres postgres' in config['identMap']
+  for name, config in fixtures['current'].items():
+    check(config)
+    try:
+      check(fixtures['legacy'][name])
+    except AssertionError:
+      pass
+    else:
+      raise AssertionError('LEGACY_TRUST_ACCEPTED:' + name)
+    broken = {**config, 'authentication': config['authentication'] + '\nhost all all 127.0.0.1/32 trust\n'}
+    try:
+      check(broken)
+    except AssertionError:
+      pass
+    else:
+      raise AssertionError('TRUST_RULE_ACCEPTED:' + name)
+  PY
+  touch "$out"
+'';
+
 postgresql-work-auth-wiring = let
   c = self.nixosConfigurations.hwc-work.config;
   db = c.hwc.data.databases.postgresql;

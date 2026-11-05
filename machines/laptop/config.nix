@@ -613,6 +613,9 @@ in
     enable = true;
     version = "17";
     package = pkgs.postgresql_17;
+    # Native postgres.js/node-postgres clients qualified with explicit Unix
+    # peer settings on a decrypted restore of all current databases.
+    authenticationMode = "peer-scram";
   };
 
   # Static hosts for local services. Deliberately IP-pinned rather than MagicDNS:
