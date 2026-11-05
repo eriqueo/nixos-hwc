@@ -81,6 +81,52 @@ rec {
     '';
     in "RUN ${python} -c ${lib.escapeShellArg ("exec(" + builtins.toJSON program + ")")} ${lib.escapeShellArgs [ version sourceSha256 patchedSha256 ]}\n";
 
+  # Temporary response framing repair. Remove when vendor stdlib and urllib3
+  # pass actual Requests streaming/download and normal-response contracts.
+  # Both controlled modules share one grammar; no resolver or native changes.
+  mkPythonHttpFramingBackport = { python, modules, stdlibUpstreamCommits }:
+    let
+      manifest = { schemaVersion = 1; inherit modules stdlibUpstreamCommits; };
+      program = ''
+        import hashlib, itertools, json, subprocess, sys
+        from pathlib import Path
+        manifest = json.loads(sys.argv[1])
+        assert manifest['schemaVersion'] == 1, 'HTTP_BACKPORT_VERSION'
+        assert set(manifest['modules']) == {'httpClient', 'urllib3'}, 'HTTP_BACKPORT_PAIR'
+        prepared = []
+        suffixes = {'httpClient': '/http/client.py', 'urllib3': '/urllib3/response.py'}
+        for name, entry in manifest['modules'].items():
+            assert set(entry) == {'path', 'sourceSha256', 'patchedSha256', 'replacements'}, 'HTTP_BACKPORT_FIELDS'
+            path = Path(entry['path'])
+            assert path.is_absolute() and str(path).endswith(suffixes[name]), 'HTTP_MODULE_PATH'
+            assert path.stat().st_size <= 262144, 'HTTP_SOURCE_BOUND'
+            raw = path.read_bytes()
+            assert len(raw) <= 262144, 'HTTP_SOURCE_BOUND'
+            assert hashlib.sha256(raw).hexdigest() == entry['sourceSha256'], 'HTTP_SOURCE_DRIFT'
+            source = raw.decode()
+            assert 1 <= len(entry['replacements']) <= 4, 'HTTP_REPLACEMENT_BOUND'
+            for old, new in entry['replacements']:
+                assert old and source.count(old) == 1, 'HTTP_HUNK_DRIFT'
+                source = source.replace(old, new)
+            output = source.encode()
+            assert len(output) <= 262144, 'HTTP_RESULT_BOUND'
+            assert hashlib.sha256(output).hexdigest() == entry['patchedSha256'], 'HTTP_RESULT_DRIFT'
+            compile(source, str(path), 'exec')
+            prepared.append((path, output))
+        # Validate the complete pair before writing either immutable-image file.
+        for path, output in prepared:
+            path.write_bytes(output)
+            cache = list(itertools.islice((path.parent / '__pycache__').glob(path.stem + '.*.pyc'), 9))
+            assert len(cache) <= 8, 'HTTP_BYTECODE_BOUND'
+            for entry in cache:
+                entry.unlink()
+        subprocess.run([sys.executable, '-B', '-c', 'from http.client import _is_legal_content_length, _is_legal_chunk_size; import urllib3.response; assert _is_legal_content_length("5") and not _is_legal_content_length("+5"); assert _is_legal_chunk_size(b"a") and not _is_legal_chunk_size(b"+a")'], check=True, timeout=20)
+      '';
+    in {
+      inherit manifest;
+      recipe = "RUN ${lib.escapeShellArg python} -B -c ${lib.escapeShellArg ("exec(" + builtins.toJSON program + ")")} ${lib.escapeShellArg (builtins.toJSON manifest)}\n";
+    };
+
   mkContainer =
     { name
     , image

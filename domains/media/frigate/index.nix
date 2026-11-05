@@ -21,7 +21,26 @@ let
   runtimeWheels = builtins.fromJSON ''
     [{"name":"Pillow","version":"13.0.0","url":"https://files.pythonhosted.org/packages/36/46/f509b74787f40ce0627501089d630b2c741b63b244c1f40b640b3b01e181/pillow-13.0.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl","file":"pillow-13.0.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl","hash":"sha256-piXfmipVl/peUmbgGu/IJgS7hdKR41R5gehjVg112mw="},{"name":"certifi","version":"2026.10.18","url":"https://files.pythonhosted.org/packages/08/ba/95dd616042484f7c83a06974388b37b837732740ee70bc5dc715b5fcd55a/certifi-2026.10.18-py3-none-any.whl","file":"certifi-2026.10.18-py3-none-any.whl","hash":"sha256-cxkcR6qnnaOU6P7i28LsgnQyyrVjERIsnker9545D2I="}]
   '';
-  runtimeInputs = { debian = runtimeDebs; wheels = runtimeWheels; };
+  httpBackport = helpers.mkPythonHttpFramingBackport {
+    python = "python3";
+    stdlibUpstreamCommits = pkgs.pythonHttpFramingBackport.upstreamCommits;
+    modules = {
+      httpClient = {
+        path = "/usr/lib/python3.11/http/client.py";
+        sourceSha256 = "de4ab4c192ceee43d5c8515718d07cc12a92a9232b450440a4c04157e5c9c66a";
+        patchedSha256 = "a5c4370e13466c7d7856711b86c135d533be1ee05611e43da4cada3cd5aedb86";
+        replacements = pkgs.pythonHttpFramingBackport.replacements;
+      };
+      urllib3 = {
+        path = "/usr/local/lib/python3.11/dist-packages/urllib3/response.py";
+        sourceSha256 = "0e4559c737914d4f8f941dca9ecfaf6caec6792258302bffec7b8b41dae3c71a";
+        patchedSha256 = "dcec06f8eea936941e81ba8ab6479a0c0ee136829df0058abff7bfb5c9394ea9";
+        replacements = pkgs.pythonUrllib3FramingBackport.replacements;
+      };
+    };
+  };
+  runtimeInputs = { debian = runtimeDebs; wheels = runtimeWheels;
+    pythonHttpBackport = httpBackport.manifest; };
   # Temporary URL parser repair; remove after upstream passes the
   # malformed-Host, current-data recovery and actual GPU consumer checks.
   runtime = helpers.mkRuntimeImage {
@@ -37,6 +56,7 @@ let
       # build owns exactly these two replacements; retain its PEP668 marker.
       RUN python3 -m pip install --no-index --no-deps --no-cache-dir --force-reinstall --break-system-packages /tmp/hwc-frigate-wheels/*.whl && rm -r /tmp/hwc-frigate-wheels
     ''
+      + httpBackport.recipe
       + helpers.mkStarletteHostBackport {
         python = "python3";
         version = "0.47.3";

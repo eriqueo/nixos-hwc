@@ -7,7 +7,9 @@ final: prev:
 let
   lib = prev.lib;
   spec = builtins.fromJSON (builtins.readFile ./python-http-framing.json);
-  manifest = prev.writeText "python-http-framing.json" (builtins.toJSON spec);
+  # Keep native runtime identity independent of container-only adapters.
+  nativeSpec = { inherit (spec) schemaVersion upstreamCommits replacements nativeSources; };
+  manifest = prev.writeText "python-http-framing.json" (builtins.toJSON nativeSpec);
   contract = prev.writeText "python-http-runtime-contract.py" ''
     import hashlib
     import http.client
@@ -261,7 +263,10 @@ in
 assert spec.schemaVersion == 1;
 {
   # The container retains its existing source/result hashes and protocol shape.
-  pythonHttpFramingBackport = builtins.removeAttrs spec [ "schemaVersion" "nativeSources" ];
+  pythonHttpFramingBackport = { inherit (spec) upstreamCommits replacements; };
+  # Local urllib3 adaptation reuses the controlled stdlib predicates. This is
+  # not an upstream urllib3 release; image callers must qualify both modules.
+  pythonUrllib3FramingBackport = { replacements = spec.urllib3Replacements; };
   mkPythonHttpRuntime = mkRuntime;
   mkPythonHttpApplication = mkApplication;
 }

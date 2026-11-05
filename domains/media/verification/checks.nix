@@ -296,6 +296,83 @@ pkgs.runCommand "starlette-host-backport-wiring" { nativeBuildInputs = [ pkgs.py
   touch "$out"
 '';
 
+frigate-http-framing = let
+  host = self.nixosConfigurations.hwc-home;
+  c = host.config;
+  shared = builtins.fromJSON (builtins.readFile (repoRoot + "/overlays/python-http-framing.json"));
+in
+assert host.pkgs.pythonHttpFramingBackport == {
+  inherit (shared) upstreamCommits replacements;
+};
+pkgs.runCommand "frigate-http-framing" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${c.system.build.frigateRuntimeImageContext} <<'PY'
+  import copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
+  context = pathlib.Path(sys.argv[1])
+  recipe = (context / 'Dockerfile').read_text()
+  manifest = json.loads((context / 'manifest.json').read_text())['pythonHttpBackport']
+  assert manifest['schemaVersion'] == 1 and set(manifest['modules']) == {'httpClient', 'urllib3'}
+  assert len(manifest['stdlibUpstreamCommits']) == 2
+  assert manifest['modules']['httpClient']['path'] == '/usr/lib/python3.11/http/client.py'
+  assert manifest['modules']['urllib3']['path'] == '/usr/local/lib/python3.11/dist-packages/urllib3/response.py'
+  def emitted(value, expected):
+    matches = []
+    for line in value.splitlines():
+      if not line.startswith('RUN '):
+        continue
+      args = shlex.split(line[4:])
+      if '-c' in args and 'HTTP_BACKPORT_PAIR' in args[args.index('-c') + 1]:
+        assert args[:3] == ['python3', '-B', '-c'] and len(args) == 5
+        assert json.loads(args[4]) == expected
+        compile(args[3], '<actual-image-builder>', 'exec')
+        matches.append((line, args[3]))
+    assert len(matches) == 1, 'HTTP_BACKPORT_INTEGRATION_MISSING'
+    return matches[0]
+  line, program = emitted(recipe, manifest)
+  without_integration = '\n'.join(value for value in recipe.splitlines() if value != line)
+  try:
+    emitted(without_integration, manifest)
+  except AssertionError:
+    pass
+  else:
+    raise AssertionError('OMITTED_BACKPORT_ACCEPTED')
+  # Run the actual emitted builder. A bad second module must fail before the
+  # first file changes. This tests the guard; actual image tests own success.
+  sha = lambda value: hashlib.sha256(value).hexdigest()
+  cases = {'source': 'HTTP_SOURCE_DRIFT', 'result': 'HTTP_RESULT_DRIFT',
+    'hunk': 'HTTP_HUNK_DRIFT', 'pair': 'HTTP_BACKPORT_PAIR', 'bound': 'HTTP_SOURCE_BOUND'}
+  for kind, code in cases.items():
+    with tempfile.TemporaryDirectory(prefix='http-builder-guard-') as folder:
+      root = pathlib.Path(folder)
+      fixture = copy.deepcopy(manifest)
+      originals = {}
+      for name, suffix in [('httpClient', 'http/client.py'), ('urllib3', 'urllib3/response.py')]:
+        path = root / suffix
+        path.parent.mkdir(parents=True)
+        original = b'sentinel=1\n'
+        path.write_bytes(original)
+        originals[path] = original
+        fixture['modules'][name] = {'path': str(path), 'sourceSha256': sha(original),
+          'patchedSha256': sha(b'sentinel=2\n'), 'replacements': [['sentinel=1', 'sentinel=2']]}
+      second = fixture['modules']['urllib3']
+      if kind == 'source':
+        second['sourceSha256'] = '0' * 64
+      elif kind == 'result':
+        second['patchedSha256'] = '0' * 64
+      elif kind == 'hunk':
+        second['replacements'] = [['missing_sentinel', 'sentinel=2']]
+      elif kind == 'pair':
+        del fixture['modules']['urllib3']
+      elif kind == 'bound':
+        path = pathlib.Path(second['path'])
+        originals[path] = b'x' * 262145
+        path.write_bytes(originals[path])
+      result = subprocess.run([sys.executable, '-B', '-c', program, json.dumps(fixture)], capture_output=True, timeout=10)
+      assert result.returncode != 0 and code.encode() in result.stderr, kind
+      assert all(path.read_bytes() == original for path, original in originals.items()), 'PARTIAL_PAIR_WRITE:' + kind
+  PY
+  touch "$out"
+'';
+
 immich-database-auth-wiring = let
   c = self.nixosConfigurations.hwc-home.config;
   db = c.hwc.media.immich.database;

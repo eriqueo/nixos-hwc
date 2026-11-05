@@ -33,6 +33,8 @@ Its Python framing replacements and upstream references come from
 Frigate uses explicit NVIDIA CDI access and no-new-privileges; its configuration contract rejects privileged mode.
 
 Frigate and Immich ML derive same-app images with the shared Starlette Host parser backport.
+Frigate additionally selects a paired stdlib/urllib3 framing recipe; its actual
+streaming model client and current-data qualification own deployment acceptance.
 
 `immich-container/` keeps its pinned Ubuntu CA distrust policy even after host NSS removes the same roots. Its exact local runtime images must be built before activation.
 
@@ -100,6 +102,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-04: Add Frigate's paired HTTP response framing backport and actual emitted-builder drift/integration checks; retain its app, model, native inputs and data paths.
 
 - 2026-11-04: Select the checked native yt-dlp launcher for transcript subprocesses; retain their provider, output and credential settings.
 
