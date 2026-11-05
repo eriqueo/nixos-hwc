@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Calibre stages its four-library source bundle into the existing early frozen loader. Parent and fork-worker probes check the selected modules and POP command controls. Books verifies the shared manifest, source sizes, hashes and file modes. Image and current-data qualification remain separate release gates.
+
 The native YouTube transcript wrapper resolves yt-dlp through the checked HTTP
 runtime catalog while retaining its original application and native dependencies.
 
@@ -150,6 +152,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Integrate the qualified frozen library bundle with early source selection and shared Books verification.
 
 - 2026-11-05: Make omitted-patch checks assert failed publication without depending on whether the exact byte-size or hash guard rejects first.
 

@@ -130,6 +130,11 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       fixture['calibre']['http']['bootstrapSha256'] = sha((hook / 'site.py').read_bytes())
       (hook / 'http-framing.json').write_text(json.dumps(fixture['calibre']['http']))
       for path in [hook / 'http/client.py', hook / 'site.py', hook / 'http-framing.json']: path.chmod(0o444)
+      for entry in fixture['calibre']['stdlib']['modules'].values():
+          (hook / entry['file']).write_bytes((calibre_context / 'stdlib/lib' / entry['file']).read_bytes())
+          (hook / entry['file']).chmod(0o444)
+      (hook / 'stdlib.json').write_text(json.dumps(fixture['calibre']['stdlib']))
+      (hook / 'stdlib.json').chmod(0o444)
       (hook / 'http').chmod(0o555)
       hook.chmod(0o555)
       ssl_value = fixture['calibre']['nativeSsl']['spec']
@@ -152,6 +157,14 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       def verify(value):
           api['verify'](value, app, native, calibre, hook, fixture['pythonVersion'], fixture['pythonPackages'], api['metadata'])
       try:
+          verify(fixture)
+          for name, entry in fixture['calibre']['stdlib']['modules'].items():
+              target = hook / entry['file']; saved = target.read_bytes()
+              target.chmod(0o644); target.write_bytes(b'corrupt-installed-stdlib')
+              try: verify(fixture)
+              except AssertionError: pass
+              else: raise AssertionError('Books accepted corrupt stdlib:' + name)
+              target.write_bytes(saved); target.chmod(0o444)
           verify(fixture)
           # Corrupt the actual shared DLL: removing the Books call to the
           # canonical installed guard must reopen this exact fixture.
@@ -1272,6 +1285,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           and any(isinstance(t,ast.Name) and t.id=='worker' for t in n.targets)]
       ssl_copy='COPY native-ssl /tmp/hwc-calibre-native-ssl'
       ssl_install='RUN python3 -I -B /tmp/hwc-calibre-native-ssl/guard.py /tmp/hwc-calibre-native-ssl/spec.json /tmp/hwc-calibre-native-ssl '+ssl_runtime_spec['rootPath']
+      stdlib_wiring=('COPY stdlib /tmp/hwc-calibre-stdlib' in text and 'FROZEN_STDLIB_SOURCE_CODE_DRIFT' in emitted[0][0] and 'CALIBRE_STDLIB_SELECTION' in emitted[1][0] and len(workers)==1 and 'CALIBRE_STDLIB_SELECTION' in workers[0])
       ssl_wiring=(ssl_copy in text and ssl_install in text and '# Native SSL inputs '+ssl_runtime['inputHash'] in text
           and text.index(ssl_copy)<text.index(ssl_install)<text.index('def native_ssl_proof')
           and ssl_probe_wired(emitted[1][0]) and len(workers)==1 and ssl_probe_wired(workers[0]))
@@ -1279,9 +1293,12 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           and 'ENV '+manifest['selectionVariable']+'='+manifest['rootPath'] in text
           and all(x[1]==0 and x[2]==manifest for x in emitted)
           and len(bootstraps)==1 and hashlib.sha256(bootstraps[0].encode()).hexdigest()==manifest['bootstrapSha256']
-          and gui and worker and ssl_wiring)
+          and gui and worker and ssl_wiring and stdlib_wiring)
   assert wired(v,recipe)
-  for before,after in [('COPY native-ssl /tmp/hwc-calibre-native-ssl','# omitted SSL copy'),
+  for before,after in [('COPY stdlib /tmp/hwc-calibre-stdlib','# omitted stdlib copy'),
+      ('FROZEN_STDLIB_SOURCE_CODE_DRIFT','omitted original parity'),
+      ('CALIBRE_STDLIB_SELECTION','omitted stdlib consumers'),
+      ('COPY native-ssl /tmp/hwc-calibre-native-ssl','# omitted SSL copy'),
       ('RUN python3 -I -B /tmp/hwc-calibre-native-ssl/guard.py','# omitted SSL installer'),
       ('native_ssl = native_ssl_proof()','native_ssl = None'),
       ('native_ssl_proof())','None)')]:
@@ -1331,14 +1348,26 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   assert namespace['main']()=='original-vendor-entry'
   assert namespace['__spec__'].loader is namespace['__loader__']
   finder=sys.meta_path[0]
-  assert finder.find_spec('http.client').origin=='/opt/hwc-calibre-http/http/client.py', 'HTTP_SELECTION_MISSING'
+  assert finder.find_spec('http.client').origin==ROOT+'/http/client.py', 'HTTP_SELECTION_MISSING'
+  for name in LIBRARIES:
+      assert finder.find_spec(name).origin==ROOT+'/'+LIBRARIES[name]['file'], 'STDLIB_SELECTION_MISSING'
   assert finder.find_spec('calibre') is None and finder.find_spec('urllib.request') is None
   """
   for variant,source in [('actual',bootstrap),
       ('develop-mode',bootstrap.replace('importer.develop_mode_path = None','pass')),
-      ('selection',bootstrap.replace("fullname == 'http.client'", "fullname == 'missing.client'")),
+      ('selection',bootstrap.replace('source_modules.get(fullname)', 'source_modules.get("missing.client")')),
       ('vendor-entry',bootstrap.replace("exec(original.loader.get_code('site'), namespace)",'pass'))]:
-      result=subprocess.run([sys.executable,'-c',harness.replace('BOOTSTRAP',repr(source))],capture_output=True,timeout=10)
+      with tempfile.TemporaryDirectory() as directory:
+          root=pathlib.Path(directory);(root/'http').mkdir()
+          # The table contains the patched HTTP source, not its original input.
+          patched=raw.decode()
+          for old,new in manifest['replacements']: patched=patched.replace(old,new)
+          (root/'http/client.py').write_text(patched)
+          for entry in stdlib_spec['modules'].values():
+              (root/entry['file']).write_bytes((stdlib_package/'lib'/entry['file']).read_bytes())
+          body=source.replace(manifest['rootPath'],str(root))
+          test=harness.replace('BOOTSTRAP',repr(body)).replace('ROOT',repr(str(root))).replace('LIBRARIES',repr(stdlib_spec['modules']))
+          result=subprocess.run([sys.executable,'-c',test],capture_output=True,timeout=10)
       assert (result.returncode==0)==(variant=='actual'), (variant,result.stderr)
       if variant!='actual': assert b'AssertionError' in result.stderr or b'KeyError' in result.stderr or b'AttributeError' in result.stderr
   sha=lambda b:hashlib.sha256(b).hexdigest()
@@ -1365,7 +1394,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           assert not output.exists() and original.read_bytes()==before,'PARTIAL_FROZEN_WRITE:'+kind
           if kind=='source':
               seeded=execute(2)
-              assert seeded.returncode==0 and output.exists(),'OPTIMIZED_GUARD_SEED_NOT_EXERCISED'
+              assert seeded.returncode!=0 and b'FROZEN_STDLIB_OPTIMIZED_INSTALLER' in seeded.stderr and not output.exists(),'OPTIMIZED_INSTALLER_ACCEPTED'
   # Native metadata, actual portable bytes and the production command order
   # share the canonical Calibre producer. The fault fixtures below touch only
   # disposable fake libraries, never a vendor or application data directory.

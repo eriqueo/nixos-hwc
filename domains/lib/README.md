@@ -16,6 +16,8 @@ any domain (media, networking, data, etc.) can use them without depending on the
 
 ## Structure
 
+The frozen loader selects one exact table for HTTP and the four qualified library sources. It validates source hashes before original site startup and rejects early imports. The installer checks complete original frozen code parity before publishing files.
+
 `mkHttpReady.nix` supplies one bounded read-only HTTP readiness command and
 timeout for native CRM and MCP units. The caller owns its service dependencies.
 
@@ -74,6 +76,8 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+
+- 2026-11-05: Integrate the qualified frozen library bundle with early source selection and shared Books verification.
 
 - 2026-11-05: Reuse the bounded patch transformer for inherited Nix patches as well as security groups; reject unsafe names and empty or excessive edits.
 
