@@ -757,7 +757,7 @@ let
     native = distroSslDescriptor;
     rootPath = "/";
     trustKind = sslTrustKinds.system;
-    proofDirectory = ".hwc-system-python-ssl";
+    proofDirectory = "${lib.removePrefix "/" distroFacts.runtimeRoot}/.hwc-native-ssl";
     guardSha256 = builtins.hashString "sha256" sslGuard.text;
   };
   distroSslRuntimeSpec = pkgs.writeText "calibre-system-python-ssl-runtime.json" (builtins.toJSON distroSslRuntimeDescriptor);
