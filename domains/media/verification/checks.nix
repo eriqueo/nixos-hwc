@@ -1338,7 +1338,9 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
       def get_code(self,name): return compile("def main(): return 'original-vendor-entry'",'/vendor/site.pyc','exec')
   class BypyFrozenImporter:
       develop_mode_path='/opt/hwc-calibre-http'
-      def find_spec(self,name,path): return types.SimpleNamespace(loader=FrozenByteCodeLoader())
+      def find_spec(self,name,path=None,target=None):
+          if name=='site': return types.SimpleNamespace(loader=FrozenByteCodeLoader())
+          return None
   importer=BypyFrozenImporter()
   sys.meta_path.insert(0,importer)
   namespace={'__name__':'__main__'}
