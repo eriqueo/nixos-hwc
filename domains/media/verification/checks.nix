@@ -1271,6 +1271,28 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   assert system_ssl['native']['opensslVersion']=='3.5.5'
   assert system_ssl['native']['original']['mode']==0o644
   assert 'privateCa' not in system_ssl and system_ssl['rootPath']==system_spec['runtimeRoot'] and system_ssl['trustKind']=='system-default'
+  # Run the actual distro installer with an unwritable filesystem root.
+  # Reverting its owner root must fail, before any runtime claim can pass.
+  for placement in ['runtime-owner','filesystem-root']:
+      with tempfile.TemporaryDirectory() as directory:
+          base=pathlib.Path(directory);image=base/'image';inputs=base/'inputs'
+          value=copy.deepcopy(system_ssl);shutil.copytree(system_context/'ssl',inputs)
+          owner=image/value['rootPath'].lstrip('/')
+          path=image/value['native']['original']['path'].lstrip('/')
+          path.parent.mkdir(parents=True);path.write_bytes(b'owned-distro-ssl');path.chmod(0o644)
+          value['native']['original'].update(sha256=hashlib.sha256(path.read_bytes()).hexdigest(),bytes=path.stat().st_size)
+          metadata=json.loads((inputs/'manifest.json').read_text());metadata['descriptor']=value['native']
+          (inputs/'manifest.json').chmod(0o644);(inputs/'manifest.json').write_text(json.dumps(metadata))
+          image.chmod(0o555)
+          if placement=='filesystem-root':value['rootPath']='/'
+          try:
+              try:ssl_api['install'](value,inputs,owner if placement=='runtime-owner' else image,inputs/'guard.py')
+              except PermissionError:assert placement=='filesystem-root'
+              else:
+                  assert placement=='runtime-owner','SYSTEM_SSL_ROOT_REGRESSION_SEED'
+                  ssl_api['installed'](value,owner)
+                  assert path.stat().st_mode & 0o777 == 0o644
+          finally:image.chmod(0o755)
   assert (context/'system-python/ssl/lib/_ssl.so').read_bytes()==(system_context/'ssl/lib/_ssl.so').read_bytes()
   source_api={'__name__':'test_system_python'}
   source_guard=(system_context/'guard.py').read_text()

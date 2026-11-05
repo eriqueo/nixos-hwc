@@ -165,6 +165,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-05: Exercise the distro SSL installer with an unwritable image root and seed the old root placement to prove the owner binding.
+
 - 2026-11-05: Bind the SSL installer root to the existing Python runtime owner, preserving the guard's single-component proof-path contract.
 
 - 2026-11-05: Keep distro SSL proof under its Python runtime directory so the installer works with all container capabilities dropped.
