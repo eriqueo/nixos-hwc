@@ -62,6 +62,12 @@ the build. Navidrome selects its original seven patch inputs from that owner.
 The inherited Chromium extension keeps its exact function and declaration with
 branch-specific context, so the complete Nix and security pipeline uses zero fuzz.
 
+The same Calibre index exports an artifact-only native SSL constructor. It builds
+one upstream-patched module with measured Python/OpenSSL headers and a portable
+ELF manifest. Its source guard rejects source, header and ABI drift. The existing
+security check exercises those guards and missing build wiring. Runtime images
+remain unchanged until the isolated original-path TLS consumer qualifies it.
+
 Calibre's frozen HTTP bootstrap preserves normal GUI mode and native worker
 selection. Its image build exercises the actual GUI import and fork_job worker.
 
@@ -134,6 +140,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Add the artifact-only Calibre native SSL constructor for the upstream compromised-key distrust fix. Pin matching headers, strict source hashes and portable ELF dependencies; exercise source/ABI and wiring failures before runtime adoption.
 
 - 2026-11-05: Preserve the inherited Chromium FFmpeg extension under strict patch matching; assert its two file postimages and exercise the complete27-patch pipeline.
 

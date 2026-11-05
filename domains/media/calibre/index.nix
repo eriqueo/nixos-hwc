@@ -33,6 +33,136 @@ let
       assert actual == (False, str(path), True, False), 'CALIBRE_WORKER_HTTP_SELECTION'
     '';
   };
+  # Temporary: the vendor native SSL predates CPython's compromised-key distrust.
+  # Retire when the unmodified vendor passes the TLS/API/GUI/worker contract.
+  # Artifact-only until the original-path, fresh-process consumer qualifies it.
+  sslDescriptor = {
+    schemaVersion = 1;
+    pythonVersion = httpBackport.manifest.pythonVersion;
+    opensslVersion = "3.5.9";
+    advisory = "CVE-2026-115557";
+    upstreamCommit = "e9bf2cf84eebf838a1edaa1c648c2b36345b99d3";
+    patch = {
+      url = "https://github.com/python/cpython/commit/${sslDescriptor.upstreamCommit}.patch";
+      includes = [ "Modules/_ssl.c" "Modules/_ssl/distrusted_spki.h" ];
+      hash = "sha256-golYkxggS4HEq/zTjv3TeI3AVKuqTqtKXCBrU+0Ky4E=";
+    };
+    sourceFiles = {
+      "Modules/_ssl.c" = "208daac45832d0bc2297834e09e017098af38d406d44820c3f250b2026a22375";
+      "Modules/_ssl/distrusted_spki.h" = "bff6ffbbdb400bcfee6d15f8309da2128157feb7d8be98d14041abe80fc9ff8e";
+    };
+    headers = {
+      python = "9005ef414e92cd4b6ff6d9fdaafdee4d614b23df71c4ca1e1df4883c1f1e0c9c";
+      openssl = "9647fc99758cf83e3bcf11ae310894fd4911ad62bff22d8213a614df89cfedda";
+    };
+    abiMacros = {
+      Py_DEBUG = 0; Py_GIL_DISABLED = 0; WITH_PYMALLOC = 1;
+      Py_ENABLE_SHARED = 1; SIZEOF_VOID_P = 8; SIZEOF_TIME_T = 8;
+      Py_TRACE_REFS = 0; Py_STATS = 0; Py_REF_DEBUG = 0;
+    };
+    original = {
+      path = "${builtins.dirOf calibrePython}/lib/calibre-extensions/_ssl.so";
+      sha256 = "7b6f778ec806ec814430c70b72751c487953fefbac8bbf79d1db1d8aefce5c04";
+      bytes = 236768;
+      mode = 493;
+      needed = [ "libc.so.6" "libcrypto.so.3" "libssl.so.3" ];
+    };
+    apiSha256 = "6562f5b125c4e340777b2f7b750a37ed5ceb6818b9786674af803b14bb6c2e5e";
+    rpath = "$ORIGIN/..";
+    limits = { fileBytes = 2097152; manifestBytes = 16384; sourceBytes = 524288; };
+  };
+  sslSpec = pkgs.writeText "calibre-native-ssl.json" (builtins.toJSON sslDescriptor);
+  sslSourceGuard = pkgs.writeText "calibre-native-ssl-source-guard.py" ''
+    import hashlib, json, pathlib, re, sys
+
+    def check(spec, root, python_header, openssl_header):
+        assert spec["schemaVersion"] == 1, "CALIBRE_SSL_SCHEMA"
+        for name, expected in spec["sourceFiles"].items():
+            path = root / name
+            assert path.is_file() and not path.is_symlink(), "CALIBRE_SSL_SOURCE_TYPE"
+            raw = path.read_bytes()
+            assert 0 < len(raw) <= spec["limits"]["sourceBytes"], "CALIBRE_SSL_SOURCE_BOUND"
+            assert hashlib.sha256(raw).hexdigest() == expected, "CALIBRE_SSL_SOURCE_DRIFT"
+        for name, path in [("python", python_header), ("openssl", openssl_header)]:
+            assert path.is_file() and not path.is_symlink(), "CALIBRE_SSL_HEADER_TYPE"
+            raw = path.read_bytes()
+            assert 0 < len(raw) <= spec["limits"]["sourceBytes"], "CALIBRE_SSL_HEADER_BOUND"
+            assert hashlib.sha256(raw).hexdigest() == spec["headers"][name], "CALIBRE_SSL_HEADER_DRIFT"
+        text = python_header.read_text()
+        for name, expected in spec["abiMacros"].items():
+            values = re.findall(r"^#define " + re.escape(name) + r"\s+(\d+)\s*$", text, re.M)
+            assert len(values) <= 1 and (int(values[0]) if values else 0) == expected, "CALIBRE_SSL_ABI_DRIFT"
+        text = openssl_header.read_text()
+        actual = [int(re.search(r"^#\s*define OPENSSL_VERSION_" + name + r"\s+(\d+)\s*$", text, re.M)[1])
+                  for name in ["MAJOR", "MINOR", "PATCH"]]
+        assert actual == list(map(int, spec["opensslVersion"].split("."))), "CALIBRE_SSL_OPENSSL_DRIFT"
+
+    if __name__ == "__main__":
+        if not __debug__:
+            raise AssertionError("CALIBRE_SSL_OPTIMIZED_GUARD")
+        spec, root, python_header, openssl_header = map(pathlib.Path, sys.argv[1:])
+        assert spec.stat().st_size <= 16384, "CALIBRE_SSL_SPEC_BOUND"
+        check(json.loads(spec.read_text()), root, python_header, openssl_header)
+        print("CALIBRE_SSL_SOURCE_FIXED")
+  '';
+  # REPLACEABLE: one native module rebuilt from the pinned source and SDK.
+  # Do not run Python's full configure/build or link a second libpython.
+  sslPackage = assert lib.assertMsg
+    (pkgs.python314.version == lib.concatMapStringsSep "." toString sslDescriptor.pythonVersion
+      && pkgs.openssl_3_5.version == sslDescriptor.opensslVersion)
+    "Calibre SSL requires the measured Python and OpenSSL SDK versions";
+    pkgs.stdenv.mkDerivation {
+      pname = "calibre-native-ssl";
+      version = pkgs.python314.version;
+      src = pkgs.python314.src;
+      patches = [ (pkgs.fetchpatch sslDescriptor.patch) ];
+      patchFlags = [ "-p1" "--fuzz=0" ];
+      nativeBuildInputs = [ pkgs.python3 pkgs.patchelf ];
+      buildInputs = [ pkgs.openssl_3_5 ];
+      dontConfigure = true;
+      postPatch = ''
+        python3 -I -B ${sslSourceGuard} ${sslSpec} . \
+          ${pkgs.python314}/include/python3.14/pyconfig.h \
+          ${lib.getDev pkgs.openssl_3_5}/include/openssl/opensslv.h
+      '';
+      buildPhase = ''
+        runHook preBuild
+        $CC -shared -fPIC -O2 -DNDEBUG -fno-strict-aliasing \
+          -I${pkgs.python314}/include/python3.14 \
+          -I${pkgs.python314}/include/python3.14/internal \
+          -I${lib.getDev pkgs.openssl_3_5}/include \
+          Modules/_ssl.c -L${lib.getLib pkgs.openssl_3_5}/lib -lssl -lcrypto -o _ssl.so
+        runHook postBuild
+      '';
+      installPhase = ''
+        runHook preInstall
+        mkdir -p "$out/lib"
+        install -m755 _ssl.so "$out/lib/_ssl.so"
+        runHook postInstall
+      '';
+      # Run after Nix's strip/RPATH fixups: the output loads vendor libraries
+      # beside the original target, not the Nix build SDK's runtime closure.
+      postFixup = ''
+        patchelf --set-rpath ${lib.escapeShellArg sslDescriptor.rpath} "$out/lib/_ssl.so"
+        python3 -I -B - ${sslSpec} "$out" <<'PYSSL'
+        import hashlib, json, pathlib, subprocess, sys
+        spec_file, output = map(pathlib.Path, sys.argv[1:])
+        spec = json.loads(spec_file.read_text())
+        path = output / "lib/_ssl.so"
+        def elf(flag):
+            return subprocess.check_output(["patchelf", flag, str(path)], text=True).strip()
+        needed, rpath, soname = sorted(elf("--print-needed").splitlines()), elf("--print-rpath"), elf("--print-soname")
+        assert needed == spec["original"]["needed"] and rpath == spec["rpath"] and not soname, "CALIBRE_SSL_PORTABLE_ABI"
+        raw = path.read_bytes()
+        assert 0 < len(raw) <= spec["limits"]["fileBytes"], "CALIBRE_SSL_BUILT_BOUND"
+        result = dict(schemaVersion=1, descriptor=spec, file=dict(sha256=hashlib.sha256(raw).hexdigest(),
+            bytes=len(raw), needed=needed, rpath=rpath, soname=soname))
+        raw = json.dumps(result, sort_keys=True, separators=(",", ":")).encode()
+        assert len(raw) <= spec["limits"]["manifestBytes"], "CALIBRE_SSL_MANIFEST_BOUND"
+        (output / "manifest.json").write_bytes(raw)
+        PYSSL
+      '';
+    };
   # Upstream7.1 maintenance keeps RELEASE7.1.5; bind its exact revision
   # and complete post-patch source separately from the library version.
   nativeSourceFacts = builtins.fromJSON ''
@@ -659,6 +789,9 @@ in
       calibreRuntimeNativePackage = nativeFfmpeg;
       calibreRuntimeNativeGuard = nativeGuard;
       calibreRuntimeNativeBundle = nativeBundle;
+      calibreRuntimeSslSpec = sslSpec;
+      calibreRuntimeSslSourceGuard = sslSourceGuard;
+      calibreRuntimeSslPackage = sslPackage;
     }; }
     (lib.mkIf cfg.enable {
       system.build.calibreRuntimeImageRecipe = runtime.dockerfile;

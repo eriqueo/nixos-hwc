@@ -1029,6 +1029,14 @@ calibre-security-wiring = let
     nativePostPatch = nativePackage.postPatch;
     nativePatchFlags = nativePackage.patchFlags;
     nativePatchCount = builtins.length nativePackage.patches;
+    ssl = {
+      spec = toString c.system.build.calibreRuntimeSslSpec;
+      guard = toString c.system.build.calibreRuntimeSslSourceGuard;
+      postPatch = c.system.build.calibreRuntimeSslPackage.postPatch;
+      build = c.system.build.calibreRuntimeSslPackage.buildPhase;
+      patchFlags = c.system.build.calibreRuntimeSslPackage.patchFlags;
+      patchCount = builtins.length c.system.build.calibreRuntimeSslPackage.patches;
+    };
     contextTransforms = map (patch: { path = toString patch; command = patch.buildCommand; })
       (builtins.filter (patch: builtins.isAttrs patch
         && lib.hasSuffix "-7.1.patch" (patch.name or "")) nativePackage.patches);
@@ -1052,6 +1060,44 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   python3 - ${binding} ${c.system.build.calibreRuntimeImageRecipe} ${c.system.build.calibreRuntimeImageContext} <<'PYTEST'
   import ast, copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
   v=json.loads(pathlib.Path(sys.argv[1]).read_text())
+  ssl=v['ssl'];ssl_spec=json.loads(pathlib.Path(ssl['spec']).read_text())
+  def ssl_wired(value):
+      return (value['patchFlags']==['-p1','--fuzz=0'] and value['patchCount']==1
+          and value['guard']+' '+value['spec']+' .' in value['postPatch']
+          and 'Modules/_ssl.c' in value['build'] and '-shared -fPIC' in value['build']
+          and '-lssl -lcrypto' in value['build'] and '-lpython' not in value['build'])
+  assert ssl_wired(ssl)
+  for key in ['postPatch','build']:
+      missing=copy.deepcopy(ssl);missing[key]=""
+      assert not ssl_wired(missing),'CALIBRE_SSL_WIRING_SEED:'+key
+  assert ssl_spec['pythonVersion']==[3,14,8] and ssl_spec['opensslVersion']=='3.5.9'
+  assert ssl_spec['patch']['includes']==sorted(ssl_spec['sourceFiles'])
+  assert ssl_spec['patch']['hash']=='sha256-golYkxggS4HEq/zTjv3TeI3AVKuqTqtKXCBrU+0Ky4E='
+  assert ssl_spec['original']['needed']==['libc.so.6','libcrypto.so.3','libssl.so.3']
+  assert ssl_spec['rpath']=='$ORIGIN/..'
+  guard={};exec(compile(pathlib.Path(ssl['guard']).read_text(),'<actual-ssl-source-guard>','exec',optimize=0),guard)
+  with tempfile.TemporaryDirectory() as directory:
+      root=pathlib.Path(directory);value=copy.deepcopy(ssl_spec)
+      for name in value['sourceFiles']:
+          path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(name)
+          value['sourceFiles'][name]=hashlib.sha256(path.read_bytes()).hexdigest()
+      py=root/'pyconfig.h';openssl=root/'opensslv.h'
+      py.write_text("".join('#define '+name+' '+str(number)+'\n' for name,number in value['abiMacros'].items()))
+      openssl.write_text("".join('# define OPENSSL_VERSION_'+name+' '+number+'\n'
+          for name,number in zip(['MAJOR','MINOR','PATCH'],value['opensslVersion'].split('.'))))
+      for name,path in [('python',py),('openssl',openssl)]:
+          value['headers'][name]=hashlib.sha256(path.read_bytes()).hexdigest()
+      guard['check'](value,root,py,openssl)
+      for kind in ['schema','source','header','abi','openssl']:
+          bad=copy.deepcopy(value)
+          if kind=='schema':bad['schemaVersion']=0
+          elif kind=='source':bad['sourceFiles']['Modules/_ssl.c']='0'*64
+          elif kind=='header':bad['headers']['python']='0'*64
+          elif kind=='abi':bad['abiMacros']['Py_GIL_DISABLED']=1
+          else:bad['opensslVersion']='3.6.5'
+          try:guard['check'](bad,root,py,openssl)
+          except AssertionError:pass
+          else:raise AssertionError('CALIBRE_SSL_GUARD_SEED:'+kind)
   recipe=pathlib.Path(sys.argv[2]).read_text()
   context=pathlib.Path(sys.argv[3])
   manifest=json.loads((context/'manifest.json').read_text())
