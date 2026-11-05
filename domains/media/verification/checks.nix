@@ -66,7 +66,8 @@ pkgs.runCommand "soularr-config-security" { nativeBuildInputs = [ pkgs.python3 ]
       # Missing/invalid SECOND key, invalid INI, oversized file and symlink all
       # fail through the real CLI before changing the original or leaking input.
       for bad in ['missing', 'newline', 'ini', 'size', 'link', 'multiline']:
-          config.chmod(0o600); config.write_text(original)
+          if config.exists(): config.chmod(0o600)
+          config.write_text(original)
           slskd.write_text('private-dummy-slskd\n')
           if bad == 'missing': slskd.unlink()
           if bad == 'newline': slskd.write_text('sensitive-value\nInjected: value\n')
