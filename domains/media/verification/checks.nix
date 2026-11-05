@@ -51,6 +51,7 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
   system_spec=provider['systemPython']['sources']
   assert json.loads((context/'system-python/spec.json').read_text())==system_spec
   assert (context/'system-python/spec.json').read_bytes()==(calibre_context/'system-python/spec.json').read_bytes()
+  assert json.loads((context/'system-python/socket/spec.json').read_text())==provider['systemPython']['nativeSocket']
   def wiring(text):
       assert '# System Python inputs '+provider['systemPython']['inputHash'] in text
       assert 'COPY system-python /tmp/hwc-system-python' in text
@@ -58,6 +59,8 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       assert '/guard.py '+system_spec['commands']['verify']+' ' in text
       assert '/ssl/guard.py /tmp/hwc-system-python/ssl/spec.json' in text
       assert 'SYSTEM_PYTHON_RUNTIME_SELECTION' in text
+      assert 'COPY system-python/socket /tmp/hwc-native-socket/system' in text
+      assert '/system/guard.py install ' in text and '/system/guard.py runtime ' in text
       assert text.index('HTTP_BACKPORT_PAIR') < text.index('/guard.py '+system_spec['commands']['install']+' ')
       assert input_marker in text
       assert 'FROM ' + spec['sourceImage'] + ' AS app-source' in text
@@ -86,6 +89,7 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
                 '/guard.py '+system_spec['commands']['verify']+' ',
                 '/ssl/guard.py /tmp/hwc-system-python/ssl/spec.json',
                 'SYSTEM_PYTHON_RUNTIME_SELECTION', input_marker, hook_modes, version_copy, version_guard, 'COPY --from=app-source /app/lazylibrarian/ /tmp/hwc-books-app/',
+                'COPY system-python/socket /tmp/hwc-native-socket/system','/system/guard.py install ','/system/guard.py runtime ',
                 'COPY --from=calibre-source ' + provider['http']['rootPath'] + '/ ' + provider['http']['rootPath'] + '/',
                 '/guard.py ' + spec['commands']['verify'] + ' ',
                 '/guard.py ' + spec['commands']['apply'] + ' ',
@@ -167,6 +171,18 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       ssl_api={'__name__':'test_calibre_ssl'}
       exec(compile((ssl_input/'guard.py').read_bytes(),'<actual-ssl-installer>','exec',optimize=0),ssl_api)
       ssl_api['install'](ssl_value,ssl_input,calibre,ssl_input/'guard.py')
+      socket_value=fixture['calibre']['nativeSocket']['spec']
+      import os
+      socket_value['owner']={'uid':os.getuid(),'gid':os.getgid()}
+      socket_input=root/'socket-input';shutil.copytree(calibre_context/'native-socket',socket_input)
+      socket_module=calibre/pathlib.Path(socket_value['native']['original']['path']).relative_to(socket_value['paths']['root'])
+      socket_module.write_bytes(b'owned-original-socket');socket_module.chmod(socket_value['native']['original']['mode'])
+      socket_value['native']['original'].update(sha256=sha(socket_module.read_bytes()),bytes=socket_module.stat().st_size)
+      socket_metadata=json.loads((socket_input/'manifest.json').read_text());socket_metadata['descriptor']=socket_value['native']
+      (socket_input/'manifest.json').chmod(0o644);(socket_input/'manifest.json').write_text(json.dumps(socket_metadata))
+      socket_api={'__name__':'test_books_socket'}
+      exec(compile((socket_input/'guard.py').read_bytes(),'<actual-socket-installer>','exec',optimize=0),socket_api)
+      socket_api['install'](socket_value,socket_input,calibre,socket_input/'guard.py')
       native = context / 'inputs/native'
       def verify(value):
           api['verify'](value, app, native, calibre, hook, fixture['pythonVersion'], fixture['pythonPackages'], api['metadata'])
@@ -192,6 +208,16 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
           exec(compile(guard_source.replace(omission,'pass # omitted shared SSL verification'),'<omitted-books-ssl>','exec',optimize=0),omitted_api)
           omitted_api['verify'](fixture,app,native,calibre,hook,fixture['pythonVersion'],fixture['pythonPackages'],api['metadata'])
           module.write_bytes(preserved);verify(fixture)
+          preserved=socket_module.read_bytes();socket_module.write_bytes(b'corrupt-installed-socket')
+          try:verify(fixture)
+          except RuntimeError as error:assert str(error)=='CALIBRE_SOCKET_PAYLOAD_HASH'
+          else:raise AssertionError('Books accepted changed shared socket module')
+          omission="namespace['installed'](socket_spec, calibre)"
+          assert guard_source.count(omission)==1
+          omitted_api={'__name__':'test_omitted_socket'}
+          exec(compile(guard_source.replace(omission,'pass # omitted shared socket verification'),'<omitted-books-socket>','exec',optimize=0),omitted_api)
+          omitted_api['verify'](fixture,app,native,calibre,hook,fixture['pythonVersion'],fixture['pythonPackages'],api['metadata'])
+          socket_module.write_bytes(preserved);verify(fixture)
           # Reproduce the actual image COPY destination's mode before the
           # recipe restores it. The unmodified guard must reject that root.
           hook.chmod(0o755)
@@ -1110,6 +1136,11 @@ calibre-security-wiring = let
     socket = {
       spec = toString c.system.build.calibreRuntimeSocketSourceSpec;
       guard = toString c.system.build.calibreRuntimeSocketSourceGuard;
+      runtime = {
+        guard = toString c.system.build.calibreRuntimeSocketGuard;
+        context = toString c.system.build.calibreRuntimeSocketContext;
+        asset = (builtins.fromJSON c.system.build.calibreRuntimeAssets.text).nativeSocket;
+      };
       variants = lib.mapAttrs (_: package: {
         path = toString package;
         postPatch = package.postPatch;
@@ -1270,6 +1301,62 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
               try:socket_api['check'](bad,source,header)
               except AssertionError:pass
               else:raise AssertionError('SOCKET_SOURCE_GUARD_SEED:'+variant+':'+kind)
+  socket_runtime=sockets['runtime'];socket_context=pathlib.Path(socket_runtime['context'])
+  socket_runtime_source=pathlib.Path(socket_runtime['guard']).read_bytes()
+  socket_runtime_api={'__name__':'test_socket_installer'}
+  exec(compile(socket_runtime_source,'<actual-socket-installer>','exec',optimize=0),socket_runtime_api)
+  socket_runtime_specs={name:json.loads((socket_context/name/'spec.json').read_text()) for name in sockets['variants']}
+  import shutil
+  for variant,runtime_spec in socket_runtime_specs.items():
+      assert runtime_spec['native']==socket_spec['variants'][variant]
+      assert hashlib.sha256(socket_runtime_source).hexdigest()==runtime_spec['guardSha256']
+      assert (socket_context/variant/'guard.py').read_bytes()==socket_runtime_source
+      for kind in ['none','schema','payload','original','mode','guard','proof','port','metadata','link']:
+          if kind=='port' and not runtime_spec['paths']['startup']:continue
+          with tempfile.TemporaryDirectory() as directory:
+              base=pathlib.Path(directory);image=base/'image';image.mkdir();inputs=base/'inputs'
+              value=copy.deepcopy(runtime_spec);value['owner']={'uid':os.getuid(),'gid':os.getgid()}
+              distribution=image/pathlib.Path(value['paths']['root']).relative_to('/')
+              distribution.mkdir(parents=True,exist_ok=True)
+              original=distribution/pathlib.Path(value['native']['original']['path']).relative_to(value['paths']['root'])
+              original.parent.mkdir(parents=True);original.write_bytes(b'owned-original-socket');original.chmod(value['native']['original']['mode'])
+              value['native']['original'].update(sha256=hashlib.sha256(original.read_bytes()).hexdigest(),bytes=original.stat().st_size)
+              proof=distribution/pathlib.Path(value['paths']['proof']).relative_to(value['paths']['root']);proof.parent.mkdir(parents=True,exist_ok=True)
+              ports=[distribution/pathlib.Path(p).relative_to(value['paths']['root']) for p in value['paths']['startup']]
+              for port in ports:port.parent.mkdir(parents=True,exist_ok=True)
+              shutil.copytree(socket_context/variant,inputs)
+              metadata=json.loads((inputs/'manifest.json').read_text());metadata['descriptor']=value['native']
+              (inputs/'manifest.json').chmod(0o644);(inputs/'manifest.json').write_text(json.dumps(metadata))
+              incoming=inputs/'lib/_socket.so'
+              if kind=='schema':value['schemaVersion']=True
+              elif kind=='payload':incoming.chmod(0o644);incoming.write_bytes(b'bad-payload')
+              elif kind=='original':original.write_bytes(b'corrupt-original-socket')
+              elif kind=='mode':original.chmod(0o444)
+              elif kind=='guard':(inputs/'guard.py').chmod(0o644);(inputs/'guard.py').write_bytes(b'bad-guard')
+              elif kind=='proof':proof.mkdir()
+              elif kind=='port':ports[0].write_bytes(b'existing-startup')
+              elif kind=='metadata':metadata['file']['needed'].append('libpython3.14.so');(inputs/'manifest.json').write_text(json.dumps(metadata))
+              elif kind=='link':incoming.parent.chmod(0o755);incoming.unlink();incoming.symlink_to(original)
+              image.chmod(0o555)
+              def snapshot():
+                  return {str(p.relative_to(image)):(p.lstat().st_mode,p.read_bytes() if p.is_file() and not p.is_symlink() else None)
+                      for p in image.rglob('*')}
+              before=snapshot()
+              try:
+                  try:socket_runtime_api['install'](value,inputs,distribution,inputs/'guard.py')
+                  except RuntimeError:
+                      assert kind!='none',variant
+                      assert snapshot()==before,'SOCKET_FAILED_INPUT_WROTE:'+variant+':'+kind
+                  else:
+                      assert kind=='none','SOCKET_BAD_INPUT_ACCEPTED:'+variant+':'+kind
+                      socket_runtime_api['installed'](value,distribution)
+                      assert len(socket_runtime_api['startup_line'](value).splitlines())==1
+                      target=distribution/pathlib.Path(value['paths']['target']).relative_to(value['paths']['root'])
+                      target.chmod(0o644);target.write_bytes(b'corrupt-installed-socket')
+                      try:socket_runtime_api['installed'](value,distribution)
+                      except RuntimeError as error:assert str(error)=='CALIBRE_SOCKET_PAYLOAD_HASH'
+                      else:raise AssertionError('SOCKET_INSTALLED_CORRUPTION_ACCEPTED')
+              finally:image.chmod(0o755)
   recipe=pathlib.Path(sys.argv[2]).read_text()
   context=pathlib.Path(sys.argv[3])
   manifest=json.loads((context/'manifest.json').read_text())
@@ -1460,6 +1547,14 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
           assignments=[n.value for n in ast.walk(definitions[0]) if isinstance(n,ast.Assign)
               and any(isinstance(t,ast.Name) and t.id=='spec' for t in n.targets)]
           return len(assignments)==1 and json.loads(ast.literal_eval(assignments[0].args[0]))==ssl_runtime_spec
+      def socket_probe_wired(body):
+          tree=ast.parse(body)
+          definitions=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='native_socket_proof']
+          calls=[n for n in ast.walk(tree) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='native_socket_proof']
+          if len(definitions)!=1 or len(calls)!=1:return False
+          assignments=[n.value for n in ast.walk(definitions[0]) if isinstance(n,ast.Assign)
+              and any(isinstance(t,ast.Name) and t.id=='spec' for t in n.targets)]
+          return len(assignments)==1 and json.loads(ast.literal_eval(assignments[0].args[0]))==socket_runtime_specs['frozen']
       workers=[ast.literal_eval(n.value) for n in verify.body if isinstance(n,ast.Assign)
           and any(isinstance(t,ast.Name) and t.id=='worker' for t in n.targets)]
       ssl_copy='COPY native-ssl /tmp/hwc-calibre-native-ssl'
@@ -1468,11 +1563,15 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
       ssl_wiring=(ssl_copy in text and ssl_install in text and '# Native SSL inputs '+ssl_runtime['inputHash'] in text
           and text.index(ssl_copy)<text.index(ssl_install)<text.index('def native_ssl_proof')
           and ssl_probe_wired(emitted[1][0]) and len(workers)==1 and ssl_probe_wired(workers[0]))
+      socket_wiring=('COPY native-socket /tmp/hwc-native-socket/frozen' in text
+          and '/frozen/guard.py install ' in text and '/system/guard.py install ' in text and '/system/guard.py runtime ' in text
+          and '# Native socket inputs '+socket_runtime['asset']['inputHash'] in text
+          and socket_probe_wired(emitted[1][0]) and len(workers)==1 and socket_probe_wired(workers[0]))
       return (binding['selected']==binding['container']==wanted and binding['pull']=='never'
           and 'ENV '+manifest['selectionVariable']+'='+manifest['rootPath'] in text
           and all(x[1]==0 and x[2]==manifest for x in emitted)
           and len(bootstraps)==1 and hashlib.sha256(bootstraps[0].encode()).hexdigest()==manifest['bootstrapSha256']
-          and gui and worker and ssl_wiring and stdlib_wiring)
+          and gui and worker and ssl_wiring and stdlib_wiring and socket_wiring)
   assert wired(v,recipe)
   for before,after in [('COPY stdlib /tmp/hwc-calibre-stdlib','# omitted stdlib copy'),
       ('FROZEN_STDLIB_SOURCE_CODE_DRIFT','omitted original parity'),
@@ -1481,7 +1580,13 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
       ('COPY native-ssl /tmp/hwc-calibre-native-ssl','# omitted SSL copy'),
       ('RUN python3 -I -B /tmp/hwc-calibre-native-ssl/guard.py','# omitted SSL installer'),
       ('native_ssl = native_ssl_proof()','native_ssl = None'),
-      ('native_ssl_proof(),stdlib_proof())','None,stdlib_proof())')]:
+      ('native_ssl_proof(),stdlib_proof(),native_socket_proof())','None,stdlib_proof(),native_socket_proof())'),
+      ('COPY native-socket /tmp/hwc-native-socket/frozen','# omitted frozen socket copy'),
+      ('/frozen/guard.py install ','/frozen/guard.py omitted '),
+      ('/system/guard.py install ','/system/guard.py omitted '),
+      ('/system/guard.py runtime ','/system/guard.py omitted '),
+      ('native_socket = native_socket_proof()','native_socket = None'),
+      ('stdlib_proof(),native_socket_proof())','stdlib_proof(),None)')]:
       omitted=recipe.replace(before,after)
       assert omitted!=recipe
       # Rebind the selected image so this fails on its missing consumer wiring.
