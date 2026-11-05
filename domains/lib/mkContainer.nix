@@ -191,7 +191,7 @@ rec {
         bootstrapSha256 = builtins.hashString "sha256" bootstrap;
       };
       program = ''
-        import hashlib, json, sys, types
+        import hashlib, importlib.util, json, sys, types
         from pathlib import Path
         import http.client
         if not __debug__:
@@ -255,7 +255,9 @@ rec {
                 content = candidate.read_bytes()
                 assert hashlib.sha256(content).hexdigest() == entry[digest_key], 'FROZEN_STDLIB_INPUT_HASH'
                 if folder == 'original':
-                    code = loader.get_code(name)
+                    module_loader = importlib.util.find_spec(name).loader
+                    assert type(module_loader).__name__ == 'FrozenByteCodeLoader', 'FROZEN_STDLIB_LOADER_DRIFT'
+                    code = module_loader.get_code(name)
                     assert shape(code) == shape(compile(content, code.co_filename, 'exec', dont_inherit=True, optimize=2)), 'FROZEN_STDLIB_SOURCE_CODE_DRIFT'
                 else:
                     compile(content, '<frozen/' + entry['file'] + '>', 'exec', dont_inherit=True, optimize=2)
