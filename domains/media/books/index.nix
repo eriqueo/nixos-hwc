@@ -317,7 +317,8 @@ let
       RUN dpkg --unpack ${debPaths} && dpkg --configure --pending && test -z "$(dpkg --audit)" && mkdir /tmp/hwc-books-empty-sources && touch /tmp/hwc-books-empty.list && apt-get -o Dir::Etc::sourcelist=/tmp/hwc-books-empty.list -o Dir::Etc::sourceparts=/tmp/hwc-books-empty-sources check
       RUN rm -rf /app/lazylibrarian && mv /tmp/hwc-books-app /app/lazylibrarian && ln -s ${assets.rootPath} /app/calibre
       RUN python3 -B /tmp/hwc-books/guard.py ${spec.commands.apply} /tmp/hwc-books/manifest.json /app/lazylibrarian
-    '' + framing.recipe + config.system.build.calibreRuntimeSystemPythonRecipe.text + ''
+    '' + framing.recipe + config.system.build.calibreRuntimeSystemPythonRecipe.text
+       + config.system.build.calibreRuntimeSqliteRecipe.text + ''
       RUN buildTmp=$(mktemp -d /tmp/hwc-books-calibre.XXXXXX) && trap 'rm -rf "$buildTmp"' EXIT && export CALIBRE_CONFIG_DIRECTORY="$buildTmp/config" XDG_CACHE_HOME="$buildTmp/cache" && ${assets.rootPath}/calibre_postinstall && calibre-debug --version && calibredb --version && ebook-convert --version && ebook-meta --version
       RUN rm -rf /tmp/hwc-books /tmp/hwc-books-empty.list /tmp/hwc-books-empty-sources
     '';
@@ -325,6 +326,7 @@ let
   runtimeContext = pkgs.runCommand "books-runtime-context" {} ''
     mkdir -p "$out/inputs/native"
     cp -r ${config.system.build.calibreRuntimeSystemPythonContext} "$out/system-python"
+    cp -r ${config.system.build.calibreRuntimeSqliteContext} "$out/sqlite"
     cp ${runtime.dockerfile} "$out/Dockerfile"
     cp ${manifestSource} "$out/inputs/manifest.json"
     cp ${guardSource} "$out/inputs/guard.py"

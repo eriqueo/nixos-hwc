@@ -27,7 +27,7 @@ let
       CALIBRE_CONFIG_DIRECTORY = "/tmp/hwc-frozen-config";
       XDG_CACHE_HOME = "/tmp/hwc-frozen-cache";
     };
-    consumerVerification = stdlibRuntimeProof + sslRuntimeProof + socketFrozenRuntimeProof + ''
+    consumerVerification = sqliteRuntimeProof + stdlibRuntimeProof + sslRuntimeProof + socketFrozenRuntimeProof + ''
       native_ssl = native_ssl_proof()
       native_socket = native_socket_proof()
       libraries = stdlib_proof()
@@ -35,7 +35,7 @@ let
       from calibre.constants import is_running_from_develop
       from calibre.utils.ipc.simple_worker import fork_job
       assert not is_running_from_develop, 'CALIBRE_GUI_DEVELOP_MODE'
-      worker = ${builtins.toJSON (stdlibRuntimeProof + sslRuntimeProof + socketFrozenRuntimeProof + ''
+      worker = ${builtins.toJSON (sqliteRuntimeProof + stdlibRuntimeProof + sslRuntimeProof + socketFrozenRuntimeProof + ''
         def prove():
             import http.client
             from calibre.constants import is_running_from_develop
@@ -1239,6 +1239,168 @@ let
   distroFullRecipe = distroRecipe + socketRecipe "system" + "RUN rm -rf ${socketStaging}\n";
   # Upstream7.1 maintenance keeps RELEASE7.1.5; bind its exact revision
   # and complete post-patch source separately from the library version.
+  # Temporary: vendor SQLite predates the qualified security fixes. Retire
+  # when unmodified vendor libraries pass the same depth/API/features/data tests.
+  sqliteFacts = builtins.fromJSON ''{"schemaVersion":1,"version":"3.54.1","sourceId":"2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76","source":"https://sqlite.org/2026/sqlite-src-3540100.zip","sourceSha256":"387e7f6cad4797b17848c07d453dc6606917bb356a6cfe5a3abafd38c240c71b","generatedSha256":"75a4760a7b9727a4c4c877aec92eacf39e52a8f2921ce00bd33be6d3a8e8e254","variants":{"system":{"path":"/usr/lib/x86_64-linux-gnu/libsqlite3.so.0.8.6","mode":420,"originalSha256":"4633a4be13fdf05cb0f859e04fb06077a1fe30a90e405721a23873bd1f3d88a8","originalBytes":1522152,"soname":"libsqlite3.so.0","options":["ALLOW_ROWID_IN_VIEW","ATOMIC_INTRINSICS=1","DEFAULT_AUTOVACUUM","DEFAULT_CACHE_SIZE=-2000","DEFAULT_FILE_FORMAT=4","DEFAULT_JOURNAL_SIZE_LIMIT=-1","DEFAULT_MMAP_SIZE=0","DEFAULT_PAGE_SIZE=4096","DEFAULT_PCACHE_INITSZ=20","DEFAULT_RECURSIVE_TRIGGERS","DEFAULT_SECTOR_SIZE=4096","DEFAULT_SYNCHRONOUS=2","DEFAULT_WAL_AUTOCHECKPOINT=1000","DEFAULT_WAL_SYNCHRONOUS=2","DEFAULT_WORKER_THREADS=0","DIRECT_OVERFLOW_READ","ENABLE_COLUMN_METADATA","ENABLE_DBPAGE_VTAB","ENABLE_DBSTAT_VTAB","ENABLE_FTS3","ENABLE_FTS3_PARENTHESIS","ENABLE_FTS4","ENABLE_FTS5","ENABLE_LOAD_EXTENSION","ENABLE_MATH_FUNCTIONS","ENABLE_PREUPDATE_HOOK","ENABLE_RTREE","ENABLE_SESSION","ENABLE_STMTVTAB","ENABLE_UNLOCK_NOTIFY","ENABLE_UPDATE_DELETE_LIMIT","HAVE_ISNAN","LIKE_DOESNT_MATCH_BLOBS","MALLOC_SOFT_LIMIT=1024","MAX_ATTACHED=10","MAX_COLUMN=2000","MAX_COMPOUND_SELECT=500","MAX_DEFAULT_PAGE_SIZE=32768","MAX_EXPR_DEPTH=1000","MAX_FUNCTION_ARG=127","MAX_LENGTH=1000000000","MAX_LIKE_PATTERN_LENGTH=50000","MAX_MMAP_SIZE=0x7fff0000","MAX_PAGE_COUNT=0xfffffffe","MAX_PAGE_SIZE=65536","MAX_SCHEMA_RETRY=25","MAX_SQL_LENGTH=1000000000","MAX_TRIGGER_DEPTH=1000","MAX_VARIABLE_NUMBER=250000","MAX_VDBE_OP=250000000","MAX_WORKER_THREADS=8","MUTEX_PTHREADS","SECURE_DELETE","SOUNDEX","SYSTEM_MALLOC","TEMP_STORE=1","THREADSAFE=1","USE_URI"],"publicSymbols":["sqlite3_aggregate_context","sqlite3_aggregate_count","sqlite3_auto_extension","sqlite3_autovacuum_pages","sqlite3_backup_finish","sqlite3_backup_init","sqlite3_backup_pagecount","sqlite3_backup_remaining","sqlite3_backup_step","sqlite3_bind_blob","sqlite3_bind_blob64","sqlite3_bind_double","sqlite3_bind_int","sqlite3_bind_int64","sqlite3_bind_null","sqlite3_bind_parameter_count","sqlite3_bind_parameter_index","sqlite3_bind_parameter_name","sqlite3_bind_pointer","sqlite3_bind_text","sqlite3_bind_text16","sqlite3_bind_text64","sqlite3_bind_value","sqlite3_bind_zeroblob","sqlite3_bind_zeroblob64","sqlite3_blob_bytes","sqlite3_blob_close","sqlite3_blob_open","sqlite3_blob_read","sqlite3_blob_reopen","sqlite3_blob_write","sqlite3_busy_handler","sqlite3_busy_timeout","sqlite3_cancel_auto_extension","sqlite3_changes","sqlite3_changes64","sqlite3_clear_bindings","sqlite3_close","sqlite3_close_v2","sqlite3_collation_needed","sqlite3_collation_needed16","sqlite3_column_blob","sqlite3_column_bytes","sqlite3_column_bytes16","sqlite3_column_count","sqlite3_column_database_name","sqlite3_column_database_name16","sqlite3_column_decltype","sqlite3_column_decltype16","sqlite3_column_double","sqlite3_column_int","sqlite3_column_int64","sqlite3_column_name","sqlite3_column_name16","sqlite3_column_origin_name","sqlite3_column_origin_name16","sqlite3_column_table_name","sqlite3_column_table_name16","sqlite3_column_text","sqlite3_column_text16","sqlite3_column_type","sqlite3_column_value","sqlite3_commit_hook","sqlite3_compileoption_get","sqlite3_compileoption_used","sqlite3_complete","sqlite3_complete16","sqlite3_config","sqlite3_context_db_handle","sqlite3_create_collation","sqlite3_create_collation16","sqlite3_create_collation_v2","sqlite3_create_filename","sqlite3_create_function","sqlite3_create_function16","sqlite3_create_function_v2","sqlite3_create_module","sqlite3_create_module_v2","sqlite3_create_window_function","sqlite3_data_count","sqlite3_data_directory","sqlite3_database_file_object","sqlite3_db_cacheflush","sqlite3_db_config","sqlite3_db_filename","sqlite3_db_handle","sqlite3_db_mutex","sqlite3_db_name","sqlite3_db_readonly","sqlite3_db_release_memory","sqlite3_db_status","sqlite3_declare_vtab","sqlite3_deserialize","sqlite3_drop_modules","sqlite3_enable_load_extension","sqlite3_enable_shared_cache","sqlite3_errcode","sqlite3_errmsg","sqlite3_errmsg16","sqlite3_error_offset","sqlite3_errstr","sqlite3_exec","sqlite3_expanded_sql","sqlite3_expired","sqlite3_extended_errcode","sqlite3_extended_result_codes","sqlite3_file_control","sqlite3_filename_database","sqlite3_filename_journal","sqlite3_filename_wal","sqlite3_finalize","sqlite3_free","sqlite3_free_filename","sqlite3_free_table","sqlite3_get_autocommit","sqlite3_get_auxdata","sqlite3_get_clientdata","sqlite3_get_table","sqlite3_global_recover","sqlite3_hard_heap_limit64","sqlite3_initialize","sqlite3_interrupt","sqlite3_is_interrupted","sqlite3_keyword_check","sqlite3_keyword_count","sqlite3_keyword_name","sqlite3_last_insert_rowid","sqlite3_libversion","sqlite3_libversion_number","sqlite3_limit","sqlite3_load_extension","sqlite3_log","sqlite3_malloc","sqlite3_malloc64","sqlite3_memory_alarm","sqlite3_memory_highwater","sqlite3_memory_used","sqlite3_mprintf","sqlite3_msize","sqlite3_mutex_alloc","sqlite3_mutex_enter","sqlite3_mutex_free","sqlite3_mutex_leave","sqlite3_mutex_try","sqlite3_next_stmt","sqlite3_open","sqlite3_open16","sqlite3_open_v2","sqlite3_os_end","sqlite3_os_init","sqlite3_overload_function","sqlite3_prepare","sqlite3_prepare16","sqlite3_prepare16_v2","sqlite3_prepare16_v3","sqlite3_prepare_v2","sqlite3_prepare_v3","sqlite3_preupdate_blobwrite","sqlite3_preupdate_count","sqlite3_preupdate_depth","sqlite3_preupdate_hook","sqlite3_preupdate_new","sqlite3_preupdate_old","sqlite3_profile","sqlite3_progress_handler","sqlite3_randomness","sqlite3_realloc","sqlite3_realloc64","sqlite3_release_memory","sqlite3_reset","sqlite3_reset_auto_extension","sqlite3_result_blob","sqlite3_result_blob64","sqlite3_result_double","sqlite3_result_error","sqlite3_result_error16","sqlite3_result_error_code","sqlite3_result_error_nomem","sqlite3_result_error_toobig","sqlite3_result_int","sqlite3_result_int64","sqlite3_result_null","sqlite3_result_pointer","sqlite3_result_subtype","sqlite3_result_text","sqlite3_result_text16","sqlite3_result_text16be","sqlite3_result_text16le","sqlite3_result_text64","sqlite3_result_value","sqlite3_result_zeroblob","sqlite3_result_zeroblob64","sqlite3_rollback_hook","sqlite3_rtree_geometry_callback","sqlite3_rtree_query_callback","sqlite3_serialize","sqlite3_set_authorizer","sqlite3_set_auxdata","sqlite3_set_clientdata","sqlite3_set_last_insert_rowid","sqlite3_shutdown","sqlite3_sleep","sqlite3_snprintf","sqlite3_soft_heap_limit","sqlite3_soft_heap_limit64","sqlite3_sourceid","sqlite3_sql","sqlite3_status","sqlite3_status64","sqlite3_step","sqlite3_stmt_busy","sqlite3_stmt_explain","sqlite3_stmt_isexplain","sqlite3_stmt_readonly","sqlite3_stmt_status","sqlite3_str_append","sqlite3_str_appendall","sqlite3_str_appendchar","sqlite3_str_appendf","sqlite3_str_errcode","sqlite3_str_finish","sqlite3_str_length","sqlite3_str_new","sqlite3_str_reset","sqlite3_str_value","sqlite3_str_vappendf","sqlite3_strglob","sqlite3_stricmp","sqlite3_strlike","sqlite3_strnicmp","sqlite3_system_errno","sqlite3_table_column_metadata","sqlite3_temp_directory","sqlite3_test_control","sqlite3_thread_cleanup","sqlite3_threadsafe","sqlite3_total_changes","sqlite3_total_changes64","sqlite3_trace","sqlite3_trace_v2","sqlite3_transfer_bindings","sqlite3_txn_state","sqlite3_unlock_notify","sqlite3_update_hook","sqlite3_uri_boolean","sqlite3_uri_int64","sqlite3_uri_key","sqlite3_uri_parameter","sqlite3_user_data","sqlite3_value_blob","sqlite3_value_bytes","sqlite3_value_bytes16","sqlite3_value_double","sqlite3_value_dup","sqlite3_value_encoding","sqlite3_value_free","sqlite3_value_frombind","sqlite3_value_int","sqlite3_value_int64","sqlite3_value_nochange","sqlite3_value_numeric_type","sqlite3_value_pointer","sqlite3_value_subtype","sqlite3_value_text","sqlite3_value_text16","sqlite3_value_text16be","sqlite3_value_text16le","sqlite3_value_type","sqlite3_version","sqlite3_vfs_find","sqlite3_vfs_register","sqlite3_vfs_unregister","sqlite3_vmprintf","sqlite3_vsnprintf","sqlite3_vtab_collation","sqlite3_vtab_config","sqlite3_vtab_distinct","sqlite3_vtab_in","sqlite3_vtab_in_first","sqlite3_vtab_in_next","sqlite3_vtab_nochange","sqlite3_vtab_on_conflict","sqlite3_vtab_rhs_value","sqlite3_wal_autocheckpoint","sqlite3_wal_checkpoint","sqlite3_wal_checkpoint_v2","sqlite3_wal_hook"]},"frozen":{"path":"/opt/calibre/lib/libsqlite3.so","mode":493,"originalSha256":"3f19a7b81f8c4e7503128f95e620581bd2ade0eea7cb148d5615a634cf1a9d88","originalBytes":1602096,"soname":"","options":["ATOMIC_INTRINSICS=1","DEFAULT_AUTOVACUUM","DEFAULT_CACHE_SIZE=-2000","DEFAULT_FILE_FORMAT=4","DEFAULT_JOURNAL_SIZE_LIMIT=-1","DEFAULT_MMAP_SIZE=0","DEFAULT_PAGE_SIZE=4096","DEFAULT_PCACHE_INITSZ=20","DEFAULT_RECURSIVE_TRIGGERS","DEFAULT_SECTOR_SIZE=4096","DEFAULT_SYNCHRONOUS=2","DEFAULT_WAL_AUTOCHECKPOINT=1000","DEFAULT_WAL_SYNCHRONOUS=2","DEFAULT_WORKER_THREADS=0","DIRECT_OVERFLOW_READ","ENABLE_CARRAY","ENABLE_COLUMN_METADATA","ENABLE_DBSTAT_VTAB","ENABLE_FTS3","ENABLE_FTS3_PARENTHESIS","ENABLE_FTS4","ENABLE_FTS5","ENABLE_GEOPOLY","ENABLE_MATH_FUNCTIONS","ENABLE_OFFSET_SQL_FUNC","ENABLE_PERCENTILE","ENABLE_PREUPDATE_HOOK","ENABLE_RTREE","ENABLE_SESSION","ENABLE_STAT4","ENABLE_UPDATE_DELETE_LIMIT","MALLOC_SOFT_LIMIT=1024","MAX_ATTACHED=10","MAX_COLUMN=2000","MAX_COMPOUND_SELECT=500","MAX_DEFAULT_PAGE_SIZE=8192","MAX_EXPR_DEPTH=1000","MAX_FUNCTION_ARG=1000","MAX_LENGTH=1000000000","MAX_LIKE_PATTERN_LENGTH=50000","MAX_MMAP_SIZE=0x7fff0000","MAX_PAGE_COUNT=0xfffffffe","MAX_PAGE_SIZE=65536","MAX_SQL_LENGTH=1000000000","MAX_TRIGGER_DEPTH=1000","MAX_VARIABLE_NUMBER=32766","MAX_VDBE_OP=250000000","MAX_WORKER_THREADS=8","MUTEX_PTHREADS","SYSTEM_MALLOC","TEMP_STORE=1","THREADSAFE=1"],"publicSymbols":["sqlite3_aggregate_context","sqlite3_aggregate_count","sqlite3_auto_extension","sqlite3_autovacuum_pages","sqlite3_backup_finish","sqlite3_backup_init","sqlite3_backup_pagecount","sqlite3_backup_remaining","sqlite3_backup_step","sqlite3_bind_blob","sqlite3_bind_blob64","sqlite3_bind_double","sqlite3_bind_int","sqlite3_bind_int64","sqlite3_bind_null","sqlite3_bind_parameter_count","sqlite3_bind_parameter_index","sqlite3_bind_parameter_name","sqlite3_bind_pointer","sqlite3_bind_text","sqlite3_bind_text16","sqlite3_bind_text64","sqlite3_bind_value","sqlite3_bind_zeroblob","sqlite3_bind_zeroblob64","sqlite3_blob_bytes","sqlite3_blob_close","sqlite3_blob_open","sqlite3_blob_read","sqlite3_blob_reopen","sqlite3_blob_write","sqlite3_busy_handler","sqlite3_busy_timeout","sqlite3_cancel_auto_extension","sqlite3_carray_bind","sqlite3_carray_bind_v2","sqlite3_changes","sqlite3_changes64","sqlite3_clear_bindings","sqlite3_close","sqlite3_close_v2","sqlite3_collation_needed","sqlite3_collation_needed16","sqlite3_column_blob","sqlite3_column_bytes","sqlite3_column_bytes16","sqlite3_column_count","sqlite3_column_database_name","sqlite3_column_database_name16","sqlite3_column_decltype","sqlite3_column_decltype16","sqlite3_column_double","sqlite3_column_int","sqlite3_column_int64","sqlite3_column_name","sqlite3_column_name16","sqlite3_column_origin_name","sqlite3_column_origin_name16","sqlite3_column_table_name","sqlite3_column_table_name16","sqlite3_column_text","sqlite3_column_text16","sqlite3_column_type","sqlite3_column_value","sqlite3_commit_hook","sqlite3_compileoption_get","sqlite3_compileoption_used","sqlite3_complete","sqlite3_complete16","sqlite3_config","sqlite3_context_db_handle","sqlite3_create_collation","sqlite3_create_collation16","sqlite3_create_collation_v2","sqlite3_create_filename","sqlite3_create_function","sqlite3_create_function16","sqlite3_create_function_v2","sqlite3_create_module","sqlite3_create_module_v2","sqlite3_create_window_function","sqlite3_data_count","sqlite3_data_directory","sqlite3_database_file_object","sqlite3_db_cacheflush","sqlite3_db_config","sqlite3_db_filename","sqlite3_db_handle","sqlite3_db_mutex","sqlite3_db_name","sqlite3_db_readonly","sqlite3_db_release_memory","sqlite3_db_status","sqlite3_db_status64","sqlite3_declare_vtab","sqlite3_deserialize","sqlite3_drop_modules","sqlite3_enable_load_extension","sqlite3_enable_shared_cache","sqlite3_errcode","sqlite3_errmsg","sqlite3_errmsg16","sqlite3_error_offset","sqlite3_errstr","sqlite3_exec","sqlite3_expanded_sql","sqlite3_expired","sqlite3_extended_errcode","sqlite3_extended_result_codes","sqlite3_file_control","sqlite3_filename_database","sqlite3_filename_journal","sqlite3_filename_wal","sqlite3_finalize","sqlite3_free","sqlite3_free_filename","sqlite3_free_table","sqlite3_get_autocommit","sqlite3_get_auxdata","sqlite3_get_clientdata","sqlite3_get_table","sqlite3_global_recover","sqlite3_hard_heap_limit64","sqlite3_initialize","sqlite3_interrupt","sqlite3_is_interrupted","sqlite3_keyword_check","sqlite3_keyword_count","sqlite3_keyword_name","sqlite3_last_insert_rowid","sqlite3_libversion","sqlite3_libversion_number","sqlite3_limit","sqlite3_load_extension","sqlite3_log","sqlite3_malloc","sqlite3_malloc64","sqlite3_memory_alarm","sqlite3_memory_highwater","sqlite3_memory_used","sqlite3_mprintf","sqlite3_msize","sqlite3_mutex_alloc","sqlite3_mutex_enter","sqlite3_mutex_free","sqlite3_mutex_leave","sqlite3_mutex_try","sqlite3_next_stmt","sqlite3_open","sqlite3_open16","sqlite3_open_v2","sqlite3_os_end","sqlite3_os_init","sqlite3_overload_function","sqlite3_prepare","sqlite3_prepare16","sqlite3_prepare16_v2","sqlite3_prepare16_v3","sqlite3_prepare_v2","sqlite3_prepare_v3","sqlite3_preupdate_blobwrite","sqlite3_preupdate_count","sqlite3_preupdate_depth","sqlite3_preupdate_hook","sqlite3_preupdate_new","sqlite3_preupdate_old","sqlite3_profile","sqlite3_progress_handler","sqlite3_randomness","sqlite3_realloc","sqlite3_realloc64","sqlite3_release_memory","sqlite3_reset","sqlite3_reset_auto_extension","sqlite3_result_blob","sqlite3_result_blob64","sqlite3_result_double","sqlite3_result_error","sqlite3_result_error16","sqlite3_result_error_code","sqlite3_result_error_nomem","sqlite3_result_error_toobig","sqlite3_result_int","sqlite3_result_int64","sqlite3_result_null","sqlite3_result_pointer","sqlite3_result_subtype","sqlite3_result_text","sqlite3_result_text16","sqlite3_result_text16be","sqlite3_result_text16le","sqlite3_result_text64","sqlite3_result_value","sqlite3_result_zeroblob","sqlite3_result_zeroblob64","sqlite3_rollback_hook","sqlite3_rtree_geometry_callback","sqlite3_rtree_query_callback","sqlite3_serialize","sqlite3_set_authorizer","sqlite3_set_auxdata","sqlite3_set_clientdata","sqlite3_set_errmsg","sqlite3_set_last_insert_rowid","sqlite3_setlk_timeout","sqlite3_shutdown","sqlite3_sleep","sqlite3_snprintf","sqlite3_soft_heap_limit","sqlite3_soft_heap_limit64","sqlite3_sourceid","sqlite3_sql","sqlite3_status","sqlite3_status64","sqlite3_step","sqlite3_stmt_busy","sqlite3_stmt_explain","sqlite3_stmt_isexplain","sqlite3_stmt_readonly","sqlite3_stmt_status","sqlite3_str_append","sqlite3_str_appendall","sqlite3_str_appendchar","sqlite3_str_appendf","sqlite3_str_errcode","sqlite3_str_finish","sqlite3_str_free","sqlite3_str_length","sqlite3_str_new","sqlite3_str_reset","sqlite3_str_truncate","sqlite3_str_value","sqlite3_str_vappendf","sqlite3_strglob","sqlite3_stricmp","sqlite3_strlike","sqlite3_strnicmp","sqlite3_system_errno","sqlite3_table_column_metadata","sqlite3_temp_directory","sqlite3_test_control","sqlite3_thread_cleanup","sqlite3_threadsafe","sqlite3_total_changes","sqlite3_total_changes64","sqlite3_trace","sqlite3_trace_v2","sqlite3_transfer_bindings","sqlite3_txn_state","sqlite3_update_hook","sqlite3_uri_boolean","sqlite3_uri_int64","sqlite3_uri_key","sqlite3_uri_parameter","sqlite3_user_data","sqlite3_value_blob","sqlite3_value_bytes","sqlite3_value_bytes16","sqlite3_value_double","sqlite3_value_dup","sqlite3_value_encoding","sqlite3_value_free","sqlite3_value_frombind","sqlite3_value_int","sqlite3_value_int64","sqlite3_value_nochange","sqlite3_value_numeric_type","sqlite3_value_pointer","sqlite3_value_subtype","sqlite3_value_text","sqlite3_value_text16","sqlite3_value_text16be","sqlite3_value_text16le","sqlite3_value_type","sqlite3_version","sqlite3_vfs_find","sqlite3_vfs_register","sqlite3_vfs_unregister","sqlite3_vmprintf","sqlite3_vsnprintf","sqlite3_vtab_collation","sqlite3_vtab_config","sqlite3_vtab_distinct","sqlite3_vtab_in","sqlite3_vtab_in_first","sqlite3_vtab_in_next","sqlite3_vtab_nochange","sqlite3_vtab_on_conflict","sqlite3_vtab_rhs_value","sqlite3_wal_autocheckpoint","sqlite3_wal_checkpoint","sqlite3_wal_checkpoint_v2","sqlite3_wal_hook"]}}}'';
+  sqliteSpec = pkgs.writeText "calibre-sqlite-spec.json" (builtins.toJSON sqliteFacts);
+  sqliteSource = pkgs.fetchurl { url = sqliteFacts.source; sha256 = sqliteFacts.sourceSha256; };
+  sqliteGenerated = pkgs.runCommand "calibre-sqlite-update-limit-source" {
+    nativeBuildInputs = [ pkgs.unzip pkgs.tcl pkgs.gnumake pkgs.stdenv.cc ];
+  } ''
+    unzip -q ${sqliteSource} -d source
+    cd source/sqlite-src-3540100
+    mkdir generated
+    cd generated
+    ../configure --disable-readline --disable-tcl --with-tclsh=${pkgs.tcl}/bin/tclsh --enable-update-limit
+    make -j1 sqlite3.c
+    echo '${sqliteFacts.generatedSha256}  sqlite3.c' | sha256sum -c -
+    cp sqlite3.c "$out"
+  '';
+  sqlitePackages = lib.mapAttrs (variant: descriptor: pkgs.stdenv.mkDerivation {
+    pname = "calibre-sqlite-${variant}";
+    version = sqliteFacts.version;
+    dontUnpack = true;
+    dontConfigure = true;
+    nativeBuildInputs = [ pkgs.python3 pkgs.patchelf pkgs.binutils ];
+    NIX_DONT_SET_RPATH_x86_64_unknown_linux_gnu = "1";
+    buildPhase = ''
+      $CC -shared -fPIC -O2 -DNDEBUG -fno-strict-aliasing \
+        ${lib.escapeShellArgs (map (value: "-DSQLITE_" + value)
+          (builtins.filter (value: value != "MUTEX_PTHREADS" && value != "ATOMIC_INTRINSICS=1") descriptor.options))} \
+        -x c ${sqliteGenerated} -x none -Wl,--as-needed -pthread -ldl -lm \
+        ${lib.optionalString (descriptor.soname != "") "-Wl,-soname,${descriptor.soname}"} -o libsqlite3.so
+    '';
+    installPhase = ''
+      mkdir -p "$out/lib"
+      install -m ${if descriptor.mode == 493 then "755" else "644"} libsqlite3.so "$out/lib/libsqlite3.so"
+    '';
+    postFixup = ''
+      python3 -I -B - ${sqliteSpec} ${variant} "$out" <<'PYSQL'
+      import ctypes, hashlib, json, pathlib, re, subprocess, sys
+      spec_file, variant, output = sys.argv[1:]
+      spec = json.loads(pathlib.Path(spec_file).read_text())
+      expected = spec['variants'][variant]
+      path = pathlib.Path(output) / 'lib/libsqlite3.so'
+      def elf(flag):
+          return subprocess.check_output(['patchelf', flag, str(path)], text=True).strip()
+      assert sorted(elf('--print-needed').splitlines()) == ['libc.so.6', 'libm.so.6'], 'SQLITE_DEPENDENCIES'
+      assert not elf('--print-rpath') and elf('--print-soname') == expected['soname'], 'SQLITE_ELF'
+      raw = path.read_bytes()
+      assert len(raw) <= 4194304 and b'/nix/store/' not in raw, 'SQLITE_PORTABLE_BOUND'
+      library = ctypes.CDLL(str(path))
+      library.sqlite3_libversion.restype = library.sqlite3_sourceid.restype = ctypes.c_char_p
+      assert library.sqlite3_libversion().decode() == spec['version'], 'SQLITE_VERSION'
+      assert library.sqlite3_sourceid().decode() == spec['sourceId'], 'SQLITE_SOURCE_ID'
+      library.sqlite3_compileoption_get.restype = ctypes.c_char_p
+      options = []
+      for i in range(128):
+          value = library.sqlite3_compileoption_get(i)
+          if value is None:
+              break
+          options.append(value.decode())
+      else:
+          raise AssertionError('SQLITE_OPTIONS_BOUND')
+      assert set(expected['options']) <= set(options), 'SQLITE_OPTIONS_LOST'
+      symbols = subprocess.check_output(['readelf', '--dyn-syms', '-W', str(path)], text=True)
+      exported = {line.split()[-1].split('@')[0] for line in symbols.splitlines() if ' GLOBAL ' in line and ' UND ' not in line}
+      assert set(expected['publicSymbols']) <= exported, 'SQLITE_PUBLIC_API_LOST'
+      manifest = dict(schemaVersion=1, variant=variant, spec=spec, file=dict(bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest()))
+      (pathlib.Path(output) / 'manifest.json').write_text(json.dumps(manifest, sort_keys=True, separators=(',', ':')))
+      PYSQL
+    '';
+  }) sqliteFacts.variants;
+  sqliteGuard = pkgs.writeText "calibre-sqlite-guard.py" ''
+    import hashlib, json, os, pathlib, stat, sys
+    def require(value, code):
+        if not value:
+            raise RuntimeError('SQLITE_' + code)
+    def read(path, maximum):
+        info = path.lstat()
+        require(stat.S_ISREG(info.st_mode) and 0 < info.st_size <= maximum, 'FILE_TYPE_BOUND')
+        return path.read_bytes()
+    def sha(raw):
+        return hashlib.sha256(raw).hexdigest()
+    def prepare(directory, root):
+        spec = json.loads(read(directory / 'spec.json', 65536))
+        require(spec['schemaVersion'] == 1 and set(spec['variants']) == {'system', 'frozen'}, 'SCHEMA')
+        prepared = []
+        for variant, expected in spec['variants'].items():
+            payload = read(directory / (variant + '.so'), 4194304)
+            manifest = json.loads(read(directory / (variant + '.json'), 65536))
+            require(manifest['schemaVersion'] == 1 and manifest['variant'] == variant and manifest['spec'] == spec, 'MANIFEST')
+            require(manifest['file'] == dict(bytes=len(payload), sha256=sha(payload)), 'PAYLOAD')
+            relative = pathlib.Path(expected['path']).relative_to('/')
+            require('..' not in relative.parts, 'PATH')
+            target = root / relative
+            require(all(not p.is_symlink() for p in target.parents if p.is_relative_to(root)), 'PARENT')
+            current = read(target, 4194304)
+            require(stat.S_IMODE(target.stat().st_mode) == expected['mode'], 'MODE')
+            # Books copies the already-qualified frozen donor library. Accept
+            # only the exact old file or this exact immutable payload.
+            require((len(current) == expected['originalBytes'] and sha(current) == expected['originalSha256']) or current == payload, 'PREIMAGE')
+            prepared.append((target, payload, expected['mode']))
+        return prepared
+    def install(directory, root):
+        prepared = prepare(directory, root)
+        # Non-retriable image-layer effect. Validate the complete group first;
+        # discard a failed layer instead of replaying it against serving files.
+        for target, payload, mode in prepared:
+            before = target.stat()
+            target.write_bytes(payload)
+            require((target.stat().st_uid, target.stat().st_gid, stat.S_IMODE(target.stat().st_mode)) == (before.st_uid, before.st_gid, mode), 'OWNER_MODE')
+        verify(directory, root)
+    def verify(directory, root):
+        for target, payload, _ in prepare(directory, root):
+            require(read(target, 4194304) == payload, 'INSTALLED')
+    if __name__ == '__main__':
+        mode, directory, root = sys.argv[1:]
+        require(not sys.flags.optimize, 'OPTIMIZED_INSTALLER')
+        require(mode in {'install', 'verify'}, 'COMMAND')
+        (install if mode == 'install' else verify)(pathlib.Path(directory), pathlib.Path(root))
+  '';
+  sqliteContext = pkgs.runCommand "calibre-sqlite-context" {} ''
+    mkdir -p "$out"
+    cp ${sqliteSpec} "$out/spec.json"
+    cp ${sqliteGuard} "$out/guard.py"
+    ${lib.concatMapStringsSep "\n" (variant: ''
+      cp ${sqlitePackages.${variant}}/lib/libsqlite3.so "$out/${variant}.so"
+      cp ${sqlitePackages.${variant}}/manifest.json "$out/${variant}.json"
+    '') (builtins.attrNames sqliteFacts.variants)}
+  '';
+  sqliteRuntimeProof = ''
+    import sqlite3
+    assert sqlite3.sqlite_version == ${builtins.toJSON sqliteFacts.version}, 'SQLITE_RUNTIME_VERSION'
+    sqlite_factories = [(sqlite3.connect, sqlite3.Error, sqlite3.SQLITE_LIMIT_EXPR_DEPTH)]
+    import importlib.util
+    if importlib.util.find_spec('apsw') is not None:
+        import apsw
+        from calibre.db.backend import Connection
+        sqlite_factories.extend([(apsw.Connection, apsw.Error, apsw.SQLITE_LIMIT_EXPR_DEPTH),
+                                 (Connection, apsw.Error, apsw.SQLITE_LIMIT_EXPR_DEPTH)])
+    for factory, error_type, limit in sqlite_factories:
+        connection = factory(':memory:')
+        try:
+            setter = connection.setlimit if hasattr(connection, 'setlimit') else connection.limit
+            setter(limit, 10)
+            assert list(connection.execute('SELECT 1 COLLATE BINARY')) == [(1,)]
+            try:
+                list(connection.execute('SELECT 1' + ' COLLATE BINARY' * 20))
+            except error_type:
+                pass
+            else:
+                raise AssertionError('SQLITE_DEPTH_LIMIT')
+            assert list(connection.execute('PRAGMA integrity_check')) == [('ok',)]
+        finally:
+            connection.close()
+  '';
+  sqliteRecipe = ''
+    # SQLite inputs ${builtins.hashString "sha256" (sqliteSpec.text + sqliteGuard.text + toString sqliteContext)}
+    COPY sqlite /tmp/hwc-sqlite
+    RUN /lsiopy/bin/python3 -I -B /tmp/hwc-sqlite/guard.py install /tmp/hwc-sqlite /
+    RUN /lsiopy/bin/python3 -I -B /tmp/hwc-sqlite/guard.py verify /tmp/hwc-sqlite /
+    RUN /lsiopy/bin/python3 -I -B -c ${lib.escapeShellArg ("exec(compile(" + builtins.toJSON sqliteRuntimeProof + ", '<sqlite-runtime>', 'exec', optimize=0), {'__name__':'__main__'})")}
+    RUN rm -rf /tmp/hwc-sqlite
+  '';
   nativeSourceFacts = builtins.fromJSON ''
 {
   "schemaVersion": 1,
@@ -1803,7 +1965,7 @@ let
       + nativeCommand nativeDescriptor.commands.apply
       + nativeCommand nativeDescriptor.commands.installed
       + "RUN python3 -I -B ${sslStaging}/guard.py ${sslStaging}/spec.json ${sslStaging} ${sslRuntimeDescriptor.rootPath}\n"
-      + socketRecipe "frozen" + distroFullRecipe + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache /tmp/hwc-calibre-stdlib ${nativeStaging} ${sslStaging}\n";
+      + socketRecipe "frozen" + distroFullRecipe + sqliteRecipe + httpBackport.recipe + "RUN rm -rf /tmp/hwc-calibre-http /tmp/hwc-frozen-config /tmp/hwc-frozen-cache /tmp/hwc-calibre-stdlib ${nativeStaging} ${sslStaging}\n";
   };
   runtimeManifest = pkgs.writeText "calibre-http-framing.json" (builtins.toJSON httpBackport.manifest);
   # Pure asset API: Books can reuse this qualified distribution without enabling
@@ -1849,6 +2011,7 @@ let
     cp -r ${stdlibPackage} "$out/stdlib"
     cp -r ${distroContext} "$out/system-python"
     cp -r ${socketContext}/frozen "$out/native-socket"
+    cp -r ${sqliteContext} "$out/sqlite"
     mkdir -p "$out/native"
     cp ${nativeSpec} "$out/native/spec.json"
     cp ${nativeGuard} "$out/native/guard.py"
@@ -1888,6 +2051,11 @@ in
   config = lib.mkMerge [
     { system.build = {
       calibreRuntimeAssets = runtimeAssets;
+      calibreRuntimeSqliteContext = sqliteContext;
+      calibreRuntimeSqliteSpec = sqliteSpec;
+      calibreRuntimeSqliteGuard = sqliteGuard;
+      calibreRuntimeSqliteRecipe = pkgs.writeText "calibre-sqlite-recipe" sqliteRecipe;
+      calibreRuntimeSqliteRuntimeProof = pkgs.writeText "calibre-sqlite-runtime.py" sqliteRuntimeProof;
       calibreRuntimeNativeSpec = nativeSpec;
       calibreRuntimeNativeSourceSpec = nativeSourceSpec;
       calibreRuntimeNativeSourceGuard = nativeSourceGuard;

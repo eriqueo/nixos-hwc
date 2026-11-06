@@ -12,6 +12,10 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Calibre owns matched frozen and system SQLite builds from pinned full source.
+The builds retain vendor compile options and public APIs. Calibre and Books share
+one guarded installer and image context. Both verify depth limits in real consumers.
+
 Calibre's native extension constructor shares source, SDK and ELF guards across
 SSL and the two source-only socket repair artifacts. The frozen socket build
 keeps its original feature set. The shared socket installer replaces the frozen
@@ -174,6 +178,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-06: Integrate SQLite 3.54.1 into shared Calibre/Books images with feature/API checks, group pre-write guards and depth-limit consumer probes; final image/data/release qualification remains required.
 
 - 2026-11-05: Include distro source facts in Frigate's shared HTTP descriptor contract so full fleet verification checks the expanded producer.
 

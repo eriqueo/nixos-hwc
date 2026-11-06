@@ -52,6 +52,7 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
   assert json.loads((context/'system-python/spec.json').read_text())==system_spec
   assert (context/'system-python/spec.json').read_bytes()==(calibre_context/'system-python/spec.json').read_bytes()
   assert json.loads((context/'system-python/socket/spec.json').read_text())==provider['systemPython']['nativeSocket']
+  assert {p.name:p.read_bytes() for p in (context/'sqlite').iterdir()} == {p.name:p.read_bytes() for p in (calibre_context/'sqlite').iterdir()}
   def wiring(text):
       assert '# System Python inputs '+provider['systemPython']['inputHash'] in text
       assert 'COPY system-python /tmp/hwc-system-python' in text
@@ -60,6 +61,7 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       assert '/ssl/guard.py /tmp/hwc-system-python/ssl/spec.json' in text
       assert 'SYSTEM_PYTHON_RUNTIME_SELECTION' in text
       assert 'COPY system-python/socket /tmp/hwc-native-socket/system' in text
+      assert 'COPY sqlite /tmp/hwc-sqlite' in text and '/tmp/hwc-sqlite/guard.py install /tmp/hwc-sqlite /' in text
       assert '/system/guard.py install ' in text and '/system/guard.py runtime ' in text
       assert text.index('HTTP_BACKPORT_PAIR') < text.index('/guard.py '+system_spec['commands']['install']+' ')
       assert input_marker in text
@@ -85,6 +87,7 @@ pkgs.runCommand "books-runtime-security" { nativeBuildInputs = [ pkgs.python3 pk
       assert 'ENTRYPOINT' not in text and 'CMD [' not in text and 'EXPOSE' not in text
   wiring(recipe)
   for token in ['COPY system-python /tmp/hwc-system-python',
+                'COPY sqlite /tmp/hwc-sqlite','/tmp/hwc-sqlite/guard.py install /tmp/hwc-sqlite /',
                 '/guard.py '+system_spec['commands']['install']+' ',
                 '/guard.py '+system_spec['commands']['verify']+' ',
                 '/ssl/guard.py /tmp/hwc-system-python/ssl/spec.json',
@@ -1175,6 +1178,48 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   python3 - ${binding} ${c.system.build.calibreRuntimeImageRecipe} ${c.system.build.calibreRuntimeImageContext} <<'PYTEST'
   import ast, copy, hashlib, json, os, pathlib, shlex, subprocess, sys, tempfile
   v=json.loads(pathlib.Path(sys.argv[1]).read_text())
+  sqlite_context=pathlib.Path(sys.argv[3])/'sqlite'
+  sqlite_recipe=pathlib.Path(sys.argv[2]).read_text()
+  def sqlite_wiring(recipe):
+      assert 'COPY sqlite /tmp/hwc-sqlite' in recipe
+      assert '/tmp/hwc-sqlite/guard.py install /tmp/hwc-sqlite /' in recipe
+      assert '/tmp/hwc-sqlite/guard.py verify /tmp/hwc-sqlite /' in recipe
+      assert 'SQLITE_DEPTH_LIMIT' in recipe and 'SQLITE_RUNTIME_VERSION' in recipe
+  sqlite_wiring(sqlite_recipe)
+  for token in ['COPY sqlite /tmp/hwc-sqlite','/tmp/hwc-sqlite/guard.py install /tmp/hwc-sqlite /','SQLITE_DEPTH_LIMIT']:
+      try:sqlite_wiring(sqlite_recipe.replace(token,'omitted-sqlite-integration'))
+      except AssertionError:pass
+      else:raise AssertionError('SQLITE_OMITTED_WIRING_ACCEPTED')
+  sqlite_api={'__name__':'test_sqlite_installer'}
+  exec(compile((sqlite_context/'guard.py').read_bytes(),'<actual-sqlite-guard>','exec',optimize=0),sqlite_api)
+  sqlite_spec=json.loads((sqlite_context/'spec.json').read_text())
+  assert sqlite_spec['version']=='3.54.1' and set(sqlite_spec['variants'])=={'system','frozen'}
+  with tempfile.TemporaryDirectory() as temporary:
+      import shutil
+      directory=pathlib.Path(temporary)/'inputs';shutil.copytree(sqlite_context,directory)
+      root=pathlib.Path(temporary)/'root';root.mkdir()
+      for variant,entry in sqlite_spec['variants'].items():
+          raw=('owned-original-'+variant).encode()
+          target=root/pathlib.Path(entry['path']).relative_to('/');target.parent.mkdir(parents=True,exist_ok=True)
+          target.write_bytes(raw);target.chmod(entry['mode'])
+          entry.update(originalBytes=len(raw),originalSha256=hashlib.sha256(raw).hexdigest())
+      (directory/'spec.json').write_text(json.dumps(sqlite_spec))
+      for variant in sqlite_spec['variants']:
+          manifest=json.loads((directory/(variant+'.json')).read_text());manifest['spec']=sqlite_spec
+          (directory/(variant+'.json')).write_text(json.dumps(manifest))
+      originals={p:p.read_bytes() for p in root.rglob('*') if p.is_file()}
+      payload=directory/'system.so';saved=payload.read_bytes();payload.write_bytes(saved+b'corrupt')
+      try:sqlite_api['install'](directory,root)
+      except RuntimeError as error:assert str(error)=='SQLITE_PAYLOAD'
+      else:raise AssertionError('SQLITE_CORRUPT_PAYLOAD_ACCEPTED')
+      assert all(p.read_bytes()==raw for p,raw in originals.items()),'SQLITE_PARTIAL_GROUP_WRITE'
+      payload.write_bytes(saved);sqlite_api['install'](directory,root);sqlite_api['verify'](directory,root)
+      sqlite_api['install'](directory,root) # exact donor payloads remain acceptable
+      target=root/pathlib.Path(sqlite_spec['variants']['frozen']['path']).relative_to('/')
+      target.write_bytes(b'corrupt-installed')
+      try:sqlite_api['verify'](directory,root)
+      except RuntimeError:pass
+      else:raise AssertionError('SQLITE_CORRUPT_INSTALLED_ACCEPTED')
   stdlib=v['stdlib'];stdlib_spec=json.loads(pathlib.Path(stdlib['spec']).read_text())
   stdlib_package=pathlib.Path(stdlib['package'])
   assert json.loads((stdlib_package/'manifest.json').read_text())==stdlib_spec
