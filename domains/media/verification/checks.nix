@@ -1197,6 +1197,7 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
   with tempfile.TemporaryDirectory() as temporary:
       import shutil
       directory=pathlib.Path(temporary)/'inputs';shutil.copytree(sqlite_context,directory)
+      for path in directory.iterdir():path.chmod(0o644)
       root=pathlib.Path(temporary)/'root';root.mkdir()
       for variant,entry in sqlite_spec['variants'].items():
           raw=('owned-original-'+variant).encode()
