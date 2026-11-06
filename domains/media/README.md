@@ -39,6 +39,7 @@ The native YouTube transcript wrapper resolves yt-dlp through the checked HTTP
 runtime catalog while retaining its original application and native dependencies.
 
 `verification/` contains pure flake checks for this capability; production modules do not import it.
+The Frigate HTTP check compares the full shared descriptor, including distro source facts.
 
 `soularr/` preserves saved INI choices while updating managed addresses and keys.
 Its bounded Eric/secrets seeder writes atomically with mode0440. Container startup
@@ -173,6 +174,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-05: Include distro source facts in Frigate's shared HTTP descriptor contract so full fleet verification checks the expanded producer.
 
 - 2026-11-05: Wire guarded frozen socket replacement and shared distro startup selection into Calibre/Books, including parent/worker probes and donor verification; retain separate image/current-data/release gates.
 

@@ -812,7 +812,7 @@ frigate-http-framing = let
   shared = builtins.fromJSON (builtins.readFile (repoRoot + "/overlays/python-http-framing.json"));
 in
 assert host.pkgs.pythonHttpFramingBackport == {
-  inherit (shared) upstreamCommits replacements;
+  inherit (shared) upstreamCommits replacements distroSources;
 };
 pkgs.runCommand "frigate-http-framing" { nativeBuildInputs = [ pkgs.python3 ]; } ''
   python3 - ${c.system.build.frigateRuntimeImageContext} <<'PY'
