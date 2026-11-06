@@ -180,6 +180,7 @@ workspace/media/
 ## Changelog
 
 - 2026-11-06: Integrate SQLite 3.54.1 into shared Calibre/Books images with feature/API checks, group pre-write guards and depth-limit consumer probes; final image/data/release qualification remains required.
+- 2026-11-06: Keep fault fixtures writable and select the distro Python probe by its contract while validating every emitted Python command shape.
 
 - 2026-11-05: Include distro source facts in Frigate's shared HTTP descriptor contract so full fleet verification checks the expanded producer.
 

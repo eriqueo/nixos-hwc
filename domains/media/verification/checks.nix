@@ -1532,7 +1532,8 @@ pkgs.runCommand "calibre-security-wiring" { nativeBuildInputs = [ pkgs.python3 p
               assert invoke.func.id=='exec' and invoke.args[0].func.id=='compile'
               compiler=invoke.args[0]
               assert next(k.value.value for k in compiler.keywords if k.arg=='optimize')==0
-              programs.append(ast.literal_eval(compiler.args[0]))
+              program=ast.literal_eval(compiler.args[0])
+              if 'SYSTEM_PYTHON_RUNTIME_SELECTION' in program:programs.append(program)
       except (ValueError,SyntaxError,AttributeError,StopIteration,AssertionError):return False
       return (system['recipe'] in text and 'COPY system-python /tmp/hwc-system-python' in text
           and len(programs)==1 and 'SYSTEM_PYTHON_RUNTIME_SELECTION' in programs[0])
