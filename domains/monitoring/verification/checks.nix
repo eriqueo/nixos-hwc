@@ -208,4 +208,47 @@ in pkgs.runCommand "website-security-probes" {
   touch "$out"
 '';
 
+# Calculator monitoring follows the website's public intake, not the private
+# estimator webhook. Exercise the actual scrape wiring and alert transitions.
+calculator-intake-monitoring = let
+  c = self.nixosConfigurations.hwc-work.config;
+  fixture = pkgs.writeText "calculator-intake-monitoring.json" (builtins.toJSON {
+    intake = c.hwc.business.website.leadsWebhookUrl;
+    jobs = c.services.prometheus.scrapeConfigs;
+    ruleFiles = c.services.prometheus.ruleFiles;
+    rules = lib.concatMap (g: g.rules)
+      (import (repoRoot + "/domains/monitoring/prometheus/parts/alerts.nix") { inherit lib; }).groups;
+    blackbox = c.services.prometheus.exporters.blackbox.configFile;
+  });
+in pkgs.runCommand "calculator-intake-monitoring" {
+  nativeBuildInputs = [ pkgs.python3 pkgs.prometheus.cli ];
+} ''
+  python3 - ${fixture} <<'PY'
+  import json,pathlib,subprocess,sys
+  f=json.loads(pathlib.Path(sys.argv[1]).read_text())
+  jobs={j['job_name']:j for j in f['jobs']}
+  assert 'probe-webhook-ingress' not in jobs, 'Retired public estimate webhook still monitored'
+  job=jobs['probe-crm-intake']
+  targets=[t for group in job['static_configs'] for t in group['targets']]
+  assert f['intake'] in targets, 'Website calculator intake is not monitored'
+  assert job['params']['module']==['http_options_2xx']
+  module=json.loads(pathlib.Path(f['blackbox']).read_text())['modules']['http_options_2xx']['http']
+  assert module['method']=='OPTIONS' and module['valid_status_codes']==[200,204]
+  assert module['headers']['Access-Control-Request-Method']=='POST'
+  rules={r['alert']:r for r in f['rules']}
+  assert 'WebhookIngressDown' not in rules, 'Retired public estimate alert still installed'
+  assert all('probe-webhook-ingress' not in r['expr'] for r in f['rules'])
+  assert 'probe-crm-intake' in rules['WebsiteSSLCertExpiringSoon']['expr']
+  alert=rules['CrmIntakeDown']
+  assert alert['for']=='5m' and alert['labels']['severity']=='P5'
+  test={'rule_files':f['ruleFiles'],'evaluation_interval':'1m','tests':[{
+      'interval':'1m','input_series':[{'series':'probe_success{job="probe-crm-intake",instance="fixture"}','values':'0+0x6 1+0x7'}],
+      'alert_rule_test':[{'eval_time':t,'alertname':alert['alert'],'exp_alerts':[] if t!='6m' else [{'exp_labels':{'job':'probe-crm-intake','instance':'fixture',**alert['labels']},'exp_annotations':{k:v.replace('{{ $labels.instance }}','fixture') for k,v in alert['annotations'].items()}}]} for t in ['4m','6m','14m']]}]}
+  pathlib.Path('intake-transition.json').write_text(json.dumps(test))
+  subprocess.run(['promtool','test','rules','intake-transition.json'],check=True,timeout=30)
+  print('PASS current calculator intake, safe preflight and pending/firing/recovered alert states')
+  PY
+  touch "$out"
+'';
+
 }
