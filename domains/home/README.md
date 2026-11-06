@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+Floating size limits preserve native menu positions; centering applies only to explicit dialog and utility rules.
 
 The shared shell package list takes native yt-dlp from the checked HTTP runtime
 catalog in both owned Home Manager lanes; package assets stay unchanged.
@@ -177,6 +178,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-05: Preserve native context-menu positions by removing blanket floating-window centering; keep dialog centering and size limits.
 
 - 2026-11-04: Select the checked native yt-dlp launcher through the shared package scope for shell consumers.
 - 2026-11-04: Repair declarative desktop cursor, mouse bindings, physical-output selection and Waybar reload supervision; extend generated desktop checks.
