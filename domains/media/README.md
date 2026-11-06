@@ -12,6 +12,9 @@ photo management, and video surveillance services.
 
 ## Structure
 
+SABnzbd selects only shared HTTP parser fields for its immutable image identity.
+Source metadata for other distributions does not change its deployed image.
+
 Calibre owns matched frozen and system SQLite builds from pinned full source.
 The builds retain vendor compile options and public APIs. Calibre and Books share
 one guarded installer and image context. Both verify depth limits in real consumers.
@@ -178,6 +181,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-06: Keep SABnzbd's existing image identity when the shared Python catalog adds Ubuntu source metadata; reject unrelated fields in its parser contract check.
 
 - 2026-11-06: Integrate SQLite 3.54.1 into shared Calibre/Books images with feature/API checks, group pre-write guards and depth-limit consumer probes; final image/data/release qualification remains required.
 - 2026-11-06: Keep fault fixtures writable and select the distro Python probe by its contract while validating every emitted Python command shape.

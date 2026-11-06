@@ -645,6 +645,10 @@ pkgs.runCommand "sabnzbd-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ];
   assert '/lsiopy/bin/python3 /tmp/hwc/apply-backports.py' in recipe
   assert 'pip check' in recipe and 'apk verify' in recipe
   manifest=json.loads((root/'manifest.json').read_text()); assert manifest['schemaVersion']==1
+  def parser_contract(value):
+      return set(value)=={'sourceSha256','patchedSha256','upstreamCommits','replacements'}
+  assert parser_contract(manifest['pythonHttpBackport']), 'SABNZBD_UNRELATED_SOURCE_FACTS'
+  assert not parser_contract(dict(manifest['pythonHttpBackport'],distroSources={})), 'SABNZBD_CATALOG_EXPANSION_SEED'
   assert json.loads((root/'backports.json').read_text())==manifest['backports']
   assert {p['name']:p['version'] for p in manifest['wheels']} == {'certifi':'2026.10.23','PyJWT':'2.15.1','urllib3':'2.8.0','oauthlib':'4.0.1'}
   assert {p['name']:p['version'] for p in manifest['apks']} == {'curl':'8.23.0-r0','libcurl':'8.23.0-r0','libexpat':'2.10.0-r0','ca-certificates-bundle':'20261020-r0'}
