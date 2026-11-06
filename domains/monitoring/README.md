@@ -18,6 +18,9 @@ Prometheus checks public website headers/CSP, the HTTP-to-HTTPS redirect and pri
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 The `calculator-intake-monitoring` check covers the website's configured intake,
 safe preflight method, certificate coverage and alert pending/firing/recovery states.
+Public calculator monitoring consumes the website's configured CRM intake URL.
+The private estimator's `estimate-push` route is deliberately closed at the public
+tunnel and has no public availability probe. n8n retains its own health probe.
 
 `alerts/index.nix` owns both system and user failure templates. The user template
 calls the existing notification producer with `--user`; delivery stays in notifications.
@@ -76,7 +79,7 @@ monitoring/
 
 ## Changelog
 
-- 2026-11-06: Add a regression check for current calculator intake monitoring and retirement of the obsolete public estimator alert.
+- 2026-11-06: Retire the obsolete public estimator probe and alert. Follow the website's configured CRM intake URL, preserve certificate alerts and test pending/firing/recovery states.
 
 - 2026-11-04: Add bounded public website security and report privacy probes with a five-minute alert and real-exporter regression checks.
 

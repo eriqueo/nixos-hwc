@@ -384,14 +384,12 @@ in
         # Fixed nonexistent capability: checks error privacy, never reads a customer report.
         { job = "probe-report-privacy"; module = "report_privacy"; interval = "2m";
           targets = [ { url = "https://reports.iheartwoodcraft.com/api/reports/security-monitor-nonexistent"; } ]; }
-        # Public webhook ingress (Cloudflare proxy → tunnel → n8n) via CORS
-        # preflight on a live webhook (estimate-push; calculator-lead was retired 2026-09-25)
-        { job = "probe-webhook-ingress"; module = "http_options_2xx";
-          targets = [ { url = "https://api.iheartwoodcraft.com/webhook/estimate-push"; } ]; }
-        # hwc-crm public intake via CORS preflight (touches no data)
+        # Public calculator intake follows the website's endpoint producer.
+        # estimate-push belongs to the private estimator, not public ingress.
+        # CORS preflight touches no customer data.
         { job = "probe-crm-intake"; module = "http_options_2xx"; targets = map (url: { inherit url; }) [
             "https://crm.iheartwoodcraft.com/hooks/contact"
-            "https://crm.iheartwoodcraft.com/hooks/calculator"
+            config.hwc.business.website.leadsWebhookUrl
           ]; }
         # hwc-leads liveness + HMAC enforcement (401 on unsigned POST)
         { job = "probe-leads-service"; module = "http_post_401"; interval = "30s";

@@ -53,17 +53,7 @@
           labels = { severity = "P5"; category = "leads"; };
           annotations = {
             summary = "CRM lead intake down: {{ $labels.instance }}";
-            description = "CORS preflight through Cloudflare → tunnel → hwc-crm has failed for 5+ minutes. Calculator submissions are being LOST; contact-form submissions are falling back to the JobTread widget and will NOT appear on the CRM board. Check cloudflared-tunnel and hwc-crm services.";
-          };
-        }
-        {
-          alert = "WebhookIngressDown";
-          expr = ''probe_success{job="probe-webhook-ingress"} == 0'';
-          for = "5m";
-          labels = { severity = "P5"; category = "leads"; };
-          annotations = {
-            summary = "Calculator webhook ingress down: {{ $labels.instance }}";
-            description = "CORS preflight through Cloudflare → tunnel → n8n has failed for 5+ minutes. Calculator submissions from site visitors are being LOST right now. Check cloudflared-tunnel and podman-n8n services.";
+            description = "Public calculator or contact intake has failed its preflight check for five minutes. New submissions may fail. Inspect this probe in Prometheus, then the cloudflared tunnel and hwc-crm services on hwc-work.";
           };
         }
         {
@@ -108,7 +98,7 @@
         }
         {
           alert = "WebsiteSSLCertExpiringSoon";
-          expr = ''(probe_ssl_earliest_cert_expiry{job=~"probe-website|probe-webhook-ingress"} - time()) < 14 * 86400'';
+          expr = ''(probe_ssl_earliest_cert_expiry{job=~"probe-website|probe-crm-intake"} - time()) < 14 * 86400'';
           for = "1h";
           labels = { severity = "P4"; category = "website"; };
           annotations = {
