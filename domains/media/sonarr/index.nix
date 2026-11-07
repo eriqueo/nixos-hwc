@@ -145,6 +145,62 @@ def library($p): {type:"package",serviceable:true,sha512:("sha512-"+$p.sha512),p
       cp ${package} "$out/${p.file}"
     '' ) dependencyInputs.apks}
   '';
+  # Temporary: 4.0.20 calls Any() on omitted nullable queue filters.
+  # Remove when the vendor API accepts omitted filters on the supported runtime.
+  # Patch only the four private-method inputs; keep explicit filters intact.
+  queuePatchSource = pkgs.writeText "sonarr-queue-null.cs" ''
+    using System;
+    using System.Linq;
+    using Mono.Cecil;
+    using Mono.Cecil.Cil;
+    class QueueNullPatch {
+      static void Main(string[] args) {
+        using (var module = ModuleDefinition.ReadModule(args[0])) {
+          var type = module.Types.Single(t => t.FullName == "Sonarr.Api.V3.Queue.QueueController");
+          var method = type.Methods.Single(m => m.Name == "GetQueue" && m.IsPrivate && m.Parameters.Count == 7);
+          var names = new[] { "seriesIds", "languages", "quality", "status" };
+          var filters = method.Parameters.Where(p => names.Contains(p.Name)).ToArray();
+          if (filters.Length != 4 || filters.Any(p => !p.ParameterType.FullName.StartsWith("System.Collections.Generic.HashSet`1<")))
+            throw new Exception("SONARR_QUEUE_SIGNATURE_CHANGED");
+          var calls = method.Body.Instructions.Count(i => i.OpCode == OpCodes.Call && i.Operand is GenericInstanceMethod && ((GenericInstanceMethod)i.Operand).Name == "Any");
+          if (calls != 4 || method.Body.Instructions.Any(i => i.OpCode == OpCodes.Starg)) throw new Exception("SONARR_QUEUE_FILTER_BODY_CHANGED");
+          var il = method.Body.GetILProcessor();
+          var first = method.Body.Instructions[0];
+          foreach (var parameter in filters) {
+            var next = il.Create(OpCodes.Nop);
+            var ctor = new MethodReference(".ctor", module.TypeSystem.Void, parameter.ParameterType) { HasThis = true };
+            il.InsertBefore(first, il.Create(OpCodes.Ldarg, parameter));
+            il.InsertBefore(first, il.Create(OpCodes.Brtrue, next));
+            il.InsertBefore(first, il.Create(OpCodes.Newobj, ctor));
+            il.InsertBefore(first, il.Create(OpCodes.Starg, parameter));
+            il.InsertBefore(first, next);
+          }
+          module.Write(args[1]);
+        }
+      }
+    }
+  '';
+  queueAssembly = pkgs.runCommand "sonarr-queue-null-assembly" {
+    nativeBuildInputs = [ pkgs.mono pkgs.unzip pkgs.python3 ];
+  } ''
+    unzip -q ${pkgs.fetchurl {
+      url = "https://api.nuget.org/v3-flatcontainer/mono.cecil/0.11.6/mono.cecil.0.11.6.nupkg";
+      hash = "sha256-0qI4MqqpSLqaAazEK1cm40xfmVlY8bMNRcDnxws6ctU=";
+    }} 'lib/net40/Mono.Cecil.dll'
+    cp lib/net40/Mono.Cecil.dll .
+    tar -xzf ${pkgs.fetchurl {
+      url = "https://github.com/Sonarr/Sonarr/releases/download/v${appVersion}/Sonarr.main.${appVersion}.linux-musl-x64.tar.gz";
+      hash = "sha256-VJAnWT3nJbEy6bh7BrW5RmUGCWJw1F4EcFEAUJHb/jE=";
+    }} Sonarr/Sonarr.Api.V3.dll
+    printf '%s\n' 'bd0c2ec64076699af8f0a893f17f4b918b1b79ad8caa5bc113b60cfe948ab3a9  Sonarr/Sonarr.Api.V3.dll' | sha256sum -c -
+    mcs -r:Mono.Cecil.dll -out:patch.exe ${queuePatchSource}
+    mkdir -p "$out"
+    mono patch.exe Sonarr/Sonarr.Api.V3.dll "$out/Sonarr.Api.V3.dll"
+    # Input drift and repeat application must fail closed.
+    if mono patch.exe "$out/Sonarr.Api.V3.dll" twice.dll; then
+      echo SONARR_QUEUE_REPEAT_PATCH_ACCEPTED >&2; exit 1
+    fi
+  '';
   # Temporary: the vendor still bundles EOL .NET 6. Remove this rehosting
   # boundary when its image uses a supported patched runtime and passes the
   # current-data old/new/old/new recovery and native SQLite/API checks.
@@ -182,6 +238,8 @@ def library($p): {type:"package",serviceable:true,sha512:("sha512-"+$p.sha512),p
       jq --slurpfile packages manifest.json -f update-deps.jq "$file" > "$file.new"
       mv "$file.new" "$file"
     done
+    printf '%s\n' 'bd0c2ec64076699af8f0a893f17f4b918b1b79ad8caa5bc113b60cfe948ab3a9  /app/sonarr/bin/Sonarr.Api.V3.dll' | sha256sum -c -
+    sha256sum -c queue-sha256
     cp ./*.dll /app/sonarr/bin/
     apk --repositories-file /dev/null --no-network del sqlite-libs
     cp libsqlite3.so.0 /usr/lib/libsqlite3.so.0
@@ -203,7 +261,7 @@ def library($p): {type:"package",serviceable:true,sha512:("sha512-"+$p.sha512),p
     version = "${appVersion}-dotnet${runtimeVersion}";
     recipe = ''
       FROM ${upstreamImage}
-      # Bound payload: ${builtins.hashString "sha256" (applyRuntimeText + toString archive + builtins.toJSON dependencyInputs + updateDepsText + toString sqliteNative + toString utilityPayload)}
+      # Bound payload: ${builtins.hashString "sha256" (applyRuntimeText + toString archive + builtins.toJSON dependencyInputs + updateDepsText + toString sqliteNative + toString utilityPayload + toString queueAssembly)}
       COPY . /tmp/hwc-sonarr/
       RUN sh /tmp/hwc-sonarr/apply-runtime.sh
     '';
@@ -219,6 +277,8 @@ def library($p): {type:"package",serviceable:true,sha512:("sha512-"+$p.sha512),p
     cp ${sqliteNative}/lib/libsqlite3.so.0 "$out/libsqlite3.so.0"
     printf '%s\n' '${sqliteNative.version}' > "$out/sqlite-version"
     sha256sum "$out/libsqlite3.so.0" | cut -d' ' -f1 > "$out/sqlite-sha256"
+    cp ${queueAssembly}/Sonarr.Api.V3.dll "$out/"
+    (cd "$out"; sha256sum Sonarr.Api.V3.dll > queue-sha256)
     cp ${utilityPayload}/* "$out/"
     (cd "$out"; sha256sum busybox uniq unexpand > utilities-sha256)
   '';

@@ -2134,6 +2134,12 @@ in pkgs.runCommand "sonarr-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 
   assert 'comm -12 /tmp/runtime-owned.txt /tmp/app-owned.txt' in script
   assert 'sha256sum -c -' in script
   assert 'includedFrameworks' in script and 'frameworks' in script
+  queue=(context/'Sonarr.Api.V3.dll').read_bytes()
+  queue_hash=(context/'queue-sha256').read_text().split()[0]
+  assert hashlib.sha256(queue).hexdigest()==queue_hash
+  assert hashlib.sha256(queue+b'violation').hexdigest()!=queue_hash
+  assert queue_hash!='bd0c2ec64076699af8f0a893f17f4b918b1b79ad8caa5bc113b60cfe948ab3a9'
+  assert 'sha256sum -c queue-sha256' in script and 'cp ./*.dll /app/sonarr/bin/' in script
   packages=json.loads((context/'manifest.json').read_text())
   assert packages
   def valid_payload(data, expected): return hashlib.sha256(data).hexdigest()==expected

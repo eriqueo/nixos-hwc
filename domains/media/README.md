@@ -12,6 +12,9 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Sonarr’s hardened image initializes omitted queue filters as empty sets in its
+hash-bound API assembly. Explicit filters retain their existing behavior.
+
 SABnzbd selects only shared HTTP parser fields for its immutable image identity.
 Source metadata for other distributions does not change its deployed image.
 
@@ -181,6 +184,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-07: Guard Sonarr’s four nullable queue filters before enumeration. Bind the patched assembly into the hardened image and reject input drift and repeated patching.
 
 - 2026-11-06: Keep SABnzbd's existing image identity when the shared Python catalog adds Ubuntu source metadata; reject unrelated fields in its parser contract check.
 
