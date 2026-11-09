@@ -17,21 +17,27 @@
 let
   cfg = config.hwc.monitoring.homepage;
   identity = config.hwc.system.core.identity;
+  shared = config.hwc.networking.shared;
+  hosts = config.hwc.networking.hosts;
+  mcp = config.hwc.system.mcp;
+  services = import ./parts/services.nix {
+    inherit (shared) vhostDomain;
+    prometheusHost = shared.tailscaleDomain;
+    prometheusPort = config.hwc.monitoring.prometheus.port;
+    mcpPort = mcp.port;
+    mcpHealthUrl = hosts.url { server = mcp.serverAlias; port = mcp.tailnetPort; path = "/health"; };
+    n8nUrl = config.hwc.automation.n8n.publicUrl;
+  };
   installConfig = source: name: ''
     ${pkgs.coreutils}/bin/install -m 0644 -o ${identity.user} -g ${identity.group} ${source} ${cfg.dataDir}/${name}.yaml
   '';
 
-  # YAML config files for Homepage
-  settingsYaml = pkgs.writeText "homepage-settings.yaml" (builtins.readFile ./parts/settings.yaml);
-  servicesYaml = pkgs.writeText "homepage-services.yaml" (builtins.readFile ./parts/services.yaml);
-  widgetsYaml = pkgs.writeText "homepage-widgets.yaml" (builtins.readFile ./parts/widgets.yaml);
-  dockerYaml = pkgs.writeText "homepage-docker.yaml" (builtins.readFile ./parts/docker.yaml);
-  bookmarksYaml = pkgs.writeText "homepage-bookmarks.yaml" (builtins.readFile ./parts/bookmarks.yaml);
+  configFiles = lib.genAttrs [ "settings" "widgets" "docker" "bookmarks" ]
+    (name: pkgs.writeText "homepage-${name}.yaml" (builtins.readFile (./parts + "/${name}.yaml")))
+    // { services = (pkgs.formats.yaml {}).generate "homepage-services.yaml" services; };
 in
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
   options.hwc.monitoring.homepage = {
     enable = lib.mkEnableOption "Homepage - service dashboard";
 
@@ -39,12 +45,6 @@ in
       type = lib.types.port;
       default = 3080;
       description = "Host port for Homepage web UI";
-    };
-
-    caddyPort = lib.mkOption {
-      type = lib.types.port;
-      default = 17443;
-      description = "Caddy TLS port for Homepage";
     };
 
     image = lib.mkOption {
@@ -60,12 +60,8 @@ in
       description = "Data directory for Homepage configuration";
     };
   };
-
-  #==========================================================================
   # IMPLEMENTATION
-  #==========================================================================
   config = lib.mkIf cfg.enable {
-    # Homepage container
     # HWC-EXCEPTION(Law 5): infra container, not a media app
     # Justification: dashboard serving config from nix-generated files; no media mounts, PUID/PGID, or VPN netns
     # Plan: permanent by design (revisit if an infra-shaped helper grows to fit)
@@ -96,22 +92,15 @@ in
       ];
     };
 
-    # Ensure data directory exists and deploy config files
     systemd.tmpfiles.rules = [
       "d ${cfg.dataDir} 0750 ${identity.user} ${identity.group} -"
     ];
 
-    # Deploy YAML config files to data directory
     system.activationScripts.homepageConfig = ''
       ${pkgs.coreutils}/bin/install -d -m 0750 -o ${identity.user} -g ${identity.group} ${cfg.dataDir}
-      ${installConfig settingsYaml "settings"}
-      ${installConfig servicesYaml "services"}
-      ${installConfig widgetsYaml "widgets"}
-      ${installConfig dockerYaml "docker"}
-      ${installConfig bookmarksYaml "bookmarks"}
+      ${lib.concatStrings (lib.mapAttrsToList (name: source: installConfig source name) configFiles)}
     '';
 
-    # Caddy reverse proxy route
     hwc.networking.shared.routes = [
       {
         name = "homepage";
@@ -119,10 +108,7 @@ in
         upstream = "http://127.0.0.1:${toString cfg.port}";
       }
     ];
-
-    #========================================================================
     # VALIDATION
-    #========================================================================
     assertions = [
       {
         assertion = cfg.port > 0 && cfg.port < 65536;

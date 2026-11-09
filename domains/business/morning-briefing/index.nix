@@ -5,6 +5,33 @@ let
   paths = config.hwc.paths;
   agentDir = "${paths.nixos}/domains/business/morning-briefing";
   mailContractFile = "${inputs.system-one}/scripts/mail_classifier_contract.json";
+  mailEnvironment = {
+    HOME = paths.user.home;
+    MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
+    HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailContractFile;
+  };
+  mailServiceConfig = {
+    Type = "oneshot";
+    User = lib.mkForce "eric";
+    Group = "users";
+    WorkingDirectory = agentDir;
+    StandardOutput = "journal";
+    StandardError = "journal";
+    NoNewPrivileges = true;
+    ProtectSystem = "strict";
+    ProtectKernelTunables = true;
+    ProtectKernelModules = true;
+    ProtectControlGroups = true;
+    ReadWritePaths = [
+      "${agentDir}/output"
+      "${agentDir}/logs"
+      "${agentDir}/dashboard"
+      "/var/lib/hwc/mail-classifier"
+      (builtins.dirOf paths.user.mailSyncStatus)
+      "/tmp"
+    ];
+  };
+
 
 in
 {
@@ -61,10 +88,7 @@ in
       description = "Morning Briefing — local data gathering and Laya mail classification";
       after = [ "network-online.target" "mail-classifier-model.service" ];
       wants = [ "network-online.target" "mail-classifier-model.service" ];
-      environment = {
-        HOME = paths.user.home;
-        MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
-        HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailContractFile;
+      environment = mailEnvironment // {
         # Proposed tasks from the mail dates rule land in this list (one producer: the contract).
         HWC_MAIL_PROPOSALS_LIST = (builtins.fromJSON (builtins.readFile mailContractFile)).lifecyclePolicy.taskList or "Mail";
         PROM_URL = cfg.prometheusUrl;
@@ -87,29 +111,9 @@ in
       # comes from /run/current-system/sw/bin (absolute path in run.sh).
       # openssh: host_exec (hostHealthFrom).
       path = [ pkgs.bash pkgs.coreutils pkgs.findutils pkgs.gawk pkgs.gnugrep pkgs.jq pkgs.nodejs_22 pkgs.notmuch pkgs.git pkgs.msmtp pkgs.pass pkgs.gnupg pkgs.curl pkgs.openssh ];
-      serviceConfig = {
-        Type = "oneshot";
-        User = lib.mkForce "eric";
-        Group = "users";
-        WorkingDirectory = agentDir;
+      serviceConfig = mailServiceConfig // {
         ExecStart = "${agentDir}/run.sh";
-        # Step 1b (gateway gather, ≤120s) + Step 2 (claude triage) both fit
         TimeoutSec = 420;
-        StandardOutput = "journal";
-        StandardError = "journal";
-        NoNewPrivileges = true;
-        ProtectSystem = "strict";
-        ProtectKernelTunables = true;
-        ProtectKernelModules = true;
-        ProtectControlGroups = true;
-        ReadWritePaths = [
-          "${agentDir}/output"
-          "${agentDir}/logs"
-          "${agentDir}/dashboard"
-          "/var/lib/hwc/mail-classifier"
-          (builtins.dirOf paths.user.mailSyncStatus)
-          "/tmp"
-        ];
       };
     };
 
@@ -133,35 +137,14 @@ in
     # needed, and the gateway's hardening stays untouched.
     systemd.services.mail-retriage = {
       description = "Mail retriage — classify unclassified unread threads on demand";
-      environment.HOME = paths.user.home;
-      environment.MAIL_SYNC_LOCK_FILE = "${builtins.dirOf paths.user.mailSyncStatus}/sync.lock";
-      environment.HWC_MAIL_CLASSIFIER_CONTRACT_FILE = mailContractFile;
+      environment = mailEnvironment;
       after = [ "mail-classifier-model.service" ];
       wants = [ "mail-classifier-model.service" ];
       path = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.notmuch ];
-      serviceConfig = {
-        Type = "oneshot";
-        User = lib.mkForce "eric";
-        Group = "users";
-        WorkingDirectory = agentDir;
+      serviceConfig = mailServiceConfig // {
         ExecStart = "${agentDir}/triage-mail.sh delta";
         TimeoutSec = 300;
         SuccessExitStatus = 75;
-        StandardOutput = "journal";
-        StandardError = "journal";
-        NoNewPrivileges = true;
-        ProtectSystem = "strict";
-        ProtectKernelTunables = true;
-        ProtectKernelModules = true;
-        ProtectControlGroups = true;
-        ReadWritePaths = [
-          "${agentDir}/output"
-          "${agentDir}/logs"
-          "${agentDir}/dashboard"
-          "/var/lib/hwc/mail-classifier"
-          (builtins.dirOf paths.user.mailSyncStatus)
-          "/tmp"
-        ];
       };
     };
 

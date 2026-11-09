@@ -30,16 +30,13 @@
     opacity:0;animation:fadeIn .3s ease forwards}
   @keyframes fadeIn{to{opacity:1}}
 
-  /* Dashboard grid */
   .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:20px;align-items:start}
   .tile{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:20px;min-width:0}
 
-  /* Pull to refresh */
   .ptr{text-align:center;font-family:var(--mono);font-size:12px;color:var(--amber-dim);
     height:0;overflow:hidden;transition:height .2s}
   .ptr.visible{height:32px;line-height:32px}
 
-  /* Header */
   .hdr{padding:16px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px;text-align:center}
   .hdr-label{font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:3px;color:var(--amber-dim)}
   .hdr-day{font-size:32px;font-weight:700;color:var(--amber);margin:6px 0 0}
@@ -48,9 +45,7 @@
   .hdr-updated .fresh{color:var(--green)}
   .hdr-updated .stale{color:var(--red)}
 
-  /* Alerts */
   .alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-  /* TODAY queue — the ranked action list above the grid */
   .today{margin-bottom:24px;border:1px solid var(--border);border-radius:8px;background:var(--surface,rgba(255,255,255,.02))}
   .today-hdr{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent,#d8a657)}
   .today-spill{font-size:11px;opacity:.6;text-transform:none;letter-spacing:0}
@@ -75,14 +70,12 @@
   .alert-critical{background:var(--red-bg);border-color:var(--red);color:#d08080}
   .alert-warning{background:var(--yellow-bg);border-color:var(--yellow);color:#fcbb74}
 
-  /* Section */
   .section{margin-bottom:0}
   .sec-hdr{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;
     color:var(--dim);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:12px;
     display:flex;justify-content:space-between;align-items:baseline}
   .sec-count{color:var(--amber-dim);font-size:12px}
 
-  /* Calendar */
   .ev{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
   .ev:last-child{border-bottom:none}
   .ev-time{font-family:var(--mono);font-size:14px;color:var(--amber);min-width:56px;flex-shrink:0;padding-top:1px}
@@ -91,7 +84,6 @@
   .ev-loc{font-size:13px;color:var(--dim);margin-top:2px}
   .ev-allday{font-family:var(--mono);font-size:11px;color:var(--amber-dim);background:var(--amber-bg);padding:1px 6px;border-radius:2px}
 
-  /* Jobs */
   .job{padding:10px 0;border-bottom:1px solid var(--border)}
   .job:last-child{border-bottom:none}
   .job-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -102,7 +94,6 @@
     background:var(--surface2);border:1px solid var(--border)}
   .test-note{font-family:var(--mono);font-size:12px;color:var(--faint);padding:8px 0}
 
-  /* Leads */
   .lead{padding:8px 0;border-bottom:1px solid var(--border)}
   .lead:last-child{border-bottom:none}
   .lead-name{font-size:15px;font-weight:600}
@@ -111,14 +102,12 @@
   .lead-age.old{color:var(--yellow)}
   .lead-age.urgent{color:var(--red)}
 
-  /* Overdue */
   .overdue-item{padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline}
   .overdue-item:last-child{border-bottom:none}
   .overdue-name{font-size:15px;font-weight:600}
   .overdue-amt{font-family:var(--mono);font-size:13px;color:var(--red)}
   .overdue-total{font-family:var(--mono);font-size:14px;color:var(--red);margin-bottom:8px}
 
-  /* System */
   .sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
   .sys-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
   .sys-val{font-family:var(--mono);font-size:24px;font-weight:600}
@@ -132,7 +121,6 @@
   .storage-pct{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:36px;text-align:right}
   .storage-avail{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:48px;text-align:right}
 
-  /* Mail health */
   .mail-row{display:flex;align-items:center;gap:10px}
   .badge{font-family:var(--mono);font-size:12px;padding:3px 10px;border-radius:2px;text-transform:uppercase;letter-spacing:1px}
   .badge-ok{background:var(--green-bg);color:var(--green);border:1px solid #3a4a3a}
@@ -140,7 +128,6 @@
   .badge-warn{background:var(--yellow-bg);color:var(--yellow);border:1px solid #4a3a20}
   .mail-detail{font-size:13px;color:var(--dim)}
 
-  /* Mail tabs */
   .mail-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:12px}
   .mail-tab{font-family:var(--mono);font-size:12px;padding:8px 16px;cursor:pointer;color:var(--dim);
     background:none;border:none;border-bottom:2px solid transparent;text-transform:uppercase;
@@ -148,16 +135,13 @@
   .mail-tab:hover{color:var(--text)}
   .mail-tab.active{color:var(--amber);border-bottom-color:var(--amber)}
   .mail-tab:focus-visible{outline:1px solid var(--amber);outline-offset:-1px}
-  .mail-live{font-family:var(--mono);font-size:11px;color:var(--green);text-align:right;margin-top:8px}
 
-  /* Mail triage */
   .thread{border:1px solid var(--border);border-radius:4px;margin-bottom:6px;overflow:hidden;transition:border-color .15s}
   .thread:hover{border-color:var(--border2)}
   .thread.do{border-left:3px solid var(--urgent)}
   .thread.did{border-left:3px solid var(--review)}
   .thread.look{border-left:3px solid var(--review)}
   .thread.junk{border-left:3px solid var(--noise)}
-  .thread.done{opacity:.35}
 
   .thread-main{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;cursor:pointer;user-select:none}
   .thread-body{flex:1;min-width:0}
@@ -169,21 +153,7 @@
   .thread-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
   .tag{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:2px;background:var(--surface2);color:var(--faint)}
   .tag.attachment{background:#2a3040;color:#5e81ac}
-  .thread-chevron{font-family:var(--mono);font-size:10px;color:var(--faint);flex-shrink:0;margin-top:2px;transition:transform .15s}
-  .thread.open .thread-chevron{transform:rotate(180deg)}
 
-  .thread-actions{display:flex;gap:6px;padding:8px 12px 10px;background:var(--surface2);border-top:1px solid var(--border);flex-wrap:wrap}
-  .act{font-family:var(--mono);font-size:12px;padding:5px 12px;border-radius:3px;cursor:pointer;
-    border:1px solid var(--border2);background:transparent;color:var(--dim);transition:all .12s;letter-spacing:.03em}
-  .act:hover{border-color:var(--amber-dim);color:var(--amber)}
-  .act.primary{border-color:var(--amber-dim);color:var(--amber);background:var(--amber-bg)}
-  .act.primary:hover{background:#3a3020}
-  .act.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
-  .act.done-state{border-color:var(--green);color:var(--green);background:var(--green-bg);cursor:default}
-  .act.err-state{border-color:var(--red);color:var(--red);cursor:default}
-  .act:disabled{opacity:.4;cursor:default}
-
-  /* Weather */
   .wx-row{display:flex;align-items:flex-start;gap:16px;padding:8px 0}
   .wx-temp{font-family:var(--mono);font-size:32px;font-weight:600;color:var(--amber);line-height:1}
   .wx-range{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:4px}
@@ -194,14 +164,12 @@
     background:var(--yellow-bg);border:1px solid var(--yellow);color:#fcbb74}
   .wx-note{font-size:13px;color:var(--dim);margin-top:6px}
 
-  /* Weekly snapshot */
   .snap-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .snap-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
   .snap-val{font-family:var(--mono);font-size:24px;font-weight:600;color:var(--amber)}
   .snap-val.zero{color:var(--dim)}
   .snap-label{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
 
-  /* Comms */
   .comms-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
   .comms-card{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
   .comms-val{font-family:var(--mono);font-size:24px;font-weight:600}
@@ -212,12 +180,10 @@
   .comms-item-name{font-size:15px;font-weight:600}
   .comms-item-meta{font-size:13px;color:var(--dim);margin-top:2px}
 
-  /* Backup */
   .bak-row{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}
   .bak-stat{display:flex;align-items:center;gap:8px}
   .bak-detail{font-family:var(--mono);font-size:13px;color:var(--dim)}
 
-  /* Tasks */
   .task-group{margin-bottom:12px}
   .task-group-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;user-select:none}
   .task-group-hdr.static{cursor:default}
@@ -240,7 +206,6 @@
   .task-due{font-family:var(--mono);font-size:12px;color:var(--dim);flex-shrink:0}
   .task-due.overdue{color:var(--red)}
 
-  /* Recent documents */
   .doc-item{display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
   .doc-item:last-child{border-bottom:none}
   .doc-type{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0}
@@ -253,11 +218,9 @@
   .doc-meta{font-size:12px;color:var(--dim)}
   .doc-amt{font-family:var(--mono);font-size:13px;color:var(--amber);flex-shrink:0;text-align:right}
 
-  /* Footer */
   .footer{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:center;
     padding:20px 0 0;border-top:1px solid var(--border);margin-top:20px;letter-spacing:.5px}
 
-  /* Links */
   a{color:inherit}
   .lnk{color:var(--amber);text-decoration:none;border-bottom:1px solid transparent}
   .lnk:hover{border-bottom-color:var(--amber)}
@@ -270,7 +233,6 @@
   .status-tag{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:2px;
     background:var(--surface2);border:1px solid var(--border);color:var(--dim)}
 
-  /* Misc */
   .empty{font-family:var(--mono);font-size:13px;color:var(--dim);padding:10px 0}
   .empty-hint{font-family:var(--mono);font-size:12px;color:var(--faint);padding:4px 0 0}
   .err-box{background:var(--red-bg);border:1px solid #4a3030;border-radius:4px;padding:20px;text-align:center;margin:40px 0}
@@ -283,9 +245,8 @@
   <div class="ptr" id="ptr">pull to refresh</div>
   <div id="app"></div>
 </div>
-<script>
-// ── Config ────────────────────────────────────────────────────────────────────
-// ── DOM helper ────────────────────────────────────────────────────────────────
+<script type="module">
+import { createMcpClient } from "./mcp-client.mjs";
 const $=(tag,attrs,...ch)=>{
   const el=document.createElement(tag);
   if(attrs)Object.entries(attrs).forEach(([k,v])=>{
@@ -298,7 +259,6 @@ const $=(tag,attrs,...ch)=>{
   return el;
 };
 
-// ── Formatters ────────────────────────────────────────────────────────────────
 function timeAgo(iso){
   const m=Math.floor((Date.now()-new Date(iso).getTime())/60000);
   if(m<1)return{text:'just now',cls:'fresh'};
@@ -331,7 +291,6 @@ function fmtShortDate(iso){
   return`${d.getMonth()+1}/${d.getDate()}`;
 }
 
-// ── Thread card ───────────────────────────────────────────────────────────────
 function makeThread(t,stage){
   const wrap=$('div',{class:`thread ${stage}`});
   const body=$('div',{class:'thread-body'});
@@ -352,7 +311,6 @@ function makeThread(t,stage){
   return wrap;
 }
 
-// ── Calendar section (7-day window, grouped by day) ─────────────────────────
 function localYmd(d){
   return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -396,8 +354,7 @@ function makeCalendar(cal){
   return sec;
 }
 
-// ── Mail tile with tabs ──────────────────────────────────────────────────────
-function makeMailTile(triage,liveThreads,mailHealth){
+function makeMailTile(triage,mailHealth){
   const sec=$('div',{class:'section'});
   const merged=triage||{threads_by_state:{},stats:{}};
 
@@ -465,7 +422,6 @@ function appendMailHealth(sec,mailHealth){
   sec.appendChild(row);
 }
 
-// ── Weather section ──────────────────────────────────────────────────────────
 function makeWeather(wx){
   const sec=$('div',{class:'section'});
   sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Weather'),$('span',{class:'sec-count'},wx.location||'')));
@@ -487,7 +443,6 @@ function makeWeather(wx){
   return sec;
 }
 
-// ── Weekly snapshot section ──────────────────────────────────────────────────
 function makeSnapshot(snap){
   const sec=$('div',{class:'section'});
   const weekLabel=snap.week_start?`Week of ${new Date(snap.week_start).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:'This Week';
@@ -508,7 +463,6 @@ function makeSnapshot(snap){
   sec.appendChild(g);return sec;
 }
 
-// ── Website section (umami + calculator leads) ──────────────────────────────
 function makeResearch(r){
   const sec=$('div',{class:'section'});
   const waiting=(r.counts&&r.counts.awaiting)||0;
@@ -549,7 +503,7 @@ function makeResearch(r){
       sec.appendChild($('div',{class:'item'},$('span',{class:'item-title'},t)));
     });
   }
-  const url=r.url||'https://research-scout.hwc.iheartwoodcraft.com';
+  const url=r.url||viewPolicy.links.research;
   sec.appendChild($('div',{style:'margin-top:6px'},
     $('a',{href:url,target:'_blank',class:'item-meta'},'review \u2192')));
   return sec;
@@ -570,7 +524,7 @@ function makeProjects(p){
     const pct=g.avgComplete==null?'':` · ${Math.round(g.avgComplete*100)}%`;
     sec.appendChild($('div',{class:'item'},$('span',{class:'item-title'},g.label),$('span',{class:'item-meta'},` ${g.count} live, ${g.needYou} need you${pct}`)));
   });
-  sec.appendChild($('a',{class:'lnk',href:p.url||'http://hwc-work:8765',target:'_blank'},'open the tracker →'));
+  sec.appendChild($('a',{class:'lnk',href:p.url||viewPolicy.links.projects,target:'_blank'},'open the tracker →'));
   return sec;
 }
 
@@ -598,7 +552,7 @@ function makeWebsite(w){
     });
     sec.appendChild(list);
   }
-  const link=$('a',{href:'https://stats.iheartwoodcraft.com',target:'_blank',class:'item-meta'},'full analytics →');
+  const link=$('a',{href:viewPolicy.links.stats,target:'_blank',class:'item-meta'},'full analytics →');
   sec.appendChild($('div',{style:'margin-top:6px'},link));
   if(w.analytics_ok===false){
     sec.appendChild($('div',{class:'alert alert-warning'},'Umami unreachable — showing zeros'));
@@ -606,7 +560,6 @@ function makeWebsite(w){
   return sec;
 }
 
-// ── Comms section ────────────────────────────────────────────────────────────
 function makeComms(comms){
   const sec=$('div',{class:'section'});
   sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Comms'),$('span',{class:'sec-count'},comms.source||'')));
@@ -631,7 +584,6 @@ function makeComms(comms){
   return sec;
 }
 
-// ── Backup section ───────────────────────────────────────────────────────────
 function makeBackup(bak){
   const sec=$('div',{class:'section'});
   const statusCls=bak.exit_status==='success'?'badge-ok':bak.exit_status==='warning'?'badge-warn':'badge-err';
@@ -654,7 +606,6 @@ function makeBackup(bak){
   return sec;
 }
 
-// ── Ops section (overnight digest — since previous evening) ─────────────────
 function makeOps(ops){
   const svc=ops.service_failures||[],probes=ops.services_down||[],errs=ops.journal_errors_top||[],
         down=ops.prometheus_targets_down||[],disk=ops.disk_forecast||[],nb=ops.nightly_builds_finished||[];
@@ -663,7 +614,7 @@ function makeOps(ops){
   const sinceLabel=ops.since?`since ${(ops.since||'').slice(5,16)}`:'';
   sec.appendChild($('div',{class:'sec-hdr'},
     $('span',null,'Overnight Ops'),
-    $('a',{class:'sec-link',href:'https://grafana.hwc.iheartwoodcraft.com/d/service-health',target:'_blank'},`${sinceLabel} · Service Health →`)));
+    $('a',{class:'sec-link',href:viewPolicy.links.serviceHealth,target:'_blank'},`${sinceLabel} · Service Health →`)));
   if(quiet){
     sec.appendChild($('div',{class:'empty'},'Quiet night — no failures, no probe drops, no errors'));
   }else{
@@ -692,7 +643,6 @@ function makeOps(ops){
   return sec;
 }
 
-// ── Tasks section ────────────────────────────────────────────────────────────
 function makeTasks(tasks){
   const sec=$('div',{class:'section'});
   const overdueArr=tasks.overdue||[],todayArr=tasks.due_today||[],weekArr=tasks.due_this_week||[],unschedArr=tasks.unscheduled||[];
@@ -732,7 +682,6 @@ function makeTasks(tasks){
   return sec;
 }
 
-// ── Recent documents section ─────────────────────────────────────────────────
 function makeRecentDocs(docs){
   const items=docs.items||[];if(!items.length)return null;
   const sec=$('div',{class:'section'});
@@ -756,7 +705,6 @@ function makeRecentDocs(docs){
   return sec;
 }
 
-// ── Jobs section ─────────────────────────────────────────────────────────────
 function jobLink(name,url,cls){
   return url?$('a',{class:`${cls} lnk`,href:url,target:'_blank'},name):$('span',{class:cls},name);
 }
@@ -765,7 +713,7 @@ function makeJobs(jobs){
   const sec=$('div',{class:'section'});
   sec.appendChild($('div',{class:'sec-hdr'},
     $('span',null,'Active Jobs'),
-    $('a',{class:'sec-link',href:'https://app.jobtread.com',target:'_blank'},`${real.length} \u00b7 JobTread \u2192`)));
+    $('a',{class:'sec-link',href:viewPolicy.links.jobtread,target:'_blank'},`${real.length} \u00b7 JobTread \u2192`)));
   if(!real.length){
     sec.appendChild($('div',{class:'empty'},jobs.ok?'No open jobs in JobTread':'No job data'));
     if(!jobs.ok)sec.appendChild($('div',{class:'empty-hint'},'gather did not run \u2014 check alerts above'));
@@ -785,12 +733,11 @@ function makeJobs(jobs){
   return sec;
 }
 
-// ── Leads section ────────────────────────────────────────────────────────────
 function makeLeads(leads){
   const sec=$('div',{class:'section'});
   sec.appendChild($('div',{class:'sec-hdr'},
     $('span',null,'New Leads'),
-    $('a',{class:'sec-link',href:'https://app.jobtread.com',target:'_blank'},`${leads.new_count||0} · JobTread →`)));
+    $('a',{class:'sec-link',href:viewPolicy.links.jobtread,target:'_blank'},`${leads.new_count||0} · JobTread →`)));
   if(!(leads.items||[]).length){sec.appendChild($('div',{class:'empty'},'No new leads'));return sec}
   leads.items.forEach(l=>{
     const ac=l.days_old>5?'urgent':l.days_old>2?'old':'';
@@ -803,12 +750,11 @@ function makeLeads(leads){
   return sec;
 }
 
-// ── Overdue section ──────────────────────────────────────────────────────────
 function makeOverdue(overdue){
   const sec=$('div',{class:'section'});
   sec.appendChild($('div',{class:'sec-hdr'},
     $('span',null,'Overdue Invoices'),
-    $('a',{class:'sec-link',href:'https://app.jobtread.com',target:'_blank'},`${overdue.count} · JobTread →`)));
+    $('a',{class:'sec-link',href:viewPolicy.links.jobtread,target:'_blank'},`${overdue.count} · JobTread →`)));
   if(!overdue.count){sec.appendChild($('div',{class:'empty'},'Nothing overdue'));return sec}
   if(overdue.total_amount)sec.appendChild($('div',{class:'overdue-total'},`$${Math.round(overdue.total_amount).toLocaleString()} outstanding`));
   (overdue.items||[]).forEach(i=>{
@@ -823,7 +769,6 @@ function makeOverdue(overdue){
   return sec;
 }
 
-// ── System section ───────────────────────────────────────────────────────────
 function makeSystem(sys){
   const sec=$('div',{class:'section'});
   const statusColor=sys.overall==='green'?'var(--green)':sys.overall==='yellow'?'var(--yellow)':'var(--red)';
@@ -851,50 +796,17 @@ function makeSystem(sys){
       $('span',{class:'storage-avail'},st.available)));
   });
   sec.appendChild($('div',{style:'margin-top:10px'},
-    $('a',{class:'sec-link',href:'https://grafana.hwc.iheartwoodcraft.com',target:'_blank'},'Grafana →')));
+    $('a',{class:'sec-link',href:viewPolicy.links.grafana,target:'_blank'},'Grafana →')));
   return sec;
 }
 
-// ── Tile wrapper ─────────────────────────────────────────────────────────────
 function tile(section){const t=$('div',{class:'tile'});t.appendChild(section);return t}
 
-// ── Main render ───────────────────────────────────────────────────────────────
 let _sectionCount=0;
-// ── Today Queue: gateway MCP dispatch (same-origin /mcp proxy → :6200) ───────
-const MCP_URL='./mcp';
-const _mcp={sid:null,seq:0};
-async function mcpRpc(method,params){
-  const body={jsonrpc:'2.0',method,params};
-  const notif=method.startsWith('notifications/');
-  if(!notif)body.id=++_mcp.seq;
-  const headers={'content-type':'application/json',accept:'application/json, text/event-stream'};
-  if(_mcp.sid)headers['mcp-session-id']=_mcp.sid;
-  headers['mcp-protocol-version']='2025-06-18';
-  const r=await fetch(MCP_URL,{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-  const sid=r.headers.get('mcp-session-id');if(sid)_mcp.sid=sid;
-  if(notif||r.status===202)return null;
-  const text=await r.text();
-  if(!r.ok)throw new Error(`gateway ${r.status}`);
-  let msg=null;
-  if((r.headers.get('content-type')||'').includes('text/event-stream')){
-    for(const line of text.split('\n')){
-      if(!line.startsWith('data:'))continue;
-      try{const j=JSON.parse(line.slice(5).trim());if(j&&(j.id===body.id||j.result!==undefined||j.error))msg=j}catch{}
-    }
-  }else{msg=JSON.parse(text)}
-  if(!msg)throw new Error('no rpc response');
-  if(msg.error)throw new Error(msg.error.message||'rpc error');
-  return msg.result;
-}
+const client = createMcpClient({ url: './mcp', fetch, timeoutMs: 15000,
+  clientInfo: { name: 'briefing-dashboard', version: '1.0' } });
 async function todayVerb(action,id){
-  if(!_mcp.sid){
-    await mcpRpc('initialize',{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'briefing-dashboard',version:'1.0'}});
-    await mcpRpc('notifications/initialized',{});
-  }
-  const r=await mcpRpc('tools/call',{name:'hwc_today',arguments:{action,id}});
-  const text=(r.content||[]).find(c=>c.type==='text')?.text??'';
-  if(r.isError)throw new Error(text.slice(0,120)||'tool error');
-  return JSON.parse(text);
+  return client.callTool('hwc_today',{action,id});
 }
 function makeToday(t){
   const box=$('div',{class:'today'});
@@ -932,7 +844,7 @@ function makeToday(t){
   return box;
 }
 
-function render(data,liveThreads){
+function render(data){
   app.innerHTML='';_sectionCount=0;
   if(data.error){
     app.appendChild($('div',{class:'err-box'},$('h2',null,'Briefing Unavailable'),$('p',null,data.error_message||'Failed to compile briefing')));
@@ -953,23 +865,14 @@ function render(data,liveThreads){
   // not repeated; unmatched transition signals remain in the watchlist.
   if(s.today&&(s.today.items||[]).length){app.appendChild(makeToday(s.today))}
 
-  const ALERT_URL={ops:'https://grafana.hwc.iheartwoodcraft.com/d/service-health',
-    leads:'https://app.jobtread.com',overdue:'https://app.jobtread.com',jobs:'https://app.jobtread.com',
-    website:'https://stats.iheartwoodcraft.com',
-    system:'https://grafana.hwc.iheartwoodcraft.com',backup:'https://grafana.hwc.iheartwoodcraft.com',
-    config_drift:'https://github.com/eriqueo/nixos-hwc',
-    refinery:'https://refinery.hwc.iheartwoodcraft.com',
-    projects:'http://hwc-work:8765',
-    research:'https://research-scout.hwc.iheartwoodcraft.com'};
-  const SOURCE_SECTION={invoice:'overdue',lead:'leads',task:'tasks',system:'system',refinery:'refinery',nightly:'nightly-builds',mail:'mail'};
-  const represented=new Set(((s.today&&s.today.items)||[]).map(it=>SOURCE_SECTION[it.source]).filter(Boolean));
+  const represented=new Set(((s.today&&s.today.items)||[]).map(it=>viewPolicy.sourceSections[it.source]).filter(Boolean));
   const watchlist=(data.alerts||[]).filter(al=>!represented.has(al.section));
   if(watchlist.length){
     const a=$('div',{class:'alerts'});
     a.appendChild($('div',{class:'sec-hdr'},$('span',null,'Watchlist')));
     watchlist.forEach(al=>{
       const el=$('div',{class:`alert alert-${al.level}`},al.message);
-      const u=ALERT_URL[al.section];
+      const u=viewPolicy.links[viewPolicy.alertLinks[al.section]];
       if(u){el.appendChild(document.createTextNode(' '));el.appendChild($('a',{class:'lnk',href:u,target:'_blank'},'view →'))}
       a.appendChild(el);
     });
@@ -980,7 +883,7 @@ function render(data,liveThreads){
   const grid=$('div',{class:'dashboard-grid'});
 
   if(s.calendar){_sectionCount++;grid.appendChild(tile(makeCalendar(s.calendar)))}
-  if(data.mail_triage||s.mail){_sectionCount++;grid.appendChild(tile(makeMailTile(data.mail_triage,liveThreads,s.mail)))}
+  if(data.mail_triage||s.mail){_sectionCount++;grid.appendChild(tile(makeMailTile(data.mail_triage,s.mail)))}
   if(s.tasks){_sectionCount++;grid.appendChild(tile(makeTasks(s.tasks)))}
   // Leads + overdue render even when empty: "Nothing overdue" is information,
   // a silently missing tile is not.
@@ -1012,12 +915,14 @@ function renderFooter(data){
   app.appendChild($('div',{class:'footer'},parts.join(' \u00b7 ')));
 }
 
-// ── Load + refresh ────────────────────────────────────────────────────────────
 const app=document.getElementById('app');
+let viewPolicy;
+const policyReady=fetch('./view-policy.json').then(response=>{if(!response.ok)throw new Error(`view policy HTTP ${response.status}`);return response.json()}).then(policy=>{if(policy.schemaVersion!==1)throw new Error("unsupported briefing view policy");viewPolicy=policy});
 async function load(){
   try{
+    await policyReady;
     const data=await fetch(`./briefing.json?t=${Date.now()}`).then(r=>{if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json()});
-    render(data,null);
+    render(data);
   }catch(e){render({error:true,error_message:`Could not load briefing: ${e.message}`})}
 }
 

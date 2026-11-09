@@ -7,68 +7,16 @@
 // the queue sees mail triage. Emits {} on any failure — the briefing degrades
 // gracefully (dashboard/email simply skip the TODAY block).
 //
-// Same StreamableHTTP JSON-RPC transport as gather-live.mjs; keep in lockstep.
 
-const GATEWAY = process.env.HWC_GATEWAY_URL || "http://127.0.0.1:6200/mcp";
-const FETCH_TIMEOUT_MS = 20_000;
+import { pathToFileURL } from "node:url";
+import { createMcpClient } from "./dashboard/mcp-client.mjs";
 
-const session = { id: null, protocolVersion: "2025-06-18", seq: 0 };
-
-async function rpc(method, params) {
-  const isNotification = method.startsWith("notifications/");
-  const body = { jsonrpc: "2.0", method, params };
-  if (!isNotification) body.id = ++session.seq;
-
-  const headers = {
-    "content-type": "application/json",
-    accept: "application/json, text/event-stream",
-  };
-  if (session.id) headers["mcp-session-id"] = session.id;
-  if (session.protocolVersion) headers["mcp-protocol-version"] = session.protocolVersion;
-
-  const res = await fetch(GATEWAY, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
-  const sid = res.headers.get("mcp-session-id");
-  if (sid) session.id = sid;
-  if (isNotification || res.status === 202) return null;
-
-  const text = await res.text();
-  if (!res.ok) throw new Error(`gateway HTTP ${res.status}: ${text.slice(0, 200)}`);
-
-  let msg = null;
-  if ((res.headers.get("content-type") || "").includes("text/event-stream")) {
-    for (const line of text.split("\n")) {
-      if (!line.startsWith("data:")) continue;
-      try {
-        const j = JSON.parse(line.slice(5).trim());
-        if (j && (j.id === body.id || j.result !== undefined || j.error)) msg = j;
-      } catch { /* keepalives */ }
-    }
-  } else {
-    msg = JSON.parse(text);
-  }
-  if (!msg) throw new Error(`no JSON-RPC response for ${method}`);
-  if (msg.error) throw new Error(msg.error.message || `rpc error on ${method}`);
-  return msg.result;
-}
-
-async function main() {
-  await rpc("initialize", {
-    protocolVersion: session.protocolVersion,
-    capabilities: {},
-    clientInfo: { name: "gather-today", version: "1.0.0" },
-  });
-  await rpc("notifications/initialized", {});
+export async function gatherToday({ gatewayUrl, fetch: fetchRequest }) {
+  const client = createMcpClient({ url: gatewayUrl, fetch: fetchRequest, timeoutMs: 20_000,
+    clientInfo: { name: "gather-today", version: "1.0.0" } });
   // Gather enough depth for the dashboard's explicit "show all" exploration
   // path; the initial render remains capped independently.
-  const r = await rpc("tools/call", { name: "hwc_today", arguments: { action: "board", limit: 50 } });
-  const text = (r.content || []).find((c) => c.type === "text")?.text ?? "";
-  if (r.isError) throw new Error(text.slice(0, 200) || "hwc_today error");
-  const parsed = JSON.parse(text);
+  const parsed = await client.callTool("hwc_today", { action: "board", limit: 50 });
   const data = parsed.data ?? {};
 
   // Case-ledger delta: what changed since the previous briefing run (each
@@ -79,20 +27,21 @@ async function main() {
   // action would fall through to a board payload.
   let changes = null;
   try {
-    const d = await rpc("tools/call", { name: "hwc_today", arguments: { action: "delta" } });
-    const dText = (d.content || []).find((c) => c.type === "text")?.text ?? "";
-    if (!d.isError) {
-      const dData = JSON.parse(dText).data ?? {};
-      if (Array.isArray(dData.new) && Array.isArray(dData.reopened)) changes = dData;
-    }
+    const d = await client.callTool("hwc_today", { action: "delta" });
+    const dData = d.data ?? {};
+    if (Array.isArray(dData.new) && Array.isArray(dData.reopened)) changes = dData;
   } catch { /* board still ships without the delta */ }
 
-  process.stdout.write(JSON.stringify({
+  return {
     items: data.items ?? [],
     spillover: data.spillover ?? 0,
     generated_at: data.generated_at ?? null,
     changes,
-  }));
+  };
 }
 
-main().catch(() => process.stdout.write("{}"));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  gatherToday({ gatewayUrl: process.env.HWC_GATEWAY_URL || "http://127.0.0.1:6200/mcp", fetch })
+    .then((out) => process.stdout.write(JSON.stringify(out)))
+    .catch(() => process.stdout.write("{}"));
+}

@@ -36,9 +36,7 @@ let
   };
 in
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
   options.hwc.monitoring.heartbeat = {
     enable = lib.mkEnableOption "outbound heartbeat to an external dead-man's switch";
 
@@ -59,10 +57,7 @@ in
       '';
     };
   };
-
-  #==========================================================================
   # IMPLEMENTATION
-  #==========================================================================
   config = lib.mkIf cfg.enable {
     systemd.services.hwc-heartbeat = {
       description = "Ping the external dead-man's switch";
@@ -86,10 +81,7 @@ in
         AccuracySec = "30s";
       };
     };
-
-    #========================================================================
     # VALIDATION
-    #========================================================================
     assertions = [
       {
         assertion = lib.hasPrefix "/run/agenix/" (toString cfg.pingUrlFile);

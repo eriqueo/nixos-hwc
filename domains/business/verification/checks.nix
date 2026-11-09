@@ -461,7 +461,7 @@ pkgs.runCommand "workbench-web-service" {} ''
 '';
 
 morning-briefing-async = pkgs.runCommand "morning-briefing-async" {
-  nativeBuildInputs = [ pkgs.nodejs_22 ];
+  nativeBuildInputs = [ pkgs.nodejs_22 pkgs.bash pkgs.coreutils pkgs.jq pkgs.util-linux ];
 } ''
   node --test ${(repoRoot + "/domains/business/morning-briefing")}/gather.test.mjs
   touch "$out"

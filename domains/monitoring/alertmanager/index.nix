@@ -12,9 +12,7 @@
 
 let
   cfg = config.hwc.monitoring.alertmanager;
-  paths = config.hwc.paths;
 
-  # Generate Alertmanager configuration
   alertmanagerConfig = {
     global = {
       resolve_timeout = "5m";
@@ -49,9 +47,7 @@ let
 
 in
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
   options.hwc.monitoring.alertmanager = {
     enable = lib.mkEnableOption "Prometheus Alertmanager for alert routing and notification";
 
@@ -59,12 +55,6 @@ in
       type = lib.types.port;
       default = 9093;
       description = "Alertmanager HTTP server port";
-    };
-
-    dataDir = lib.mkOption {
-      type = lib.types.path;
-      default = "${paths.state}/alertmanager";
-      description = "Data directory for Alertmanager";
     };
 
     webhookReceivers = lib.mkOption {
@@ -107,10 +97,7 @@ in
       description = "Time before re-sending an alert";
     };
   };
-
-  #==========================================================================
   # IMPLEMENTATION
-  #==========================================================================
   config = lib.mkIf cfg.enable {
     services.prometheus.alertmanager = {
       enable = true;
@@ -118,14 +105,12 @@ in
       configuration = alertmanagerConfig;
     };
 
-    # Configure Prometheus to send alerts to Alertmanager
     services.prometheus.alertmanagers = lib.mkIf config.hwc.monitoring.prometheus.enable [{
       static_configs = [{
         targets = [ "localhost:${toString cfg.port}" ];
       }];
     }];
 
-    # Run as eric user
     # Note: NixOS alertmanager module hardcodes --storage.path=/var/lib/alertmanager
     # We create that directory and ensure eric owns it
     systemd.services.alertmanager = {
@@ -137,14 +122,10 @@ in
       };
     };
 
-    # Firewall - localhost + Tailscale
     networking.firewall.interfaces."lo".allowedTCPPorts = [ cfg.port ];
     networking.firewall.interfaces."tailscale0".allowedTCPPorts =
       lib.optional (config.networking.interfaces ? "tailscale0") cfg.port;
-
-    #==========================================================================
     # VALIDATION
-    #==========================================================================
     assertions = [
       {
         assertion = !cfg.enable || config.hwc.monitoring.prometheus.enable;
@@ -154,13 +135,8 @@ in
         assertion = !cfg.enable || (cfg.port != 0);
         message = "Alertmanager port must be configured";
       }
-      {
-        assertion = !cfg.enable || (cfg.dataDir != "");
-        message = "Alertmanager data directory must be configured";
-      }
     ];
 
-    # Warn if no webhook receivers configured (allows deployment without webhooks)
     warnings = lib.optional (cfg.enable && cfg.webhookReceivers == [])
       "Alertmanager has no webhook receivers configured. Configure webhookReceivers to receive alerts.";
   };

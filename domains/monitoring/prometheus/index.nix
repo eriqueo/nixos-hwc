@@ -132,9 +132,9 @@ let
   localHttp =
     lib.optional (on [ "services" "caddy" "enable" ]) (svc "Caddy" "http://127.0.0.1:2019/config/")
     ++ lib.optional cfg.enable (svc "Prometheus" "http://127.0.0.1:${toString cfg.port}/-/healthy")
-    ++ lib.optional (on [ "hwc" "monitoring" "alertmanager" "enable" ]) (svc "Alertmanager" "http://127.0.0.1:9093/-/healthy")
-    ++ lib.optional (on [ "hwc" "monitoring" "grafana" "enable" ]) (svc "Grafana" "http://127.0.0.1:3000/api/health")
-    ++ box "homepage" "Homepage" "http://127.0.0.1:3080/"
+    ++ lib.optional (on [ "hwc" "monitoring" "alertmanager" "enable" ]) (svc "Alertmanager" "http://127.0.0.1:${toString config.hwc.monitoring.alertmanager.port}/-/healthy")
+    ++ lib.optional (on [ "hwc" "monitoring" "grafana" "enable" ]) (svc "Grafana" "http://127.0.0.1:${toString config.hwc.monitoring.grafana.port}/api/health")
+    ++ box "homepage" "Homepage" "http://127.0.0.1:${toString config.hwc.monitoring.homepage.port}/"
     ++ box "vaultwarden" "Vaultwarden" "http://127.0.0.1:8222/alive"
     ++ box "authentik-server" "Authentik" "http://127.0.0.1:9200/-/health/live/"
     ++ box "paperless" "Paperless-NGX" "http://127.0.0.1:8102/api/"
@@ -215,16 +215,18 @@ let
   # One job per name: the same job exported by several hosts merges its
   # static_configs (so rules/dashboards keep matching job="node" etc.).
   mergeJobs = jobs: lib.mapAttrsToList
-    (_: group: (builtins.head group) // { static_configs = lib.concatMap (j: j.static_configs) group; })
+    (name: group:
+      let settings = j: builtins.removeAttrs j [ "static_configs" ]; in
+      assert lib.assertMsg (lib.all (j: settings j == settings (builtins.head group)) group)
+        "Prometheus job ${name} has conflicting settings across serving hosts";
+      (builtins.head group) // { static_configs = lib.concatMap (j: j.static_configs) group; })
     (lib.groupBy (j: j.job_name) jobs);
 
   fleetScrapeConfigs = mergeJobs (lib.concatMap (h: hostJobs h ++ hostProbes h) members);
   fleetRules = lib.concatMap (h: (hostCfg h).hwc.monitoring.prometheus.rules) members;
 in
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
   options.hwc.monitoring.prometheus = {
     enable = lib.mkEnableOption "the central Prometheus (collects every serving host's exports)";
 
@@ -232,12 +234,6 @@ in
       type = lib.types.port;
       default = 9090;
       description = "Prometheus HTTP server port";
-    };
-
-    dataDir = lib.mkOption {
-      type = lib.types.path;
-      default = "${paths.state}/prometheus";
-      description = "Data directory for Prometheus time-series database";
     };
 
     retention = lib.mkOption {
@@ -300,10 +296,7 @@ in
       description = "EXPORT: extra rule groups (JSON/YAML strings) this host's modules contribute, e.g. Frigate's per-camera recording rules.";
     };
   };
-
-  #==========================================================================
   # IMPLEMENTATION
-  #==========================================================================
   config = lib.mkMerge [
     (lib.mkIf agent.enable {
       services.prometheus.exporters.node = {
@@ -320,7 +313,7 @@ in
 
       # The tailnet address may appear after the unit starts at boot: wait for
       # tailscaled and retry instead of failing.
-      systemd.services.prometheus-node-exporter = {
+      systemd.services = lib.genAttrs [ "prometheus-node-exporter" "prometheus-blackbox-exporter" ] (_: {
         after = [ "tailscaled.service" ];
         wants = [ "tailscaled.service" ];
         startLimitIntervalSec = 0;
@@ -330,18 +323,7 @@ in
           Restart = lib.mkForce "always";
           RestartSec = 5;
         };
-      };
-      systemd.services.prometheus-blackbox-exporter = {
-        after = [ "tailscaled.service" ];
-        wants = [ "tailscaled.service" ];
-        startLimitIntervalSec = 0;
-        serviceConfig = {
-          User = lib.mkForce "eric";
-          Group = lib.mkForce "users";
-          Restart = lib.mkForce "always";
-          RestartSec = 5;
-        };
-      };
+      });
 
       hwc.monitoring.prometheus.scrapeConfigs = [{
         job_name = "node";
@@ -428,10 +410,7 @@ in
         StateDirectory = lib.mkForce "hwc/prometheus";
         WorkingDirectory = lib.mkForce "${paths.state}/prometheus";
       };
-
-      #========================================================================
       # VALIDATION
-      #========================================================================
       assertions = [
         {
           assertion = builtins.match "^[0-9]+d$" cfg.retention != null;

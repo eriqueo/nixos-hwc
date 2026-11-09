@@ -40,7 +40,10 @@ alert-tier-exclusivity = let
   };
   # Every threshold in use, each ±1, plus the ends of the scale. Bounds are
   # whole numbers, so integer samples cross every boundary exactly.
-  samples = [ 0 50 69 70 71 81 82 83 84 85 86 89 90 91 94 95 96 99 100 ];
+  samples = bounds: lib.unique ([ 0 100 ] ++ lib.concatMap (b:
+    lib.concatMap (n: [ (n - 1) n (n + 1) ])
+      ([ b.lower ] ++ lib.optional (b.upper != null) b.upper)
+  ) bounds);
   matches = b: v: v > b.lower && (b.upper == null || v <= b.upper);
   overlaps = lib.concatLists (lib.mapAttrsToList (family: names:
     let bounds = map boundsOf names;
@@ -49,7 +52,7 @@ alert-tier-exclusivity = let
       in lib.optional (lib.length hit > 1)
         "${family}: sample ${toString v} matches ${
           lib.concatStringsSep " + " (map (b: b.name) hit)}"
-    ) samples
+    ) (samples bounds)
   ) families);
   unboundedLowTiers = lib.concatLists (lib.mapAttrsToList (family: names:
     map (b: "${family}: ${b.name} has no upper bound but is not the top tier")
@@ -247,6 +250,89 @@ in pkgs.runCommand "calculator-intake-monitoring" {
   pathlib.Path('intake-transition.json').write_text(json.dumps(test))
   subprocess.run(['promtool','test','rules','intake-transition.json'],check=True,timeout=30)
   print('PASS current calculator intake, safe preflight and pending/firing/recovered alert states')
+  PY
+  touch "$out"
+'';
+
+
+# Override existing public options through the real modules, rather than
+# testing another rendering of the same URL/port formulas.
+monitoring-wiring = let
+  work = (self.nixosConfigurations.hwc-work.extendModules { modules = [({ lib, ... }: {
+    hwc.networking.shared.vhostDomain = lib.mkForce "monitoring-fixture.invalid";
+    hwc.networking.hosts.tailnetSuffix = lib.mkForce "fixture.ts.net";
+    hwc.monitoring.prometheus.port = lib.mkForce 19090;
+    hwc.monitoring.alertmanager.port = lib.mkForce 19093;
+    hwc.monitoring.grafana.port = lib.mkForce 13000;
+    hwc.monitoring.homepage.port = lib.mkForce 13080;
+    hwc.system.mcp.port = lib.mkForce 16200;
+    hwc.system.mcp.tailnetPort = lib.mkForce 16243;
+  })]; }).config;
+  home = (self.nixosConfigurations.hwc-home.extendModules { modules = [({ lib, ... }: {
+    hwc.monitoring.exportarr.port = lib.mkForce 19707;
+    hwc.monitoring.exportarr.apps = lib.mkForce [ "prowlarr" "sonarr" ];
+  })]; }).config;
+  probes = lib.concatMap (p: p.targets) work.hwc.monitoring.prometheus.probes;
+  probeUrl = service: (lib.findFirst (t: (t.labels.service or null) == service) null probes).url;
+  job = name: lib.findFirst (j: j.job_name == name) null home.hwc.monitoring.prometheus.scrapeConfigs;
+  exporter = name: home.virtualisation.oci-containers.containers."exportarr-${name}";
+  conflict = self.nixosConfigurations.hwc-work.extendModules { modules = [{
+    hwc.monitoring.prometheus.scrapeConfigs = [{
+      job_name = "node";
+      scrape_interval = "999s";
+      static_configs = [{ targets = [ "localhost:19100" ]; }];
+    }]; }]; };
+  rejected = !(builtins.tryEval (builtins.deepSeq conflict.config.services.prometheus.scrapeConfigs true)).success;
+  fleet = self.nixosConfigurations.hwc-work.config.services.prometheus.scrapeConfigs;
+  nodes = lib.filter (j: j.job_name == "node") fleet;
+  nodeHosts = map (sc: sc.labels.host) (builtins.head nodes).static_configs;
+  homepage = pkgs.writeText "homepage-wiring.json" (builtins.toJSON {
+    activation = work.system.activationScripts.homepageConfig;
+  });
+in
+assert lib.assertMsg (lib.all (name:
+  let unit = home.systemd.services.${name}; in
+  builtins.elem "tailscaled.service" unit.after
+  && builtins.elem "tailscaled.service" unit.wants
+  && unit.serviceConfig.Restart == "always"
+  && unit.serviceConfig.RestartSec == 5
+) [ "prometheus-node-exporter" "prometheus-blackbox-exporter" ])
+  "both host exporters must tolerate the tailnet address appearing after boot";
+assert lib.assertMsg (probeUrl "Alertmanager" == "http://127.0.0.1:19093/-/healthy"
+  && probeUrl "Grafana" == "http://127.0.0.1:13000/api/health"
+  && probeUrl "Homepage" == "http://127.0.0.1:13080/")
+  "monitoring probes must follow the configured service ports";
+assert lib.assertMsg ((exporter "prowlarr").environment.PORT == "19707"
+  && (exporter "prowlarr").cmd == [ "prowlarr" "-p" "19707" "-u" "http://127.0.0.1:9696" "-a" "\${API_KEY}" ]
+  && (job "prowlarr-exporter").static_configs == [{ targets = [ "localhost:19707" ]; }]
+  && (exporter "sonarr").environment.PORT == "19708"
+  && (job "sonarr-exporter").static_configs == [{ targets = [ "localhost:19708" ]; }])
+  "reordered Exportarr apps must bind the same ports in containers and scrape jobs";
+assert lib.assertMsg (rejected && builtins.length nodes == 1
+  && builtins.elem "hwc-home" nodeHosts && builtins.elem "hwc-work" nodeHosts)
+  "fleet jobs must combine compatible targets and reject conflicting settings";
+pkgs.runCommand "monitoring-wiring" {
+  nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.pyyaml ])) ];
+} ''
+  python3 - ${homepage} <<'PY'
+  import json,pathlib,shlex,sys,yaml
+  activation=json.loads(pathlib.Path(sys.argv[1]).read_text())['activation']
+  installs=[shlex.split(line) for line in activation.splitlines() if 'install -m 0644' in line]
+  assert sorted(pathlib.Path(args[-1]).name for args in installs)==['bookmarks.yaml','docker.yaml','services.yaml','settings.yaml','widgets.yaml']
+  source=next(args[-2] for args in installs if args[-1].endswith('/services.yaml'))
+  groups=yaml.safe_load(pathlib.Path(source).read_text())
+  tiles={name:tile for group in groups for entries in group.values() for entry in entries for name,tile in entry.items()}
+  assert tiles['CRM']['href']=='https://crm.monitoring-fixture.invalid'
+  assert tiles['Cameras']['href']=='https://grafana.monitoring-fixture.invalid/d/cameras'
+  assert tiles['hwc-home']['widget']['url']=='http://host.containers.internal:19090'
+  assert tiles['hwc-work']['widget']['url']=='http://host.containers.internal:19090'
+  assert tiles['MCP Gateway']['href']=='https://hwc-work.fixture.ts.net:16243/health'
+  assert tiles['MCP Gateway']['widget']['url']=='http://host.containers.internal:16200/health'
+  assert tiles['n8n']['href']=='https://hwc-work.fixture.ts.net:2443'
+  assert tiles['n8n']['siteMonitor']==tiles['n8n']['href']
+  assert tiles['Prometheus']['href']=='http://hwc-work.fixture.ts.net:19090'
+  assert tiles['Prometheus']['siteMonitor']==tiles['Prometheus']['href']+'/-/healthy'
+  print('PASS generated Homepage YAML, configured links and installed file set')
   PY
   touch "$out"
 '';

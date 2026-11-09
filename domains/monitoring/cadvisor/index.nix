@@ -13,9 +13,7 @@ let
   cfg = config.hwc.monitoring.cadvisor;
 in
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
   options.hwc.monitoring.cadvisor = {
     enable = lib.mkEnableOption "cAdvisor container metrics exporter";
 
@@ -25,10 +23,7 @@ in
       description = "cAdvisor metrics port";
     };
   };
-
-  #==========================================================================
   # IMPLEMENTATION
-  #==========================================================================
   config = lib.mkIf cfg.enable {
     # cAdvisor container for container metrics
     # HWC-EXCEPTION(Law 5): infra container, not a media app
@@ -87,10 +82,7 @@ in
         scrape_interval = "30s";
       }
     ];
-
-    #==========================================================================
     # VALIDATION
-    #==========================================================================
     assertions = [
       {
         assertion = !cfg.enable || config.hwc.monitoring.prometheus.agent.enable;
