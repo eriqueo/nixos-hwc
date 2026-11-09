@@ -44,6 +44,7 @@ notifications/
 | `hwc.notifications.notify.transitionMode` | Transition decision engine: `shadow` (default, records only) or `off` |
 
 ## Changelog
+- 2026-11-09: Add the `discord-projects` channel (`#projects`, secret `discord-webhook-projects`) and move the `projects` topic to it from `discord-ops`. A P1 on that topic still adds SMTP.
 - 2026-11-04: `notify/parts/routes.nix` — new `projects` topic (tracker digest from morning-briefing) routed to `discord-ops` until a projects channel exists.
 - 2026-11-02: Remove query-only URL parsing and hoist fixed dispatcher patterns.
 - 2026-09-30: Add terminal-only user-scope service failure handling in the existing producer. Intermediate retries and deliberate stops send nothing. Unreadable unit state or failed delivery exits nonzero and logs locally. The system branch retains its30-second recovery warning/critical behavior. No new sender or channel.

@@ -75,6 +75,17 @@
   }
 
   {
+    id        = "discord-projects";
+    name      = "#projects (Discord)";
+    adapter   = "discord";
+    secretRef = "discord-webhook-projects";
+    params = {
+      username  = "HWC Projects";
+      timeoutMs = 5000;
+    };
+  }
+
+  {
     id        = "discord-website";
     name      = "#website (Discord)";
     adapter   = "discord";

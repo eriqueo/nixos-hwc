@@ -89,6 +89,7 @@ these same rules instead of maintaining another host list.
 
 ## Changelog
 
+- 2026-11-09: Add `discord-webhook-projects` (`parts/services/discord-webhook/projects.age`), the `#projects` channel webhook Eric supplied. Encrypted to the agreed five-recipient default; work host-key decryption matched byte for byte. Generated `root:secrets / 0440` mount; hwc-notify restarts on ciphertext change.
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-03: Create four scoped PostgreSQL environment payloads and rotate only Umami's database URL password; verify work/home host-key byte parity.
 - 2026-11-03: Add and host-key-decrypt-check the isolated Immich database password under the existing generated default policy.
