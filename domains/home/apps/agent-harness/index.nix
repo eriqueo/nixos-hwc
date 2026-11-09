@@ -423,6 +423,13 @@ in
             tokenFile = lib.mkOption { type = lib.types.str; description = "Mounted file holding the shared hub/bot control token."; };
             ingressUrl = lib.mkOption { type = lib.types.str; description = "The control bot's loopback card ingress."; };
             since = lib.mkOption { type = lib.types.str; description = "Cards created before this date never post."; };
+            publicUrl = lib.mkOption {
+              type = lib.types.str;
+              description = ''
+                The hub as a card's Open link reaches it from Eric's phone. It needs
+                the full tailnet host name: Discord rejects a link button whose host
+                has no dot, so `tracker.url` (`http://hwc-work:8765`) cannot be used.'';
+            };
           };
         };
         # One producer: the control bot's `targets.projects` in the system
@@ -437,6 +444,12 @@ in
             tokenFile = if on then "/run/agenix/${bot.targets.projects.tokenSecret}" else "";
             ingressUrl = if on then "http://127.0.0.1:${toString bot.targets.projects.cardPort}" else "";
             since = if on then bot.targets.projects.postSince else "";
+            publicUrl =
+              if on then
+                "http://${lib.attrByPath [ "networking" "hostName" ] "localhost" osConfig}.${
+                  lib.attrByPath [ "hwc" "networking" "hosts" "tailnetSuffix" ] "invalid" osConfig
+                }:${toString cfg.tracker.port}"
+              else "";
           };
         defaultText = lib.literalMD "derived from the system control bot's `targets.projects`; off without a system config";
         description = ''
@@ -693,7 +706,7 @@ in
           "TRACKER_CONTROL_TOKEN_FILE=${cfg.tracker.discordCards.tokenFile}"
           "TRACKER_CARD_INGRESS_URL=${cfg.tracker.discordCards.ingressUrl}"
           "TRACKER_POST_SINCE=${cfg.tracker.discordCards.since}"
-          "TRACKER_PUBLIC_URL=${cfg.tracker.url}"
+          "TRACKER_PUBLIC_URL=${cfg.tracker.discordCards.publicUrl}"
         ] ++ lib.optional (workbenchSite != null)
           # Workbench area switcher: the page renders the Nix-produced registry
           # (hwc.business.workbench, the one producer of the area list) from the

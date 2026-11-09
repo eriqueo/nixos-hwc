@@ -106,6 +106,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-09 (b): `tracker.discordCards.publicUrl` gives card links the full tailnet host name (host name plus `hwc.networking.hosts.tailnetSuffix`). Discord refused the first live card because `http://hwc-work:8765` has no dot. Pins claude-config bfecf8a: the hub refuses to post with such a URL, and `POST /api/control/v1/posts/release` lets an operator re-post a card whose post did not land.
 - 2026-11-09: Tracker decision cards reach Discord. New `tracker.discordCards` (enable, token file, bot ingress, start date) feeds `hwc-tracker` and the new one-minute `tracker-post-cards` user timer. Its one producer is the system control bot's `hwc.server.ai.hwcControlBot.targets.projects`: system Home Manager reads it through osConfig and `flake.nix` hands the standalone lane the same value. The hub bounds posting (3 sends a call, 30 a day, one message per card). Stop the timer to stop posting; disable the bot target to remove both sides.
 - 2026-10-16: Pin tested legacy Close delivery retirement and the shared typed handoff parser. Preserve historical readers, late acknowledgements, occupied holds and canonical replay. Fleet enablement stays separate.
 
