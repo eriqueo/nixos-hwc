@@ -11,6 +11,8 @@ Firefly III personal finance manager running as a Podman container, with optiona
 
 ## Structure
 
+Pico’s Alpine manifest pins APK tools and libapk2 together at 2.14.13-r0.
+
 Core and Pico declare separate owned PostgreSQL roles and read protected
 password environment files. The data capability provisions them before startup.
 Core atomically publishes the existing APP_KEY/cron environment file at0600;
@@ -177,6 +179,8 @@ Firewall rules auto-open internal ports on `tailscale0` interface.
 - `firefly-explorer.service` — immutable explorer package; validates its token, Firefly account, UI assets, and tailscaled socket before serving. Every API request is authorized with Tailscale WhoIs. Split groups remain read-only; writes are limited to existing category/expense-account ids and existing tags.
 
 ## Changelog
+
+- 2026-11-09: Replace withdrawn Alpine APK tools 2.14.12 packages with the signed 2.14.13 pair and exact hashes. Regenerate Pico’s offline context and image identity.
 - 2026-11-03: Declare restricted database ownership, protected password environment delivery and provisioning/rotation dependencies.
 
 - 2026-11-02: Complete Core’s direct advisory repair with phpseclib 3.0.58 and

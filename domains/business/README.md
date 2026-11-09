@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Pico’s Alpine manifest pins APK tools and libapk2 together at 2.14.13-r0.
+
 Paperless’s `index.nix` shares a hash-pinned Debian fetch helper between its runtime and Gotenberg contexts.
 
 CRM follows the configured PostgreSQL role operator's restart lifecycle and waits
@@ -121,6 +123,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-09: Replace withdrawn Alpine APK tools 2.14.12 packages with the signed 2.14.13 pair and exact hashes. Regenerate Pico’s offline context and image identity.
 
 - 2026-11-09: Paperless and Gotenberg Debian downloads fall back to the direct Debian security mirror when the CDN fails. Package hashes, manifests and image identities stay unchanged.
 

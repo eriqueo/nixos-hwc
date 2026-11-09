@@ -19,15 +19,15 @@
   },
   {
     "name": "libapk2",
-    "version": "2.14.12-r0",
+    "version": "2.14.13-r0",
     "repository": "main",
-    "hash": "sha256-RB2dw0xPmPFLowo1WSgdb0V3MDtO+m64wWJ0ZpecP0c="
+    "hash": "sha256-xugMp6fgtNlPSqdlewwfnxWo2OWhlFW49sgpVZ5wi9E="
   },
   {
     "name": "apk-tools",
-    "version": "2.14.12-r0",
+    "version": "2.14.13-r0",
     "repository": "main",
-    "hash": "sha256-/fijJyGeHm5dTkX719t89Igf4+ZB6DHljKpy6Doays4="
+    "hash": "sha256-C9qQagqCwQwCj9q+QPSsq3kKuBn1gC+Bf0X8txHx0RE="
   },
   {
     "name": "musl-utils",
