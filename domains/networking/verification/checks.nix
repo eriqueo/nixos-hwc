@@ -318,7 +318,7 @@ in pkgs.runCommand "briefing-mcp-routing" {
   matches = []
   def find(value):
       if isinstance(value, dict):
-          if any(f['hostname'] in m.get('host', []) for m in value.get('match', [])):
+          if isinstance(value.get('match'), list) and any(isinstance(m, dict) and f['hostname'] in m.get('host', []) for m in value['match']):
               matches.append(value)
           for child in value.values(): find(child)
       elif isinstance(value, list):
@@ -344,7 +344,7 @@ in pkgs.runCommand "briefing-mcp-routing" {
       with socket.socket() as sock:
           sock.bind(('127.0.0.1', 0)); port = sock.getsockname()[1]
       config = {'admin': {'disabled': True}, 'apps': {'http': {'servers': {'fixture': {
-          'listen': ['127.0.0.1:' + str(port)], 'routes': [route]
+          'listen': ['127.0.0.1:' + str(port)], 'automatic_https': {'disable': True}, 'routes': [route]
       }}}}}
       pathlib.Path('fixture.json').write_text(json.dumps(config))
       with open('runtime.log', 'a') as log:
