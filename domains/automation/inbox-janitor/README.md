@@ -158,6 +158,9 @@ distinct live gdrive investigations share `datax__ops__gdrive__` — so inferrin
 from filenames would delete parallel work while sounding precise.
 
 ## Changelog
+- 2026-11-04: `janitor.py` compiles its fixed regexes once at module load
+  (size filter, age parsing, `slugify`, source-host xattr, Syncthing API key)
+  and reuses them at the original call sites (68ff8eda). No behavior change intended.
 - 2026-09-30: Added `--citations` (read-only JSON export of which existing
   files and folders under `downloads/agent/` are cited, and by whom) and
   `--self-check`. The citation map already existed inside

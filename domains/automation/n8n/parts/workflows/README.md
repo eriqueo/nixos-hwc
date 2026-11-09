@@ -190,14 +190,16 @@ send one result through hwc-notify.
 **Purpose:** Provide JobTread customer and job data for the Heartwood Estimator app dropdowns
 
 **Triggers:**
-- Webhook `GET /webhook/jt-customers` (Fetch all customers)
+- Webhook `GET /webhook/jt-customers[?page={cursor}]` (one page of customers)
 - Webhook `GET /webhook/jt-jobs?customerId={id}` (Fetch jobs for customer)
 
 **Features:**
 - API key authentication via `x-api-key` header
-- GraphQL queries to JobTread API
+- Pave queries to JobTread (`grantKey` from `$env.JOBTREAD_GRANT_KEY`)
+- Customers: 50 per page; the caller follows `nextPage` by passing it back as
+  `page` (validated as a string of at most 2000 characters)
 - Filters jobs by Phase custom field (1-3 = estimating stages)
-- Returns formatted dropdown data with IDs, names, addresses
+- Returns formatted dropdown data with IDs, names, addresses and per-customer locations
 
 **Request Headers:**
 ```
@@ -207,10 +209,14 @@ x-api-key: {ESTIMATOR_API_KEY}
 **Response (Customers):**
 ```json
 {
+  "version": 1,
   "customers": [
-    { "id": "uuid", "name": "John Smith", "address": "123 Main St, City, ST 12345" }
+    { "id": "uuid", "name": "John Smith", "primaryLocationId": "uuid",
+      "address": "123 Main St, City, 12345",
+      "locations": [{ "id": "uuid", "name": "Home", "address": "123 Main St, City, 12345" }] }
   ],
-  "count": 42
+  "count": 42,
+  "nextPage": "cursor-or-null"
 }
 ```
 
@@ -226,7 +232,7 @@ x-api-key: {ESTIMATOR_API_KEY}
 
 **Credentials Required:**
 - `ESTIMATOR_API_KEY`: Shared secret for webhook authentication
-- JobTread API credential (Bearer token)
+- `JOBTREAD_GRANT_KEY`: JobTread Pave grant key (container env)
 
 ---
 
@@ -347,7 +353,7 @@ Configure these in n8n UI (Settings → Credentials):
 - `SLACK_WEBHOOK_URL`: From `/run/secrets/slack-webhook-url`
 - `ESTIMATOR_API_KEY`: Shared secret for estimator webhook authentication
 - `POSTGRES_REST_URL`: PostgREST endpoint (e.g., `http://127.0.0.1:3001`)
-- JobTread API Bearer token (configured as HTTP Header Auth credential)
+- `JOBTREAD_GRANT_KEY`: JobTread Pave grant key (read by `08a` from the container env)
 
 Credentials are accessed via environment variables in workflows:
 - `{{ $env.JELLYFIN_API_KEY }}`
@@ -379,6 +385,28 @@ flake check); unit tests at `workspace/automation/test_n8n_workflow_export.py`.
 - **Master Plan:** `/home/eric/.claude/plans/cozy-pondering-fog.md`
 - **n8n Module:** `/home/eric/.nixos/domains/server/n8n/index.nix`
 - **Script Wrappers:** `/home/eric/.local/bin/`
+
+## Structure
+
+```
+workflows/
+├── 01-media-pipeline-orchestration.json      # canonical export (_hwc block)
+├── 02-frigate-surveillance-intelligence.json # canonical export (_hwc block)
+├── 08a-jt-data-provider.json                 # hand-maintained; estimator JT dropdown data
+├── 08b-estimate-router.json                  # hand-maintained; estimate → JT/Postgres/Slack
+└── README.md
+```
+
+The `03`/`05` sections above describe retired workflows whose exports are gone.
+
+## Changelog
+
+- 2026-10-07: `08a-jt-data-provider.json` customers path rewritten (ad7d89e3):
+  a `Build JT Query` code node builds the Pave query with `$env.JOBTREAD_GRANT_KEY`
+  and an optional `page` cursor, `POST to JT API` sends it, and `Transform Customers`
+  returns `version`, per-customer `locations`, `primaryLocationId` and `nextPage`.
+  Customer queries no longer stop at the first 50 records. `Respond Unauthorized
+  (Customers)` was removed. The jobs path is unchanged apart from JSON formatting.
 
 ---
 
