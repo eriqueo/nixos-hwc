@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "sourceSections": {
+    "invoice": "overdue",
+    "lead": "leads",
+    "task": "tasks",
+    "system": "system",
+    "refinery": "refinery",
+    "nightly": "nightly-builds",
+    "mail": "mail"
+  },
+  "links": {
+    "dashboard": "https://briefing.hwc.iheartwoodcraft.com",
+    "jobtread": "https://app.jobtread.com",
+    "grafana": "https://grafana.hwc.iheartwoodcraft.com",
+    "serviceHealth": "https://grafana.hwc.iheartwoodcraft.com/d/service-health",
+    "stats": "https://stats.iheartwoodcraft.com",
+    "repo": "https://github.com/eriqueo/nixos-hwc",
+    "refinery": "https://refinery.hwc.iheartwoodcraft.com",
+    "projects": "http://hwc-work:8765",
+    "research": "https://research-scout.hwc.iheartwoodcraft.com"
+  },
+  "alertLinks": {
+    "ops": "serviceHealth",
+    "leads": "jobtread",
+    "overdue": "jobtread",
+    "jobs": "jobtread",
+    "website": "stats",
+    "system": "grafana",
+    "backup": "grafana",
+    "config_drift": "repo",
+    "refinery": "refinery",
+    "projects": "projects",
+    "research": "research"
+  }
+}

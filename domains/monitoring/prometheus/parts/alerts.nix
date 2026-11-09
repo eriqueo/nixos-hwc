@@ -3,26 +3,59 @@
 # Prometheus Alert Rules - Organized by Severity
 # P5 = Critical, P4 = Warning, P3 = Info
 #
-# TIER LADDERS (CPU / memory / disk) ARE MUTUALLY EXCLUSIVE AT THE EXPRESSION.
-# Every tier below the top one carries an explicit upper bound equal to the next
-# tier's lower bound (`> lower ... <= upper`), so one sample can satisfy at most
-# one tier in its family. Before that, a 96%-full disk matched Moderate (>82),
-# Elevated (>85) AND High (>95) at once and each fired its own alert with its
-# own repeat_interval — three messages for one fact. Bounds are half-open on the
-# low side and closed on the high side, so the boundary value itself (exactly
-# 85.0) belongs to the LOWER tier and no value falls through a gap.
-# Mechanically checked by `checks.x86_64-linux.alert-tier-exclusivity` in
-# flake.nix, which parses these expressions and proves no sample matches twice.
-# Alertmanager inhibition is deliberately NOT used: it would suppress a delivery
-# while leaving three alerts firing, which hides the overlap instead of removing it.
+# Alertmanager inhibition would hide duplicate deliveries while leaving overlapping
+# alerts firing. Tier exclusivity belongs in the expressions instead.
 
 { lib, ... }:
 
+let
+  usageRules = { metric, summaryName, descriptionName, target ? "{{ $labels.instance }}", tiers }:
+    lib.listToAttrs (lib.imap0 (index: tier: {
+      name = tier.name;
+      value = {
+        alert = tier.name;
+        expr = "${metric} > ${toString tier.threshold}"
+          + lib.optionalString (index > 0) " <= ${toString (builtins.elemAt tiers (index - 1)).threshold}"
+          + "\n";
+        for = tier.duration;
+        labels = { severity = tier.severity; category = "system"; };
+        annotations = {
+          summary = "${tier.label} ${summaryName} usage on ${target}";
+          description = "${descriptionName} usage is {{ $value | humanize }}% (threshold: ${toString tier.threshold}%)";
+        };
+      };
+    }) tiers);
+  cpu = usageRules {
+    metric = ''100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)'';
+    summaryName = "CPU"; descriptionName = "CPU";
+    tiers = [
+      { name = "HighCPUUsage"; threshold = 90; duration = "10m"; severity = "P5"; label = "Critical"; }
+      { name = "ElevatedCPUUsage"; threshold = 70; duration = "15m"; severity = "P4"; label = "Elevated"; }
+    ];
+  };
+  memory = usageRules {
+    metric = "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100";
+    summaryName = "memory"; descriptionName = "Memory";
+    tiers = [
+      { name = "HighMemoryUsage"; threshold = 95; duration = "10m"; severity = "P5"; label = "Critical"; }
+      { name = "ElevatedMemoryUsage"; threshold = 80; duration = "15m"; severity = "P4"; label = "Elevated"; }
+    ];
+  };
+  disk = usageRules {
+    metric = ''100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"})'';
+    summaryName = "disk"; descriptionName = "Disk";
+    target = "{{ $labels.instance }}:{{ $labels.mountpoint }}";
+    # Root normally uses about 77%; 82% avoids permanent informational alerts.
+    tiers = [
+      { name = "HighDiskUsage"; threshold = 95; duration = "15m"; severity = "P5"; label = "Critical"; }
+      { name = "ElevatedDiskUsage"; threshold = 85; duration = "30m"; severity = "P4"; label = "Elevated"; }
+      { name = "ModerateDiskUsage"; threshold = 82; duration = "1h"; severity = "P3"; label = "Moderate"; }
+    ];
+  };
+in
 {
   groups = [
-    #========================================================================
     # WEBSITE + LEAD PIPELINE (blackbox probes — see prometheus/index.nix)
-    #========================================================================
     {
       name = "website_alerts";
       rules = [
@@ -118,46 +151,13 @@
         }
       ];
     }
-
-    #========================================================================
     # P5 - CRITICAL ALERTS
-    #========================================================================
     {
       name = "critical_alerts";
       rules = [
-        # System - Critical CPU usage
-        {
-          alert = "HighCPUUsage";
-          expr = ''
-            100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
-          '';
-          for = "10m";
-          labels = {
-            severity = "P5";
-            category = "system";
-          };
-          annotations = {
-            summary = "Critical CPU usage on {{ $labels.instance }}";
-            description = "CPU usage is {{ $value | humanize }}% (threshold: 90%)";
-          };
-        }
+        cpu.HighCPUUsage
 
-        # System - Critical memory usage
-        {
-          alert = "HighMemoryUsage";
-          expr = ''
-            (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
-          '';
-          for = "10m";
-          labels = {
-            severity = "P5";
-            category = "system";
-          };
-          annotations = {
-            summary = "Critical memory usage on {{ $labels.instance }}";
-            description = "Memory usage is {{ $value | humanize }}% (threshold: 95%)";
-          };
-        }
+        memory.HighMemoryUsage
 
         # System - Critical disk space
         # Covers root AND data volumes (/mnt/*). A full /mnt/media or /mnt/hot
@@ -165,23 +165,8 @@
         # the same regex as Moderate/Elevated rather than root-only. (Salvaged
         # from the retired hwc-disk-space-check script, which alerted critical
         # at 95% on every monitored filesystem.)
-        {
-          alert = "HighDiskUsage";
-          expr = ''
-            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 95
-          '';
-          for = "15m";
-          labels = {
-            severity = "P5";
-            category = "system";
-          };
-          annotations = {
-            summary = "Critical disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }}";
-            description = "Disk usage is {{ $value | humanize }}% (threshold: 95%)";
-          };
-        }
+        disk.HighDiskUsage
 
-        # Services - Service down
         {
           alert = "ServiceDown";
           expr = ''up{job!="frigate"} == 0'';
@@ -235,7 +220,6 @@
           };
         }
 
-        # Immich - High API error rate
         {
           alert = "ImmichHighErrorRate";
           expr = ''
@@ -253,70 +237,15 @@
         }
       ];
     }
-
-    #========================================================================
     # P4 - WARNING ALERTS
-    #========================================================================
     {
       name = "warning_alerts";
       rules = [
-        # System - Elevated CPU usage
-        # Upper bound 90 = HighCPUUsage's lower bound: a 95% sample is Critical
-        # only, never Critical AND Elevated. Threshold and `for` unchanged.
-        {
-          alert = "ElevatedCPUUsage";
-          expr = ''
-            100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 70 <= 90
-          '';
-          for = "15m";
-          labels = {
-            severity = "P4";
-            category = "system";
-          };
-          annotations = {
-            summary = "Elevated CPU usage on {{ $labels.instance }}";
-            description = "CPU usage is {{ $value | humanize }}% (threshold: 70%)";
-          };
-        }
+        cpu.ElevatedCPUUsage
 
-        # System - Elevated memory usage
-        # Upper bound 95 = HighMemoryUsage's lower bound (see the ladder note in
-        # this file's header). Threshold and `for` unchanged.
-        {
-          alert = "ElevatedMemoryUsage";
-          expr = ''
-            (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80 <= 95
-          '';
-          for = "15m";
-          labels = {
-            severity = "P4";
-            category = "system";
-          };
-          annotations = {
-            summary = "Elevated memory usage on {{ $labels.instance }}";
-            description = "Memory usage is {{ $value | humanize }}% (threshold: 80%)";
-          };
-        }
+        memory.ElevatedMemoryUsage
 
-        # System - Elevated disk usage
-        # Upper bound 95 = HighDiskUsage's lower bound. A 96%-full /mnt/media is
-        # now Critical only; it used to be Critical + Elevated + Moderate at once.
-        # Threshold and `for` unchanged.
-        {
-          alert = "ElevatedDiskUsage";
-          expr = ''
-            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 85 <= 95
-          '';
-          for = "30m";
-          labels = {
-            severity = "P4";
-            category = "system";
-          };
-          annotations = {
-            summary = "Elevated disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }}";
-            description = "Disk usage is {{ $value | humanize }}% (threshold: 85%)";
-          };
-        }
+        disk.ElevatedDiskUsage
 
         # Compare with the configured rate; a degraded daily average is not
         # a healthy baseline. Zero frames belong to the offline alert above.
@@ -334,7 +263,6 @@
           };
         }
 
-        # Frigate - High CPU usage
         {
           alert = "FrigateHighCPU";
           expr = "frigate_cpu_usage_percent > 80";
@@ -349,7 +277,6 @@
           };
         }
 
-        # Immich - Large worker queue
         {
           alert = "ImmichLargeQueue";
           expr = "immich_worker_queue_size > 100";
@@ -364,7 +291,6 @@
           };
         }
 
-        # Containers - High memory usage
         {
           alert = "ContainerHighMemory";
           expr = "container_memory_usage_bytes{name!=\"\"} > 2000000000";
@@ -380,36 +306,12 @@
         }
       ];
     }
-
-    #========================================================================
     # P3 - INFO ALERTS
-    #========================================================================
     {
       name = "info_alerts";
       rules = [
-        # System - Moderate disk usage
-        # Threshold is 82%, NOT 75%: root (/) baselines ~77% (its normal used
-        # state), so a 75% threshold fired permanently and re-sent to Discord
-        # every repeat_interval (4h) with no actionable signal. 82% sits above
-        # the baseline and below the Elevated (85%) tier.
-        # Upper bound 85 = ElevatedDiskUsage's lower bound.
-        {
-          alert = "ModerateDiskUsage";
-          expr = ''
-            100 - ((node_filesystem_avail_bytes{mountpoint=~"/|/mnt/.*"} * 100) / node_filesystem_size_bytes{mountpoint=~"/|/mnt/.*"}) > 82 <= 85
-          '';
-          for = "1h";
-          labels = {
-            severity = "P3";
-            category = "system";
-          };
-          annotations = {
-            summary = "Moderate disk usage on {{ $labels.instance }}:{{ $labels.mountpoint }}";
-            description = "Disk usage is {{ $value | humanize }}% (threshold: 82%)";
-          };
-        }
+        disk.ModerateDiskUsage
 
-        # Immich - Slow API responses
         {
           alert = "ImmichSlowAPI";
           expr = "histogram_quantile(0.95, rate(immich_api_duration_bucket[5m])) > 2000";
@@ -424,7 +326,6 @@
           };
         }
 
-        # System - High network traffic
         {
           alert = "HighNetworkTraffic";
           expr = ''

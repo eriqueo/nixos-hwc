@@ -1,15 +1,10 @@
 # domains/monitoring/index.nix
 #
-# Monitoring Domain Aggregator
-# Charter v7.0 compliant
 #
-# Imports all monitoring modules
 
-{ lib, config, ... }:
+{ lib, ... }:
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
   options.hwc.monitoring = {
     enable = lib.mkEnableOption "monitoring stack (Prometheus, Grafana, exporters)" // {
       default = true;
@@ -25,13 +20,7 @@
     ./exportarr/index.nix
     ./fleet-map/index.nix
     ./homepage/index.nix
-    ./alerts/index.nix            # Alert sources, thresholds, severity mapping
-    ./heartbeat/index.nix         # Outbound ping to an external dead-man's switch
+    ./alerts/index.nix
+    ./heartbeat/index.nix
   ];
-  #==========================================================================
-  # IMPLEMENTATION & VALIDATION
-  #==========================================================================
-  config = {
-    assertions = [];
-  };
 }

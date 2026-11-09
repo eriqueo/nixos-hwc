@@ -14,7 +14,6 @@
 let
   cfg = config.hwc.monitoring.exportarr;
 
-  # Port and URL base mapping for Arr apps
   appPorts = {
     sonarr = 8989;
     radarr = 7878;
@@ -22,19 +21,15 @@ let
     prowlarr = 9696;
   };
 
-  # Loopback API roots. No path prefix: the *arr apps run with an empty
-  # URL base (they are name-based vhosts, not subpaths).
-  appUrls = {
-    sonarr = "http://127.0.0.1:8989";
-    radarr = "http://127.0.0.1:7878";
-    lidarr = "http://127.0.0.1:8686";
-    prowlarr = "http://127.0.0.1:9696";
-  };
+  # Arr apps use name-based vhosts and have no URL prefix.
+  exporters = lib.imap0 (idx: name: {
+    inherit name;
+    port = cfg.port + idx;
+    url = "http://127.0.0.1:${toString appPorts.${name}}";
+  }) cfg.apps;
 in
 {
-  #==========================================================================
   # OPTIONS
-  #==========================================================================
   options.hwc.monitoring.exportarr = {
     enable = lib.mkEnableOption "Exportarr metrics exporter for *arr applications";
 
@@ -50,29 +45,22 @@ in
       description = "Arr applications to monitor";
     };
   };
-
-  #==========================================================================
   # IMPLEMENTATION
-  #==========================================================================
   config = lib.mkIf cfg.enable {
-    # Create separate exportarr container for each app
-    virtualisation.oci-containers.containers = lib.listToAttrs (lib.imap0 (idx: app: {
-      name = "exportarr-${app}";
-      value = let
-        exporterPort = cfg.port + idx;
-      in {
+    virtualisation.oci-containers.containers = lib.listToAttrs (map (app: {
+      name = "exportarr-${app.name}";
+      value = {
         image = "ghcr.io/onedr0p/exportarr:latest";
         autoStart = true;
 
-        # Use host network to access Arr apps on 127.0.0.1
         extraOptions = [ "--network=host" ];
 
         environmentFiles = [
-          "/run/exportarr/${app}-env"
+          "/run/exportarr/${app.name}-env"
         ];
 
         environment = {
-          PORT = toString exporterPort;
+          PORT = toString app.port;
           # Host network: bind the tailnet address, not every interface.
           INTERFACE = config.hwc.monitoring.prometheus.agent.listenAddress;
           ENABLE_ADDITIONAL_METRICS = "true";
@@ -80,15 +68,14 @@ in
         };
 
         cmd = [
-          app
-          "-p" (toString exporterPort)
-          "-u" appUrls.${app}
+          app.name
+          "-p" (toString app.port)
+          "-u" app.url
           "-a" "\${API_KEY}"
         ];
       };
-    }) cfg.apps);
+    }) exporters);
 
-    # Prepare environment files with API keys
     systemd.services = lib.listToAttrs (map (app: {
       name = "podman-exportarr-${app}";
       value = {
@@ -103,20 +90,16 @@ in
       };
     }) cfg.apps);
 
-    # Register with Prometheus (one job per app)
-    hwc.monitoring.prometheus.scrapeConfigs = lib.imap0 (idx: app: {
-      job_name = "${app}-exporter";
+    hwc.monitoring.prometheus.scrapeConfigs = map (app: {
+      job_name = "${app.name}-exporter";
       static_configs = [{
-        targets = [ "localhost:${toString (cfg.port + idx)}" ];
+        targets = [ "localhost:${toString app.port}" ];
       }];
       metrics_path = "/metrics";
       scrape_interval = "60s";
       scrape_timeout = "30s";
-    }) cfg.apps;
-
-    #==========================================================================
+    }) exporters;
     # VALIDATION
-    #==========================================================================
     assertions = [
       {
         assertion = !cfg.enable || config.hwc.monitoring.prometheus.agent.enable;

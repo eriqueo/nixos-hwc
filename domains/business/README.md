@@ -46,7 +46,7 @@ The same Paperless runtime pins Python3.14.10, current signed Debian security pa
 
 Lead resubmissions read only the existing JobTread ID columns. Report views omit view history and omit payload reads for revoked reports. The lead package checks these projections against an isolated PostgreSQL cluster with poisoned unused fields. Estimator catalog exports select named fields; fixed patterns compile at module load.
 
-Morning-briefing live sources run concurrently after the MCP handshake. Research queues use four-profile batches alongside lessons and ingest-health reads; refinery files use sixteen-read batches. `morning-briefing/gather.test.mjs` checks overlap, bounds and stable partial output through the `morning-briefing-async` flake check.
+Morning-briefing gathers bind their clock, configuration and I/O at the command entry. JobTread reads run independently of the MCP task handshake. Browser and command gathers share one MCP transport; plain and HTML email render through `morning-briefing/email.jq`. Research queues retain four-profile batches, and refinery files retain sixteen-read batches. `morning-briefing/gather.test.mjs` exercises the production modules through the `morning-briefing-async` flake check.
 The three `*-composer.json` / `*-composer.lock` pairs define production-only
 Composer inputs. `composer-runtime-packages.json` pins each changed dist archive
 by URL and SHA256; `index.nix` rebuilds the offline cache. Install scripts and
@@ -125,6 +125,7 @@ business/
 ## Changelog
 
 - 2026-11-09: Update Workbench with list/category task filters, due/priority/title ordering, direct completion and an attention-first Server view. System filters include healthy checks and failures using producer tool identity. Use one Send to T3 action with project-scoped conversation browsing and the existing credential; verify the exact policy through the app parser.
+- 2026-11-09: Untangle briefing transport, collection and email rendering. Preserve partial data when a source fails, share view categories, and use an atomic overlap lock.
 
 - 2026-11-09: Replace withdrawn Alpine APK tools 2.14.12 packages with the signed 2.14.13 pair and exact hashes. Regenerate Pico’s offline context and image identity.
 

@@ -1,6 +1,6 @@
 # domains/monitoring/alerts/index.nix
 #
-# Alert Sources — what to watch, thresholds, severity mapping, systemd triggers.
+# Alert Sources — what to watch, failure hooks, systemd triggers.
 #
 # NAMESPACE: hwc.monitoring.alerts.*
 #
@@ -15,122 +15,46 @@
 
 let
   cfg = config.hwc.monitoring.alerts;
-  enabled = cfg.enable;
 
-  # Get notification scripts from the notifications domain
   notifInternal = config.hwc.notifications._internal;
 
-  # A unit is monitored only on the host whose module enables it. Gating on
-  # the owning module's enable OPTION (not on config.systemd.services, which
-  # recurses — see the NOTE below) keeps a unit that moved to another host
-  # (service split) from leaving an ExecStart-less OnFailure stub here, which
-  # is what turned the alert-onfailure-units check red after wave 1.
+  # Reading systemd.services here recurses. Gate units on their owning
+  # module instead: an OnFailure-only unit has no ExecStart and reports no failure.
   on = path: lib.attrByPath path false config;
-  # Containers are gated on being declared (reading the oci-containers
-  # attrset, not systemd.services, keeps this recursion-free).
   containers = config.virtualisation.oci-containers.containers;
   podman = name: lib.optional (containers ? ${name}) "podman-${name}";
 
-  # List of critical services to auto-detect (when services list is empty)
-  # NOTE: We don't check if services exist at build time to avoid infinite recursion
-  # systemd will gracefully handle OnFailure= for non-existent services
-  #
-  # Audited 2026-08-26. That graceful handling is exactly the hazard: OnFailure=
-  # on a unit that does not exist is a silent no-op, so a dead entry reads as
-  # coverage and delivers nothing. Seven of the eighteen entries here named
-  # units that do not exist on hwc-server -- measured with
-  # `systemctl show -p LoadState --value <u>.service` returning `bad-setting`:
-  #   backup, backup-local, backup-cloud   (the real unit is
-  #                                         borgbackup-job-hwc-backup, which is
-  #                                         covered from its own module)
-  #   frigate, receipts-ocr, podman-immich (retired)
-  #   jt-mcp                               (runs on a droplet, not this host)
-  # `backup` was the worst of them: it looked like backup coverage for months.
-  #
-  # Eight live timer-driven units carried NO notifier at all and are added
-  # below. Each was verified `loaded` with an empty OnFailure before adding.
-  # postgresql-db-backup is the one that mattered most -- a silently failing
-  # backup job is the failure you find out about on the day you need it.
-  #
-  # This list is still a hand-maintained blessed list, which is why it drifted.
-  # Deriving it from config.systemd.services is the principled fix and is
-  # blocked on the infinite recursion the NOTE above describes; left as a known
-  # gap rather than pretended away.
-  #
-  # NOT A DEADMAN. Every entry here delivers through hwc-notify, so this list
-  # cannot cover hwc-notify itself: an OnFailure= on the dispatcher would ask
-  # the dispatcher to report its own death, and the one failure mode that
-  # matters — the dispatcher down, or both adapters dead — is exactly the case
-  # where nothing is sent. That gap needs a watcher OFF this host and is
-  # deliberately not filled here; the disabled canary
-  # (domains/notifications/canary.nix, off since 2026-08-29) is untouched by
-  # this change and is not that watcher either.
+  # hwc-notify cannot report its own death; do not add it to this list.
   autoDetectedServices =
-    # Web / infra
     lib.optional (on [ "services" "caddy" "enable" ]) "caddy"
     ++ lib.optional (on [ "services" "postgresql" "enable" ]) "postgresql"
     ++ lib.optional (on [ "services" "jellyfin" "enable" ]) "jellyfin"
-    # Containers: media stack (hwc-server), apps (hwc-work) — wherever declared
     ++ lib.concatMap podman [
       "n8n" "navidrome" "gluetun" "mousehole" "qbittorrent" "sonarr" "radarr" "prowlarr"
       "refinery" "umami"
     ]
-    # Business apps + ingress (service split: these run on hwc-work). The
-    # dispatcher itself is never listed — it cannot report its own death
-    # (see NOT A DEADMAN above).
     ++ lib.optional (on [ "hwc" "business" "crm" "enable" ]) "hwc-crm"
     ++ lib.optional (on [ "hwc" "system" "mcp" "enable" ]) "hwc-sys-mcp"
     ++ lib.optional (on [ "hwc" "server" "services" "radicale" "enable" ]) "radicale"
     ++ lib.optional (on [ "hwc" "server" "ai" "leadScout" "enable" ]) "lead-scout"
     ++ lib.optional (on [ "hwc" "networking" "cloudflared" "enable" ])
          "cloudflared-tunnel-${config.hwc.networking.cloudflared.tunnelId}"
-    ++ [
-
-    # Timer-driven jobs (added 2026-08-26 — all were uncovered)
-    #
-    # postgresql-db-backup is deliberately NOT here. It was on this list for
-    # about ten minutes while writing this change, until an eval showed the
-    # mistake: the same commit retires that job (machines/home/config.nix),
-    # so naming it here would generate a unit carrying only `OnFailure=` and no
-    # ExecStart — which is precisely how the seven dead entries above came to
-    # report LoadState=bad-setting. A name on this list is not a no-op; it
-    # CREATES a stub unit. Add a name here only after checking the unit exists.
-  ] ++ lib.optional (on [ "hwc" "server" "ai" "brainvec" "enable" ]) "brainvec-ingest"
+    ++ lib.optional (on [ "hwc" "server" "ai" "brainvec" "enable" ]) "brainvec-ingest"
     ++ lib.optional (on [ "hwc" "business" "crm" "enable" ]) "hwc-crm-tick"
     ++ lib.optional (on [ "hwc" "data" "storage" "enable" ] && on [ "hwc" "data" "storage" "monitoring" "enable" ]) "storage-monitor"
     ++ lib.optional (on [ "hwc" "automation" "inboxJanitor" "enable" ]) "inbox-janitor"
     ++ lib.optional (on [ "hwc" "business" "morningBriefing" "enable" ]) "morning-briefing"
     ++ lib.optional (on [ "hwc" "automation" "nightlyBuilds" "enable" ]) "nightly-builds"
     ++ lib.optional (on [ "hwc" "server" "ai" "llamaCpp" "embed" "enable" ]) "llama-embed"
-    ++ [
-
-    # Added 2026-09-07 — three more timer-driven units that were running with
-    # no notifier. All three are declared with an ExecStart in a module that is
-    # enabled on hwc-server (home-scout: domains/server/native/ai/home-scout,
-    # hwc.server.ai.homeScout.enable = true; recyclarr:
-    # domains/media/recyclarr/parts/config.nix, hwc.media.recyclarr.enable =
-    # true), so none of them creates the ExecStart-less stub the note above
-    # describes. That is not a claim you have to take on trust: the
-    # `alert-onfailure-units` flake check derives the monitored set from the
-    # evaluated hwc-server config and fails if any monitored name resolves to a
-    # unit without an ExecStart. It reads the FINAL config from outside this
-    # module, so it does not hit the recursion that blocks deriving this list.
-  ] ++ lib.optionals (on [ "hwc" "server" "ai" "homeScout" "enable" ]) [
-    "home-scout-schools"
-    "home-scout-overlays"
-  ] ++ lib.optional (on [ "hwc" "media" "recyclarr" "enable" ]) "recyclarr-sync"
-    ++ [
-
-    # Added 2026-09-21: the outside-calendar mirror into Radicale
-    # (domains/server/services/radicale/parts/mirrors.nix, declared with an
-    # ExecStart whenever hwc.server.services.radicale.mirrors is non-empty,
-    # which machines/home/config.nix sets). A dead feed URL must be heard.
-  ] ++ lib.optional
+    ++ lib.optionals (on [ "hwc" "server" "ai" "homeScout" "enable" ]) [
+      "home-scout-schools"
+      "home-scout-overlays"
+    ] ++ lib.optional (on [ "hwc" "media" "recyclarr" "enable" ]) "recyclarr-sync"
+    ++ lib.optional
     (on [ "hwc" "server" "services" "radicale" "enable" ]
       && (lib.attrByPath [ "hwc" "server" "services" "radicale" "mirrors" ] { } config) != { })
     "radicale-mirror";
 
-  # Get final list of services to monitor
   monitoredServices =
     if cfg.sources.serviceFailures.services != []
     then cfg.sources.serviceFailures.services
@@ -142,11 +66,8 @@ in
 {
   # OPTIONS
   options.hwc.monitoring.alerts = {
-    enable = lib.mkEnableOption "Alert sources — detection, thresholds, severity mapping";
-
-    #==========================================================================
+    enable = lib.mkEnableOption "Alert sources — detection, failure hooks";
     # ALERT SOURCES
-    #==========================================================================
     sources = {
       smartd = {
         enable = lib.mkEnableOption "SMART disk monitoring alerts";
@@ -186,7 +107,6 @@ in
           example = [ "podman-immich" "jellyfin" "backup" ];
         };
 
-        # Auto-detected critical services when services list is empty
         autoDetect = lib.mkOption {
           type = lib.types.bool;
           default = true;
@@ -194,40 +114,11 @@ in
         };
       };
     };
-
-    #==========================================================================
-    # SEVERITY MAPPING
-    #==========================================================================
-    severity = {
-      critical = lib.mkOption {
-        type = lib.types.str;
-        default = "P5";
-        description = "Severity tag for critical alerts (immediate action required)";
-      };
-
-      warning = lib.mkOption {
-        type = lib.types.str;
-        default = "P4";
-        description = "Severity tag for warning alerts (attention needed)";
-      };
-
-      info = lib.mkOption {
-        type = lib.types.str;
-        default = "P3";
-        description = "Severity tag for informational alerts";
-      };
-    };
   };
 
-  #==========================================================================
   # IMPLEMENTATION
-  #==========================================================================
-  config = lib.mkIf enabled {
-
-    # =======================================================================
+  config = lib.mkIf cfg.enable {
     # SMARTD NOTIFICATIONS
-    # =======================================================================
-    # Configure smartd to use our notification script via the mail mailer
     services.smartd = lib.mkIf cfg.sources.smartd.enable {
       notifications = {
         mail = {
@@ -241,10 +132,7 @@ in
         test = lib.mkForce false;
       };
     };
-
-    # =======================================================================
     # SYSTEMD SERVICES
-    # =======================================================================
     systemd.services = lib.mkMerge [
       # Callers insert literal unit names, so %i preserves their hyphens.
       (lib.mkIf cfg.sources.serviceFailures.enable {
@@ -257,11 +145,9 @@ in
             ExecStart = "${notifInternal.serviceFailureNotify}/bin/hwc-service-failure-notify %i";
             User = "root";
 
-            # Don't fail if notification fails - we log it
             SuccessExitStatus = [ 0 1 ];
           };
 
-          # Don't block on this
           unitConfig = {
             DefaultDependencies = false;
             RefuseManualStart = false;
@@ -269,7 +155,6 @@ in
         };
       })
 
-      # Add OnFailure= to monitored services
       (lib.mkIf (cfg.sources.serviceFailures.enable && monitoredServices != []) (
         lib.listToAttrs (map (serviceName: {
           name = serviceName;
@@ -290,13 +175,10 @@ in
         TimeoutStartSec = 30;
       };
     };
-
-    #==========================================================================
     # VALIDATION
-    #==========================================================================
     assertions = [
       {
-        assertion = !enabled || (config.hwc.notifications.enable or false);
+        assertion = !cfg.enable || (config.hwc.notifications.enable or false);
         message = ''
           hwc.monitoring.alerts requires notifications to be enabled for delivery.
           Enable notifications with: hwc.notifications.enable = true
@@ -307,10 +189,7 @@ in
         message = "hwc.monitoring.alerts.sources.smartd requires services.smartd.enable = true";
       }
     ];
-
-    # =======================================================================
     # WARNINGS
-    # =======================================================================
     warnings = lib.optional (cfg.sources.serviceFailures.enable && monitoredServices == []) ''
       hwc.monitoring.alerts.sources.serviceFailures is enabled but no services are being monitored.
       Either:

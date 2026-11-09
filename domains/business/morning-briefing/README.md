@@ -2,21 +2,40 @@
 
 Daily automated briefing for Heartwood Craft ops. Runs as a systemd timer at 6am MT, gathers data into a single JSON file served by Caddy and read by the workbench `brief` hub (via the `hwc_morning_brief` MCP tool).
 
-**Data gathering is local CLI, not MCP.** The 6am run is headless, and `~/.claude`
-runs `defaultMode=acceptEdits` — which does NOT auto-approve Bash or MCP tool
-calls. So an agent asked to gather via MCP gets every call *permission-denied*
-(this produced briefings full of bogus `[CRITICAL] … permission denied` alerts).
-`run.sh` therefore gathers system/mail/calendar directly in bash (`systemctl`,
-`df`, `notmuch`, `khal`) as `eric`, who has full file/CLI access. A resident,
-CPU-only Laya service performs mail classification locally. **JobTread
-sections (jobs/leads/tasks/overdue/docs) are placeholders** pending a local data
-source — see "JobTread follow-up" below.
+The scheduled runner uses local tools for host health, calendar and mail counts.
+It reads JobTread jobs/invoices through PAVE and CalDAV tasks through the local
+MCP gateway. Laya owns mail classification. Each source keeps its own failure
+boundary, so an unavailable gateway does not discard JobTread data.
 
 Dashboard: `https://briefing.hwc.iheartwoodcraft.com`
 
 ## Structure
 
-`gather-live.mjs` overlaps three independent sources after the MCP handshake and merges results in source order. `gather-research.mjs` overlaps its queue, lessons and health groups, with four profile requests per batch. `gather-refinery.mjs` reads sixteen files per batch. Remaining work waits at each batch boundary. `gather.test.mjs` tests these scripts with held I/O and partial failures; run `node --test domains/business/morning-briefing/gather.test.mjs` or the `morning-briefing-async` flake check.
+`gather-live.mjs` overlaps independent jobs, invoices and tasks, then merges in
+source order. All five gather scripts expose functions with explicit I/O,
+configuration and clock inputs; CLI entries bind their environment.
+`dashboard/mcp-client.mjs` owns StreamableHTTP sessions for both headless gathers
+and dashboard actions. It shares concurrent initialization, negotiates the
+protocol, matches response IDs and never replays a tool call. A later caller can
+retry a failed handshake.
+
+`email.jq` contains the existing plain and HTML renderers. Both consume the same
+watchlist helper and the versioned source map/links in `dashboard/view-policy.json`.
+The dashboard consumes that policy too and shows an error if it cannot load it.
+`run.sh` owns orchestration, shared backup-unit reads and a kernel-held `flock`.
+Busy runs skip; lock errors fail. The classifier and dashboard publisher remain
+owned by `triage-mail.sh`.
+
+Research keeps four profile requests per batch, and Refinery keeps sixteen file
+reads per batch. Projects reads at most twenty project pages, with ten seconds
+per request and twenty-five seconds total. At the total deadline it stops card
+reads and retains the portfolio already gathered. The shell keeps its thirty
+second outer bound.
+
+`gather.test.mjs` uses normal module imports, held I/O and real loopback HTTP,
+plus the actual shell entry and jq templates. Run
+`node --test domains/business/morning-briefing/gather.test.mjs` or the registered
+`morning-briefing-async` check.
 
 Mail snapshots provide State order and display names from the canonical
 contract. Counts, dashboard tabs and email renderers consume those fields.
@@ -27,7 +46,7 @@ contract. Counts, dashboard tabs and email renderers consume those fields.
 index.nix              # NixOS module: systemd service + timer
 run.sh                 # 5-step pipeline (see below)
 gather-live.mjs        # Step 1b: JobTread jobs/leads/overdue + CalDAV tasks via
-                       #   the local MCP gateway (:6200/mcp, StreamableHTTP)
+                       #   PAVE for JobTread; MCP gateway for CalDAV tasks
 gather-today.mjs       # Step 2c: expanded hwc_today board + case-ledger delta →
                        #   sections.today (bounded view, explorable depth, changes)
 gather-refinery.mjs    # Step 1c: refinery item store (local .md read) →
@@ -38,9 +57,12 @@ gather-projects.mjs    # Step 1c: tracker hub portfolio (loopback :8765/api/port
 gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
                        #   (:8422/api/<tool>) → sections.research (articles
                        #   awaiting review + the standing themes report)
-CLAUDE.md              # Agent prompt: data schema, alert rules, MCP sources
+email.jq               # Plain + HTML rendering, shared watchlist policy
+CLAUDE.md              # Current runtime and consumer contract
 dashboard/
-  index.html           # Static SPA dashboard (dark theme, pull-to-refresh)
+  index.html           # Static dashboard
+  mcp-client.mjs       # Shared browser/Node session and tool transport
+  view-policy.json     # Versioned source map and destination links
   briefing.json        # Atomically published served copy of output/briefing.json
 output/
   briefing.json        # Final merged output (main + mail triage)
@@ -55,12 +77,12 @@ logs/
 |------|------|-----|
 | 0 | Pre-flight | The classifier service validates its pinned model at startup. |
 | 1 | Local gather | bash assembles `briefing.json` directly: `systemctl` (services incl. failed unit NAMES, podman-* container count, borg backup unit), `df` (storage), `notmuch` (mail), `khal`→`jq` (calendar, 7-day window), `curl` open-meteo (weather). Alerts computed locally. **No Claude, no MCP.** |
-| 1b | Live gather | `node gather-live.mjs` → local MCP gateway (`:6200/mcp`, plain JSON-RPC, no permissions): `jt_jobs` (jobs + leads + weekly snapshot), `jt_documents list_overdue` (overdue invoices), `hwc_tasks_list` (CalDAV tasks). Best-effort: per-section failures become dashboard alerts, placeholders kept. |
+| 1b | Live gather | `node gather-live.mjs` → local MCP gateway (`:6200/mcp`, plain JSON-RPC, no permissions): PAVE (jobs, leads, invoices), `hwc_tasks_list` (CalDAV tasks). Best-effort: per-section failures become dashboard alerts, placeholders kept. |
 | 1c | Local-app gather | `node gather-refinery.mjs` (refinery `.md` item store) and `node gather-research.mjs` (research-scout REST on `:8422`). Both emit `{}` on any failure and are `|| echo '{}'`-guarded, so each degrades independently — one app being down never costs the other its section. `gather-research.mjs` reads the lessons snapshot with `generate:false`, so the briefing spends no LLM calls. |
 | 2 | Mail classification | `notmuch` → resident Laya estimates State (`do/look/junk`), Domain, and factual traits. Unsupported automatic State stays retryable `dont-know`, displayed DONT KNOW. Human corrections and rules remain authoritative. |
 | 2b | Persist decisions | The classifier writes `state/*`, `domain/*`, `trait/*`, append-only judgments, outcomes, and axis-specific human locks. |
 | 3 | Merge | `jq` injects mail_triage into briefing.json, including active routing rules and per-thread routing explanations. |
-| 4 | Publish | Dashboard reads via symlink; no-op if symlink exists |
+| 4 | Publish | `triage-mail.sh publish` atomically copies the combined JSON for Caddy |
 | 5 | Email | Plain-text render (alerts, calendar, tasks, leads, overdue invoices, jobs, mail triage w/ summaries, website) via msmtp from office@. **Only sent on the pre-9am run** — midday/evening timer firings refresh the dashboard without re-emailing (`FORCE_EMAIL=1` overrides). |
 
 Step 1 builds `briefing.json` atomically (`.tmp` → validate with `jq empty` → `mv`); on any failure the previous briefing is kept. `generated_at` is stamped from `date -Iseconds`. The calendar is parsed with `jq` (NOT `python3`, which is not on the unit PATH — the old `python3` injector silently failed).
@@ -68,14 +90,14 @@ Step 1 builds `briefing.json` atomically (`.tmp` → validate with `jq empty` �
 ### JobTread / tasks data (Step 1b)
 
 Done 2026-07-08 — `gather-live.mjs` implements the follow-up this section used
-to describe: it speaks StreamableHTTP JSON-RPC to the local gateway and fills
+to describe: it reads PAVE plus the local gateway and fills
 `sections.{jobs,leads,overdue,tasks,weekly_snapshot}`. Notes:
 
 - **tasks** come from `hwc_tasks_list` (Radicale CalDAV — Eric's real
   reminders), NOT JobTread: JT tasks for this org are template groups with no
   due dates, while the CalDAV store is what todui/Apple Reminders show.
 - `weekly_snapshot.estimates_sent_this_week` stays `null` (renders "—"):
-  `jt_documents list` has no created-since filter and returns oldest-first, so
+  The bounded invoice read does not provide the sent-this-week history, so
   a cheap "this week" query isn't available.
 - `recent_documents` stays empty for the same reason.
 - Every job/lead/invoice carries a `url` → `https://app.jobtread.com/jobs/<id>`
@@ -109,56 +131,24 @@ morning run and each intraday mail retriage publish that copy atomically.
 
 ## Sections
 
-| Section | Data Source | MCP Tool | Dashboard Location |
-|---------|------------|----------|-------------------|
-| Calendar | iCloud via khal | `hwc_calendar_list` (range=week) | Top |
-| Weather | Web search | N/A (web search) | After Calendar |
-| Tasks | JobTread | `jt_get_tasks` | After Weather |
-| Jobs | JobTread | `jt_search_jobs` | After Tasks |
-| Weekly Snapshot | JobTread (aggregated) | `jt_search_jobs`, `jt_get_documents` | After Jobs |
-| Leads | JobTread | `jt_search_jobs` (filtered) | After Snapshot |
-| Overdue Docs | JobTread | `jt_get_overdue_documents` | After Leads |
-| Recent Documents | JobTread | `jt_get_documents` | After Overdue |
-| System Health | HWC server | `hwc_monitoring_health_check` | After Recent Docs |
-| Backup | Borg via HWC | `hwc_storage_status` | After System |
-| Mail | notmuch + Laya | Step 2 pipeline | After Backup |
-| Comms | Quo/OpenPhone | Placeholder (future) | After Mail |
-| Refinery | Refinery item store | N/A (local file read) | After Mail triage |
-| Research | research-scout `:8422` | N/A (loopback REST) | After Refinery |
+| Section | Producer |
+|---------|----------|
+| Calendar | Local khal / Radicale |
+| Jobs, leads, overdue invoices | JobTread PAVE |
+| Tasks and mail proposals | `hwc_tasks_list` / Radicale |
+| Mail states and routing rules | Laya classifier ledger |
+| System, disks, backup, VPN, journal | Local or `hostHealthFrom` read commands |
+| Weather | Open-Meteo |
+| Website | Umami and PostgreSQL reads |
+| Research | research-scout REST, without generating reports |
+| Projects | Tracker portfolio and bounded card reads |
+| Refinery | Item store |
+| Today | `hwc_today` board and delta |
 
-## NixOS Options
-
-- `hwc.business.morningBriefing.enable` — enable the service + timer
-- `hwc.business.morningBriefing.onCalendar` — systemd calendar expression (default: `*-*-* 06:00:00`)
-- `hwc.business.morningBriefing.outputDir` — read-only; where `briefing.json` lands. Consumers (the wall display) read it from here.
-
-Service runs as `eric`, hardened with `ProtectSystem=strict`, 300s timeout.
-
-## Manual Run
-
-```bash
-sudo systemctl start morning-briefing.service
-journalctl -u morning-briefing.service -f
-```
-
-## MCP Tools Used
-
-**JobTread** — not an MCP tool any more. `gather-live.mjs` queries PAVE
-(`https://api.jobtread.com/pave`) directly, read-only, with the
-`jobtread-grant-key` agenix secret (`HWC_JT_GRANT_KEY_FILE`) and the org id from
-`leads/parts/jt-mappings.nix` (`HWC_JT_ORG_ID`):
-- open jobs (`closedOn` null, size 50) → `jobs`, `leads`, weekly snapshot
-- documents past `dueDate` with `balance` > 0, not draft → `overdue`
-
-**HWC-SYS** (via the `hwc-sys-mcp` gateway) — server health and tasks
-- `hwc_monitoring_health_check` — services, containers, storage
-- `hwc_mail_health` — mail system status
-- `hwc_storage_status` — Borg backup and disk usage
-- `hwc_calendar_list` (range=week) — iCloud calendar via khal
 
 ## Troubleshooting
 
-**Classifier unavailable**: unclassified mail stays in DO. Check `mail-classifier-model.service`
+**Classifier unavailable**: unclassified mail remains DONT KNOW. Check `mail-classifier-model.service`
 and `/run/hwc-mail-classifier/laya.sock`; the briefing records the degraded state.
 
 **MCP server unreachable**: The agent adds an alert for any data source that fails. Check `hwc-sys-mcp` gateway status with `systemctl status hwc-sys-mcp`. Individual tool failures produce partial briefings (other sections still render).
@@ -172,6 +162,7 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+- 2026-11-09: Share headless/browser MCP transport and versioned view policy. Make gather inputs explicit, retain PAVE data during gateway outages, bound project reads, share backup and unit setup, use a kernel lock, and test real transport, rendering and overlap behavior.
 - 2026-11-02: Overlap independent live and research gathers; batch refinery file reads and profile queues while preserving order and graceful degradation.
 - 2026-10-15: "FROM YOUR MAIL" block. `gather-live.mjs` splits the CalDAV tasks that sit in the
   mail proposals list (the classifier contract's `lifecyclePolicy.taskList`, reaching the unit as
