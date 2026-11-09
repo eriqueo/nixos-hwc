@@ -211,9 +211,9 @@ in
       handoff = {
         enable = lib.mkEnableOption "configured T3 conversation handoffs";
         targets = lib.mkOption {
-          type = lib.types.attrsOf lib.types.attrs;
-          default = assert targetProfile.schemaVersion == 1; targetProfile.targets;
-          description = "Explicit T3 target allowlist; Workbench validates its typed records and requires selection for every Send.";
+          type = lib.types.attrs;
+          default = targetProfile;
+          description = "Versioned T3 destination policy or legacy fixed-target map. Workbench parses the typed records, restricts discovery to configured projects and requires conversation selection for every Send.";
         };
         credentialsSecret = lib.mkOption {
           type = lib.types.str;

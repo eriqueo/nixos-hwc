@@ -1064,11 +1064,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792935033,
-        "narHash": "sha256-BIJAxbCmj5OMM6frOobAAVBuvDvh+TwoRcqSidz00dg=",
+        "lastModified": 1794258463,
+        "narHash": "sha256-3gdMvqrHhghXSIRs5W1SYOR2oZxjkVeyJtwSpWA7dd4=",
         "owner": "eriqueo",
         "repo": "workbench",
-        "rev": "cbf994de20c88b70a5d560c820fcfa38a233ba13",
+        "rev": "969e3d92a75203b8b363e8b51541ea0a7c52435b",
         "type": "github"
       },
       "original": {

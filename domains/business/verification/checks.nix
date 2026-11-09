@@ -1,5 +1,5 @@
 # Pure verification function; not a NixOS or Home Manager module.
-{ lib, pkgs, repoRoot, self }:
+{ inputs, lib, pkgs, repoRoot, self }:
 {
 
 estimator-private-api = let
@@ -444,7 +444,7 @@ assert lib.assertMsg (lib.hasInfix
   "workbench-web: explicit styles override must survive argv escaping";
 assert lib.assertMsg (disabledHandoff.systemd.services.workbench-web.environment.WORKBENCH_HANDOFF_TARGETS == "{}")
   "workbench-web: disabled handoffs must override ambient targets";
-assert lib.assertMsg (builtins.fromJSON handoffEnvironment.WORKBENCH_HANDOFF_TARGETS == publicTargets.targets
+assert lib.assertMsg (builtins.fromJSON handoffEnvironment.WORKBENCH_HANDOFF_TARGETS == publicTargets
   && handoffMount.linkDirectory == handoffOnly.age.secretsDir
   && handoffMount.generationDirectory == handoffOnly.age.secretsMountPoint
   && handoffEnvironment.WORKBENCH_HANDOFF_CREDENTIALS_FILE == handoffOnly.hwc.secrets.api."workbench-t3-credentials")
@@ -456,7 +456,23 @@ assert lib.assertMsg (lib.hasInfix (lib.escapeShellArgs [ "--state-file"
   handoffOnly.hwc.data.borg.sqliteSnapshots.workbench-actions.source ]) handoffService.serviceConfig.ExecStart
   && lib.elem handoffOnly.hwc.business.workbench.web.stateDir handoffService.serviceConfig.ReadWritePaths)
   "workbench-web: handoff-only service needs the backed-up writable journal";
-pkgs.runCommand "workbench-web-service" {} ''
+pkgs.runCommand "workbench-web-service" {
+  nativeBuildInputs = [ pkgs.python3 ];
+} ''
+  PYTHONPATH=${inputs.workbench}/src python3 - ${pkgs.writeText "workbench-destinations.json" handoffEnvironment.WORKBENCH_HANDOFF_TARGETS} <<'PY'
+  import json, pathlib, sys
+  from workbench.core.agent import HandoffProject, parse_handoff_targets
+  from workbench.core.errors import ConfigError
+  policy = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  targets = parse_handoff_targets(policy)
+  assert targets and all(isinstance(target, HandoffProject) for target in targets.values())
+  # The real parser must reject an authority field outside its vocabulary.
+  for row in policy['destinations'].values(): row['browserOrigin'] = 'https://unconfigured.invalid'
+  try: parse_handoff_targets(policy)
+  except ConfigError: pass
+  else: raise AssertionError('Unknown destination authority field accepted')
+  print('PASS actual configured project policy and rejected authority seed')
+  PY
   touch "$out"
 '';
 
