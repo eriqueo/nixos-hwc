@@ -124,6 +124,8 @@ business/
 
 ## Changelog
 
+- 2026-11-09: Use real HTTP for briefing timeout regressions so the pinned Node 22 suite cannot exit with unresolved fake requests.
+
 - 2026-11-09: Update Workbench with list/category task filters, due/priority/title ordering, direct completion and an attention-first Server view. System filters include healthy checks and failures using producer tool identity. Use one Send to T3 action with project-scoped conversation browsing and the existing credential; verify the exact policy through the app parser.
 - 2026-11-09: Untangle briefing transport, collection and email rendering. Preserve partial data when a source fails, share view categories, and use an atomic overlap lock.
 

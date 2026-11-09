@@ -260,23 +260,31 @@ test("Today board survives a failed delta and uses the shared session", async ()
 
 test("project page deadlines retain the portfolio and stop at the total budget", { timeout: 5000 }, async () => {
   const projects = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [String(i), { id: String(i), status: "active", open: 1, waits: [] }]));
-  let requests = 0;
-  const result = await gatherProjects({ baseUrl: "http://tracker", publicUrl: "http://public", waitDays: 7,
-    requestTimeoutMs: 20, totalTimeoutMs: 45,
-    fetch: async (url, { signal }) => {
-      assert.ok(signal instanceof AbortSignal);
-      if (url.endsWith("/api/portfolio")) return response({ projects, today: "2026-11-04", counts: { live: 20 } });
-      requests++;
-      return new Promise((_resolve, reject) => {
-        if (signal.aborted) reject(signal.reason);
-        else signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-      });
-    },
+  // Real sockets keep Node alive while AbortSignal.timeout's unref'ed timer
+  // fires, matching the fetch adapter rather than relying on other tests' I/O.
+  await withGateway((_body, request, res) => {
+    if (request.url === "/api/portfolio") reply(res, { projects: { 0: projects[0], 1: projects[1] }, today: "2026-11-04", counts: { live: 2 } });
+    else if (request.url === "/api/projects/1") reply(res, { cards: [{ id: "next", title: "Next", status: "open", expires: "2026-11-05" }] });
+    // The first project never responds; the next must remain reachable.
+  }, async (url) => {
+    const result = await gatherProjects({ baseUrl: url, publicUrl: "http://public", waitDays: 7,
+      requestTimeoutMs: 100, totalTimeoutMs: 2000, fetch });
+    assert.equal(result.counts.live, 2);
+    assert.deepEqual(result.expiring.map((card) => card.card), ["next"]);
   });
-  assert.equal(result.available, true);
-  assert.equal(result.counts.live, 20);
-  assert.deepEqual(result.expiring, []);
-  assert.ok(requests > 0 && requests < 20, requests);
+
+  let requests = 0;
+  await withGateway((_body, request, res) => {
+    if (request.url === "/api/portfolio") reply(res, { projects, today: "2026-11-04", counts: { live: 20 } });
+    else requests++;
+  }, async (url) => {
+    const result = await gatherProjects({ baseUrl: url, publicUrl: "http://public", waitDays: 7,
+      requestTimeoutMs: 1000, totalTimeoutMs: 250, fetch });
+    assert.equal(result.available, true);
+    assert.equal(result.counts.live, 20);
+    assert.deepEqual(result.expiring, []);
+    assert.ok(requests > 0 && requests < 20, requests);
+  });
 });
 
 

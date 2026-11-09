@@ -162,6 +162,8 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+
+- 2026-11-09: Exercise project deadlines through real HTTP sockets so the pinned Node 22 test runner owns pending I/O until cancellation.
 - 2026-11-09: Share headless/browser MCP transport and versioned view policy. Make gather inputs explicit, retain PAVE data during gateway outages, bound project reads, share backup and unit setup, use a kernel lock, and test real transport, rendering and overlap behavior.
 - 2026-11-02: Overlap independent live and research gathers; batch refinery file reads and profile queues while preserving order and graceful degradation.
 - 2026-10-15: "FROM YOUR MAIL" block. `gather-live.mjs` splits the CalDAV tasks that sit in the
