@@ -368,6 +368,20 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 
 ## Changelog
 
+- **2026-11-04**: New `projects` topic route to `discord-ops` for the
+  morning-briefing project-tracker digest (e0c8bd16). The source hoists fixed
+  regexes to module scope and parses `/audit/recent` query strings with
+  `URLSearchParams` instead of `new URL()` (68ff8eda).
+- **2026-09-25**: New `serverAlias` option (default `work`) and read-only
+  derived `url` (`hwc.networking.hosts.url { server = serverAlias; port =
+  reverseProxyPort; }`), the one producer of the dispatcher address for senders
+  on every host; the dispatcher moved to hwc-work (2fdea699). Removed the
+  `voice-log` topic route (3833ee4f).
+- **2026-09-21**: The calculator-source and `leads`-topic rules also deliver
+  to `smtp-office`, so new leads, CRM alerts and calendar reminders reach email (b82c1cf7).
+- **2026-09-19**: Removed the `persona-daemon` topic route with the local chat
+  stack (16f1f9ce).
+
 - **2026-09-07**: The executive brief stopped deleting the body. Since
   2026-08-29 a notification with an `executive` block rendered `meaning` in
   place of `body` on Discord and instead of it on SMTP, so every producer that
