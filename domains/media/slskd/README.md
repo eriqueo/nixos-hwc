@@ -24,7 +24,7 @@ slskd is a modern, web-based Soulseek client for peer-to-peer music sharing. Thi
 ### Service Type
 - **Container**: Podman (via `virtualisation.oci-containers`)
 - **Image**: `slskd/slskd:latest`
-- **Network**: `media-network` (internal container network)
+- **Network**: its own gluetun tunnel by default (`vpn`); `media-network` only with `allowClearnet` (see Networking)
 - **Routing**: Port mode (HTTPS port 8443) - slskd is subpath-hostile
 
 ### Directory Structure
@@ -150,19 +150,25 @@ From slskd documentation:
 
 ## Networking
 
+### Mode (default `vpn`)
+
+`network.mode` defaults to `"vpn"`: slskd runs inside its own gluetun instance
+(`vpnInstance`, default `gluetun-slskd`), not qBittorrent's, because Proton
+forwards one port per WireGuard session. `network.mode = "media"` fails the
+build unless `allowClearnet = true` is set explicitly. The option defaulted to
+`"media"` until 2026-08-20, and slskd egressed on the house IP for about six weeks.
+
 ### Ports
 
-- **5031** (host) → **5030** (container): Web UI (HTTP, proxied via Caddy HTTPS 8443)
-- **50300** (host) → **50300** (container): Soulseek P2P (TCP)
-
-### Firewall
-
-```nix
-networking.firewall.allowedTCPPorts = [ 50300 5031 ];
-```
-
-- **50300**: Required for Soulseek network connectivity
-- **5031**: Internal HTTP, proxied by Caddy
+- VPN mode: slskd publishes no host ports and opens no host firewall ports. The
+  tunnel instance publishes the web UI as `127.0.0.1:5031 → 5030` (set on the
+  instance in `machines/home/config.nix`). The Soulseek listen port is the tunnel's
+  NAT-PMP forwarded port, read by `slskd-config-generator` from
+  `${hwc.networking.gluetun.stateRoot}/<vpnInstance>/forwarded-port`; before the
+  first sync it falls back to `listenPort` (default 50300).
+- Clearnet mode: **5031** (host) → **5030** (container) for the web UI, and
+  `listenPort` (host) → `listenPort` (container) for Soulseek P2P; the firewall
+  opens both.
 
 ### Caddy Route
 
@@ -188,12 +194,15 @@ slskd doesn't support URL base configuration and hardcodes paths in JavaScript/a
 ```
 agenix.service
     ↓
-slskd-config-generator.service (generates config from secrets)
+slskd-config-generator.service (generates config from secrets + forwarded port)
     ↓
-init-media-network.service (creates media-network)
+podman-<vpnInstance>.service  (VPN mode; slskd bindsTo/partOf it)
+  or init-media-network.service (clearnet mode)
     ↓
 podman-slskd.service (starts container)
 ```
+
+In VPN mode slskd restarts whenever its tunnel restarts.
 
 ### Restart Behavior
 
@@ -289,7 +298,7 @@ sudo cat /run/agenix/slskd-soulseek-password
 
 **Common causes**:
 - Incorrect Soulseek password
-- Port 50300 blocked by firewall
+- No forwarded port yet (VPN mode) or `listenPort` blocked by firewall (clearnet mode)
 - Network connectivity issues
 
 ---
@@ -339,8 +348,8 @@ sudo systemctl restart podman-slskd
 ## Configuration Files
 
 ### Primary Configuration
-- **Module**: `domains/server/containers/slskd/`
-- **Options**: `options.nix` (enable, image, network mode)
+- **Module**: `domains/media/slskd/`
+- **Options**: `index.nix` (enable, image, network mode, vpnInstance, allowClearnet, listenPort; assertions)
 - **System Integration**: `sys.nix` (podman backend)
 - **Container Config**: `parts/config.nix` (main config generation)
 
@@ -426,3 +435,26 @@ shares.directories = [
 **Last Updated**: 2025-11-06
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection
+
+## Structure
+
+```
+slskd/
+├── index.nix        # Options + assertions (VPN default, allowClearnet escape hatch)
+├── sys.nix          # mkContainer wiring, conditional ports/firewall, tunnel dependencies
+├── parts/config.nix # slskd-config-generator (secrets + forwarded listen port → slskd.yml)
+├── VERSION.md
+└── README.md
+```
+
+## Changelog
+
+- 2026-09-10: Comment in `parts/config.nix` now points directory creation at
+  `media/directories.nix` (ca49bf2b). No behavior change.
+- 2026-08-20: slskd moved into its own gluetun tunnel (0f102aa4).
+  `network.mode` defaults to `vpn`; new `vpnInstance` (default `gluetun-slskd`),
+  `allowClearnet` and `listenPort` options. A clearnet mode without
+  `allowClearnet` fails the build, and `mkVpnAssertions` checks the instance.
+  In VPN mode host ports and firewall openings are dropped, the listen port
+  follows the tunnel's forwarded-port file, and `podman-slskd` binds to and is
+  part of `podman-<vpnInstance>.service`.
