@@ -13,6 +13,8 @@ Paperless-NGX document management system running as a Podman container. Provides
 
 ## Structure
 
+Paperless’s `index.nix` shares a hash-pinned Debian fetch helper between its runtime and Gotenberg contexts.
+
 Paperless declares its own PostgreSQL owner and loads PAPERLESS_DBPASS from a
 protected environment file. It requires role provisioning before startup and
 restarts with credential/provisioner changes; converter isolation stays in place.
@@ -126,6 +128,8 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+
+- 2026-11-09: Paperless and Gotenberg Debian downloads fall back to the direct Debian security mirror when the CDN fails. Package hashes, manifests and image identities stay unchanged.
 - 2026-11-03: Declare restricted database ownership, protected password environment delivery and provisioning/rotation dependencies.
 
 - 2026-11-02: Repair the existing application's Python, image-processing, compression, certificate and OS dependencies. Actual codecs, OCR, Office parser and restored PostgreSQL15.19 consumers pass; all74tables and authenticated document API fingerprints match old/new/restored. Application/schema stays3.1.3.

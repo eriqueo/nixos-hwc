@@ -5,6 +5,15 @@ let
   # Temporary browser patch: retire when a qualified vendor image includes
   # Chromium >=156.0.8078.79 and passes the Paperless conversion contracts.
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
+  # Both official security endpoints serve the same pinned bytes. The CDN can
+  # return 404 for an encoded package URL while the direct mirror still serves it.
+  # Permanent by design: hash verification remains authoritative on either mirror.
+  fetchDeb = p: pkgs.fetchurl {
+    inherit (p) hash;
+    urls = [ p.url ] ++ lib.optional
+      (lib.hasPrefix "https://deb.debian.org/debian-security/" p.url)
+      (lib.replaceStrings [ "https://deb.debian.org/" ] [ "https://security.debian.org/" ] p.url);
+  };
   gotenbergPackages = builtins.fromJSON ''
     [{"name":"chromium-common","version":"156.0.8078.79-1~deb13u1","file":"chromium-common_156.0.8078.79-1~deb13u1_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/chromium/chromium-common_156.0.8078.79-1~deb13u1_amd64.deb","hash":"sha256-KdmjMSO8xaukd0briactlzv3pzfjggQlx0lpBPcjX70="},{"name":"chromium","version":"156.0.8078.79-1~deb13u1","file":"chromium_156.0.8078.79-1~deb13u1_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/c/chromium/chromium_156.0.8078.79-1~deb13u1_amd64.deb","hash":"sha256-kyV3f7hC6vo/mSIJ7m8babrXbDMRqI79TXdyzsIuN5U="},{"name":"libnss3","version":"2:3.110-1+deb13u5","file":"libnss3_2%3a3.110-1+deb13u5_amd64.deb","url":"https://deb.debian.org/debian-security/pool/updates/main/n/nss/libnss3_3.110-1+deb13u5_amd64.deb","hash":"sha256-cFmDkWXDnnNP9ZxxL96D716gEyiHKBnfur0cCOdfMRY="},{"name":"tzdata","version":"2026f-0+deb13u1","file":"tzdata_2026f-0+deb13u1_all.deb","url":"https://deb.debian.org/debian/pool/main/t/tzdata/tzdata_2026f-0+deb13u1_all.deb","hash":"sha256-LBxWEJFAKINDDQ1HxXo8CqALRK/IpiOSZQZahyEaXBE="}]
   '';
@@ -25,7 +34,7 @@ let
     mkdir -p "$out/debian"
     cp ${gotenbergRuntime.dockerfile} "$out/Dockerfile"
     cp ${gotenbergManifest} "$out/manifest.json"
-    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+    ${lib.concatMapStrings (p: let source = fetchDeb p; in ''
       cp ${source} "$out/debian/${p.file}"
     '') gotenbergPackages}
   '';
@@ -136,7 +145,7 @@ let
     mkdir -p "$out/debian" "$out/wheels"
     cp ${paperlessRuntime.dockerfile} "$out/Dockerfile"
     cp ${paperlessManifest} "$out/manifest.json"
-    ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
+    ${lib.concatMapStrings (p: let source = fetchDeb p; in ''
       cp ${source} "$out/debian/${p.file}"
     '') paperlessDebs}
     ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''

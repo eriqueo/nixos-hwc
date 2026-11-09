@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Paperless’s `index.nix` shares a hash-pinned Debian fetch helper between its runtime and Gotenberg contexts.
+
 CRM follows the configured PostgreSQL role operator's restart lifecycle and waits
 for reconciliation before schema assertions. Its shared HTTP readiness command
 holds dependents until the application responds.
@@ -119,6 +121,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-09: Paperless and Gotenberg Debian downloads fall back to the direct Debian security mirror when the CDN fails. Package hashes, manifests and image identities stay unchanged.
 
 - 2026-11-04: Restart CRM with the shared role operator so its new Requires dependency cannot leave it stopped after credential or operator updates.
 
