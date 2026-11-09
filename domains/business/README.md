@@ -124,7 +124,7 @@ business/
 
 ## Changelog
 
-- 2026-11-09: Update Workbench with list/category task filters, due/priority/title ordering, direct completion and an attention-first Server view. Use one Send to T3 action with project-scoped conversation browsing and the existing credential; verify the exact policy through the app parser.
+- 2026-11-09: Update Workbench with list/category task filters, due/priority/title ordering, direct completion and an attention-first Server view. System filters include healthy checks and failures using producer tool identity. Use one Send to T3 action with project-scoped conversation browsing and the existing credential; verify the exact policy through the app parser.
 
 - 2026-11-09: Replace withdrawn Alpine APK tools 2.14.12 packages with the signed 2.14.13 pair and exact hashes. Regenerate Pico’s offline context and image identity.
 
