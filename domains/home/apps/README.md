@@ -14,7 +14,6 @@ User application configuration via Home Manager.
 `agent-harness/` owns workspace process inspection and its pinned runtime; see its module README.
 ```
 apps/
-├── aerc/           # Email client
 ├── blender/        # 3D modeling
 ├── bitwarden/      # Desktop client for the self-hosted vault
 ├── chromium/       # Browser
@@ -22,22 +21,40 @@ apps/
 ├── gpu-screen-recorder/  # Call/screen recording (gsr-toggle script + sys.nix capture wrapper)
 ├── hyprland/       # Wayland compositor
 ├── kitty/          # Terminal emulator
-├── librewolf/      # Privacy browser
+├── firefox/        # Browser
 ├── plasma/         # Stock household desktop, seed-only user defaults
 ├── mpv/            # Media player
 ├── obsidian/       # Note-taking
 ├── xournalpp/      # PDF annotator / handwritten notes
 ├── vesktop/        # Discord client with Vencord built in
-├── waybar/         # Status bar
+├── waybar/         # Status bar (patches/hyprland-lua-ipc.patch for workspace clicks)
 ├── tuxedo/         # todo.txt TUI (keyboard-driven task manager)
 ├── todui/          # VTODO task TUI (external flake input; HWC adapter only)
 ├── t3code/         # Agent desktop and server launchers; trusted desktop URI binding
 ├── pave-query-builder/  # Pave/JobTread API query TUI+CLI (external flake input; HWC adapter only)
 ├── eden/            # Switch 1 emulator derived from Yuzu and Sudachi
-└── ... (30+ apps)
+└── ... (60+ apps; `ls` is authoritative)
 ```
 
 ## Changelog
+
+- 2026-11-05: `hyprland/` drops blanket floating-window centering so native
+  context menus keep their positions; dialog centering and size limits remain (b4574b4c).
+- 2026-11-04: `hyprland/` renders its config through Home Manager's Lua API
+  (Hyprland 0.57) and its helpers and laptop streaming use Lua IPC; it remembers
+  the external screen's side per screen, installs session cursor assets and
+  preserves Lua mouse flags. `waybar/` adds `patches/hyprland-lua-ipc.patch` for
+  workspace clicks, escapes calendar markup, excludes virtual displays and
+  supervises reloads. `t3code/` stops the captured Electron child on the laptop
+  without `pkill` sweeps. `claude-code/` becomes the CLI installation owner
+  (`nix` or `native`); `codex/` retires the laptop's release-binary override.
+  `rea/` gets util-linux `prlimit` and procps from Nix. `workbench/` binds its
+  TUI and Mail helper to the checked Python runtime. `dt/` narrows SQLite reads
+  and adds `source/src/__tests__/read-paths.test.ts` to the package check.
+  Details live in each app's README (851a1d21, 20569a7c, a0fc1f45, ef719b6a,
+  cae85777, cda83d4e, 64af6e17, 482678e1, 0eb4a4d6, a4cc1490, 124b11fe,
+  dc79d90d, 68ff8eda). Structure listing drops the absent `aerc/` and
+  `librewolf/` and adds `firefox/`.
 
 - 2026-11-03: Remove the unused Aider module, package, generated config and shell setup.
 

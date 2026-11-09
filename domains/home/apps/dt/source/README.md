@@ -56,3 +56,32 @@ node dist/dt.mjs status
 ## NixOS
 
 See `INTEGRATION.md` for Waybar, Hyprland, and NixOS module setup.
+
+## Structure
+
+```
+source/
+├── build.mjs              # esbuild bundle
+├── config.example.toml
+├── INTEGRATION.md         # Waybar, Hyprland and NixOS wiring
+├── package.json, package-lock.json, tsconfig.json
+└── src/
+    ├── cli/               # amend, calendar-rebuild, doctor, export, in, log, out,
+    │                      #   pomodoro-check, snooze, stale-check, status, toggle
+    ├── config/            # config loader
+    ├── db/                # connection, schema, queries
+    ├── lib/               # calendar, snooze, time, types
+    ├── pdf/invoice.ts
+    ├── tui/               # Ink TUI screens
+    └── __tests__/read-paths.test.ts
+```
+
+## Changelog
+
+- 2026-11-04: `db/queries.ts` selects explicit columns for active sessions and
+  invoice/category/day summaries (timer and status readers no longer load
+  notes); `cli/amend.ts` and `cli/calendar-rebuild.ts` follow. Fixed regexes in
+  the CLI, `lib/calendar.ts`, `lib/time.ts` and `tui/Export.tsx` move to module
+  scope. New `__tests__/read-paths.test.ts` checks SQLite results with an
+  unused large column present; `parts/package.nix` runs it as the package
+  `checkPhase` (68ff8eda).
