@@ -9,6 +9,11 @@
 
 ## Structure
 
+MCP mail/calendar share buffered argv execution and bounded binary discovery in
+`src/src/executors/shell.ts` (under `mcp/` in this domain). Calendar command
+instances bind their khal configuration once; the tool aggregator supplies command
+settings. SMTP streaming and classifier receipts keep their separate protocols.
+
 The MCP package runs its full test suite with at most two workers during Nix builds.
 
 MCP `hwc_notify send` reports full, partial, failed, and unrouted delivery from the dispatcher counts. It preserves response evidence on errors and never retries a send.
@@ -103,6 +108,12 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-11-09: Untangle MCP mail/calendar command handling: share literal argv
+  execution and one in-flight binary lookup, bind khal config per tool instance,
+  and reuse calendar creation arguments. Preserve mutation ordering and command
+  limits. Replace the timed flock test with explicit release and test real process
+  failures, gateway wiring, punctuation and concurrent discovery.
 
 - 2026-11-09: Bound MCP test workers to two so concurrent release builds do not time out module imports and leak unfinished test state. Keep every test and its timeout.
 

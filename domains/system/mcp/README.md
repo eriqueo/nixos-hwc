@@ -164,7 +164,7 @@ All containers run under **root podman**. The MCP server runs as user `eric`. To
 
 - **Process isolation**: `User = mkForce "eric"`, `ProtectSystem=strict`, `ProtectHome=read-only`, `NoNewPrivileges`, kernel protections
 - **Resource limits**: `MemoryMax=512M`, `CPUQuota=50%`
-- **Command execution**: All shell commands via `execFile` (no shell). Arguments validated against unsafe patterns as defense-in-depth.
+- **Command execution**: Buffered commands use `execFile` with argument arrays. Infrastructure callers retain `safeExec` validation; mail queries and calendar text pass literally. Classifier mutations retain their fixed flock/start-pipe shell protocol.
 - **Secrets**: Tools expose names and metadata only — never decrypt or return values
 - **Mutations**: Disabled by default. Gated behind `mutations.enable` + per-action allowlist
 - **Network**: Binds `127.0.0.1` only. External access requires Tailscale Funnel or Caddy
@@ -486,6 +486,12 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-11-09: Untangle MCP mail/calendar command handling: share literal argv
+  execution and one in-flight binary lookup, bind khal config per tool instance,
+  and reuse calendar creation arguments. Preserve mutation ordering and command
+  limits. Replace the timed flock test with explicit release and test real process
+  failures, gateway wiring, punctuation and concurrent discovery.
+
 - 2026-11-09: Bound MCP test workers to two so concurrent release builds do not time out module imports and leak unfinished test state. Keep every test and its timeout.
 - 2026-11-02: Hoist fixed patterns, precompile CalDAV properties and remove full URL parsing from SSE query lookup.
 - 2026-11-02: Remove independent read barriers from status tools and file-backed boards; add bounded ordered scheduling and handler-level concurrency regressions.
@@ -745,6 +751,11 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-04-02**: Root podman fix, parameter validation, `.mcp.json` registration, Phase 1-3 foundation.
 
 ## Structure
+
+MCP mail/calendar share buffered argv execution and bounded binary discovery in
+`src/src/executors/shell.ts` (under `mcp/` in this domain). Calendar command
+instances bind their khal configuration once; the tool aggregator supplies command
+settings. SMTP streaming and classifier receipts keep their separate protocols.
 
 The MCP package runs its full test suite with at most two workers during Nix builds.
 

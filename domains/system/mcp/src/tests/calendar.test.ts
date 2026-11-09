@@ -12,6 +12,7 @@ import {existsSync} from "node:fs";
 import {mkdir,rm,writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import {calendarTools} from "../src/tools/calendar.js";
+import {bindCommand,cachedBinary,executeFile,safeExec} from "../src/executors/shell.js";
 it("week read uses seven dated days and preserves event data",async()=>{
  vi.useFakeTimers();vi.setSystemTime(new Date("2026-09-07T16:00:00Z"));
  run.mockImplementation((_bin,args,_options,callback)=>{
@@ -116,13 +117,14 @@ describe("delete and edit read the event itself",()=>{
   }});
  });
 
- it("recreates an edited event at the same local time, on its own calendar",async()=>{
+ it("recreates an edited event with the configured binary, on its own calendar and local time",async()=>{
   // khal names a discovered calendar by the collection's displayname file.
   await writeFile(join(store,"displayname"),"Work jobs\n");
-  const result=await calendar({action:"edit",query:"client call",newSummary:"Client call",confirm:true});
+  const result=await calendarTools({khalBin:"/fixture/edit-khal",khalConfig:"/fixture/edit.conf"})[0].handler({action:"edit",query:"client call",newSummary:"Client call",confirm:true});
   expect(result.status).toBe("ok");
   const created=run.mock.calls.find(c=>c[1].includes("new"));
-  expect(created![1]).toEqual(["new","-a","Work jobs","2026-10-02","09:00","10:00","Client call","::","Kitchen remodel scope"]);
+  expect(created![0]).toBe("/fixture/edit-khal");
+  expect(created![1]).toEqual(["-c","/fixture/edit.conf","new","-a","Work jobs","2026-10-02","09:00","10:00","Client call","::","Kitchen remodel scope"]);
   expect(existsSync(files.call)).toBe(false);
  });
 
@@ -157,5 +159,142 @@ describe("repeat calendar creation",()=>{
  it.each([{repeat:"hourly"},{repeat:"weekly",until:"2026-02-30"},{until:"2027-01-01"},{repeat:"weekly",until:"2026-01-01"}])("rejects invalid repetition %j before writing",async fields=>{
   expect((await calendar({action:"create",summary:"Chore",date:"2026-10-14",...fields})).status).toBe("error");
   expect(run.mock.calls.some(c=>c[1].includes("new"))).toBe(false);
+ });
+});
+
+
+describe("mail/calendar command boundary", () => {
+ beforeEach(() => { run.mockReset(); });
+
+ it("passes literal arguments to a real process and preserves nonzero exit/output", async () => {
+  const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+  run.mockImplementation(actual.execFile);
+  const literal = "Smith & Sons; $(echo unsafe) | {quote} `literal`";
+  const result = await executeFile(process.execPath, ["-e",
+   "process.stdout.write(process.argv[1]); process.stderr.write('diagnostic'); process.exitCode=7", literal]);
+  expect(result).toEqual({exitCode:7,stdout:literal,stderr:"diagnostic"});
+  expect(run).toHaveBeenCalledTimes(1);
+ });
+
+ it("reports a real timeout and output overflow as failures without retries", async () => {
+  const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+  run.mockImplementation(actual.execFile);
+  const timeout = await executeFile(process.execPath, ["-e", "setInterval(()=>{},1000)"], {timeout:100});
+  expect(timeout.exitCode).not.toBe(0);
+  const overflow = await executeFile(process.execPath, ["-e", "process.stdout.write('x'.repeat(4096))"], {maxBuffer:32});
+  expect(overflow.exitCode).not.toBe(0);
+  expect(run).toHaveBeenCalledTimes(2);
+ });
+
+ it.each([new Error("failed"), Object.assign(new Error("missing"),{code:"ENOENT"}),
+  Object.assign(new Error("killed"),{code:null})])("does not report success for an error without a numeric exit", async error => {
+  run.mockImplementation((_bin,_args,_options,callback)=>callback(error,undefined,undefined));
+  expect(await executeFile("fixture",[])).toEqual({exitCode:1,stdout:"",stderr:""});
+  expect(run).toHaveBeenCalledTimes(1);
+ });
+
+ it("keeps the restrictive infrastructure policy separate from literal argv", async () => {
+  await expect(safeExec("fixture",["a;b"])).rejects.toThrow("Unsafe argument");
+  expect(run).not.toHaveBeenCalled();
+ });
+
+ it("falls back only on ENOENT and caches the selected executable", async () => {
+  run.mockImplementation((bin,_args,_options,callback)=>callback(
+   Object.assign(new Error("probe"),{code:bin==="missing" ? "ENOENT" : 2}),"",""));
+  const binary=cachedBinary(["missing","present","unused"]);
+  expect(await binary()).toBe("present");
+  expect(await binary()).toBe("present");
+  expect(run.mock.calls.map(call=>call[0])).toEqual(["missing","present"]);
+  expect(run.mock.calls.every(call=>call[1][0]==="--version" && call[2].timeout===3000)).toBe(true);
+ });
+
+ it("does not cache failed discovery and keeps resolver instances separate", async () => {
+  run.mockImplementation((_bin,_args,_options,callback)=>callback(Object.assign(new Error("missing"),{code:"ENOENT"})));
+  const binary=cachedBinary(["later"]);
+  await expect(binary()).rejects.toThrow("Binary not found");
+  run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"",""));
+  expect(await binary()).toBe("later");
+  expect(await cachedBinary(["other"])()).toBe("other");
+  expect(run.mock.calls.map(call=>call[0])).toEqual(["later","later","other"]);
+ });
+
+ it("shares in-flight discovery but runs each requested action once", async () => {
+  let release!: () => void;
+  run.mockImplementation((_bin,args,_options,callback)=>{
+   if (args[0]==="--version") release=()=>callback(null,"version","");
+   else callback(null,"result","");
+  });
+  const command=bindCommand(cachedBinary(["fixture"]),{});
+  const first=command(["first"]), second=command(["second"]);
+  expect(run).toHaveBeenCalledTimes(1);
+  release();
+  await Promise.all([first,second]);
+  expect(run.mock.calls.map(call=>call[1])).toEqual([["--version"],["first"],["second"]]);
+ });
+
+ it("releases every discovery waiter on failure and permits a later discovery", async () => {
+  let release!: () => void;
+  run.mockImplementation((_bin,_args,_options,callback)=>{
+   release=()=>callback(Object.assign(new Error("missing"),{code:"ENOENT"}));
+  });
+  const binary=cachedBinary(["fixture"]);
+  const failed=Promise.allSettled([binary(),binary()]);
+  expect(run).toHaveBeenCalledTimes(1);
+  release();
+  expect((await failed).map(result=>result.status)).toEqual(["rejected","rejected"]);
+  run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"version",""));
+  expect(await binary()).toBe("fixture");
+  expect(run).toHaveBeenCalledTimes(2);
+ });
+
+ it("binds prefixes and default limits while honoring per-call overrides", async () => {
+  run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"output",""));
+  const command=bindCommand(async()=>"fixture",{maxBuffer:1234},["-c","fixture.conf"]);
+  await command(["list"],{timeout:3500});
+  await command(["new","literal & title"],{maxBuffer:4321});
+  expect(run.mock.calls.map(call=>call.slice(0,3))).toEqual([
+   ["fixture",["-c","fixture.conf","list"],{timeout:3500,maxBuffer:1234}],
+   ["fixture",["-c","fixture.conf","new","literal & title"],{timeout:15000,maxBuffer:4321}],
+  ]);
+ });
+
+ it("keeps configured calendar instances independent and runs a failed create once", async () => {
+  run.mockImplementation((_bin,args,_options,callback)=>callback(args.includes("new") ? Object.assign(new Error("failed"),{code:7}) : null,"",""));
+  const first=calendarTools({khalBin:"/fixture/first",khalConfig:"/fixture/first.conf"})[0];
+  const second=calendarTools({khalBin:"/fixture/second",khalConfig:"/fixture/second.conf"})[0];
+  await first.handler({action:"list",range:"custom",start:"2026-11-01"});
+  await second.handler({action:"list",range:"custom",start:"2026-11-01"});
+  const result=await first.handler({action:"create",summary:"Smith & Sons",date:"2026-11-01"});
+  expect(result.status).toBe("error");
+  const calls=run.mock.calls.filter(call=>call[1][0]!=="--version");
+  expect(calls.map(call=>[call[0],call[1].slice(0,2)])).toEqual([
+   ["/fixture/first",["-c","/fixture/first.conf"]],
+   ["/fixture/second",["-c","/fixture/second.conf"]],
+   ["/fixture/first",["-c","/fixture/first.conf"]],
+  ]);
+  expect(calls[2][1]).toContain("Smith & Sons");
+  expect(calls[2][2]).toEqual({timeout:10000,maxBuffer:2*1024*1024});
+  expect(run.mock.calls.filter(call=>call[1].includes("new"))).toHaveLength(1);
+ });
+
+ it("binds configured command paths at gateway construction", async () => {
+  const {allTools}=await import("../src/tools/index.js");
+  const {loadConfig}=await import("../src/config.js");
+  vi.stubEnv("HWC_KHAL_BIN","/fixture/gateway-khal");
+  vi.stubEnv("HWC_KHALT_CONFIG","/fixture/gateway.conf");
+  vi.stubEnv("HWC_SYSTEMCTL_BIN","/fixture/systemctl");
+  run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"",""));
+  try {
+   const tools=allTools(loadConfig());
+   await tools.find(tool=>tool.name==="hwc_calendar")!.handler({action:"list",range:"custom",start:"2026-11-01"});
+   expect(run.mock.calls.find(call=>call[1].includes("list"))?.slice(0,3)).toEqual([
+    "/fixture/gateway-khal",["-c","/fixture/gateway.conf","list","--format","{start-time}|{end-time}|{title}|{location}","2026-11-01","2026-11-01"],
+    {timeout:3500,maxBuffer:2*1024*1024},
+   ]);
+   await tools.find(tool=>tool.name==="hwc_mail")!.handler({action:"sync",wait:true});
+   expect(run.mock.calls.at(-1)?.slice(0,3)).toEqual([
+    "/fixture/systemctl",["--user","start","--wait","mbsync.service"],{timeout:120000,maxBuffer:1024*1024},
+   ]);
+  } finally {vi.unstubAllEnvs();}
  });
 });

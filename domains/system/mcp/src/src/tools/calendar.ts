@@ -4,7 +4,7 @@ import { REPEAT_FREQUENCIES, isRepeatFrequency, validDate } from "../executors/c
  */
 
 import { mapReads } from "../executors/concurrency.js";
-import { execFile } from "node:child_process";
+import { bindCommand, cachedBinary } from "../executors/shell.js";
 import { readdir, readFile, unlink } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { homedir } from "node:os";
@@ -14,82 +14,9 @@ import { contract } from "../result.js";
 import type { ResultEnvelope, ToolDef, ToolResult } from "../types.js";
 import { log } from "../log.js";
 
-// Fixed patterns are shared; stateful uses reset their cursor below.
 const parseVeventsPatternRegex = /\r?\n/;
 const icsTimePatternRegex = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/;
 const icsTimePatternRegex2 = /;TZID=(?:"([^"]*)"|([^;]*))/i;
-
-/* ════════════════════════════════════════════════════════════════ */
-/*  Binary resolution                                              */
-/* ════════════════════════════════════════════════════════════════ */
-
-// khalt supersedes plain khal. The MCP module (domains/system/mcp/index.nix)
-// puts khalt's package on the service PATH and exports HWC_KHAL_BIN (the fork's
-// `khal` binary) and HWC_KHALT_CONFIG (the isolated khalt config that points at
-// the Radicale-synced calendars). We pass `-c <config>` so khal reads the same
-// khalt config the TUI uses, rather than the legacy ~/.config/khal/config.
-const KHAL_ENV_BIN = process.env.HWC_KHAL_BIN;
-const KHALT_CONFIG = process.env.HWC_KHALT_CONFIG;
-const KHAL_CANDIDATES = [
-  ...(KHAL_ENV_BIN ? [KHAL_ENV_BIN] : []),
-  "khal",
-  "/etc/profiles/per-user/eric/bin/khal",
-];
-const VDIRSYNCER_CANDIDATES = ["vdirsyncer", "/etc/profiles/per-user/eric/bin/vdirsyncer"];
-let _khal: string | null = null;
-let _vdirsyncer: string | null = null;
-
-async function resolveBin(candidates: string[]): Promise<string> {
-  for (const bin of candidates) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        execFile(bin, ["--version"], { timeout: 3000 }, (err) => {
-          if (err && (err as NodeJS.ErrnoException).code === "ENOENT") reject(err);
-          else resolve();
-        });
-      });
-      return bin;
-    } catch { continue; }
-  }
-  throw new Error(`Binary not found: ${candidates.join(", ")}`);
-}
-
-async function khalBin(): Promise<string> {
-  if (!_khal) _khal = await resolveBin(KHAL_CANDIDATES);
-  return _khal;
-}
-async function vdirsyncerBin(): Promise<string> {
-  if (!_vdirsyncer) _vdirsyncer = await resolveBin(VDIRSYNCER_CANDIDATES);
-  return _vdirsyncer;
-}
-
-// Global `-c <config>` flag prepended to every khal invocation so the fork
-// reads the khalt config (Radicale calendars). Empty when unset → khal's
-// default config resolution applies.
-function khalConfigArgs(): string[] {
-  return KHALT_CONFIG ? ["-c", KHALT_CONFIG] : [];
-}
-
-/* ════════════════════════════════════════════════════════════════ */
-/*  Executor                                                       */
-/* ════════════════════════════════════════════════════════════════ */
-
-function runBin(
-  bin: string,
-  args: string[],
-  opts: { timeout?: number } = {},
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  const { timeout = 15000 } = opts;
-  return new Promise((resolve) => {
-    execFile(bin, args, { timeout, maxBuffer: 2 * 1024 * 1024 }, (err, stdout, stderr) => {
-      resolve({ exitCode: err ? 1 : 0, stdout: stdout || "", stderr: stderr || "" });
-    });
-  });
-}
-
-/* ════════════════════════════════════════════════════════════════ */
-/*  Parser                                                         */
-/* ════════════════════════════════════════════════════════════════ */
 
 interface CalendarEvent {
   date: string;
@@ -162,23 +89,6 @@ function parseKhalOutput(raw: string): CalendarEvent[] {
 
   return events;
 }
-
-export async function khalList(start: string, end: string): Promise<CalendarEvent[]> {
-  const bin = await khalBin();
-  const { stdout, stderr, exitCode } = await runBin(bin, [
-    ...khalConfigArgs(),
-    "list",
-    "--format", "{start-time}|{end-time}|{title}|{location}",
-    start,
-    end,
-  ], { timeout: 3500 });
-  if (exitCode !== 0) throw new Error(`khal list failed: ${stderr}`);
-  return parseKhalOutput(stdout);
-}
-
-/* ════════════════════════════════════════════════════════════════ */
-/*  Calendar storage helpers                                       */
-/* ════════════════════════════════════════════════════════════════ */
 
 const HOME = homedir();
 // The Radicale-synced calendars dir (calendars-radicale/, written by the
@@ -373,29 +283,65 @@ async function searchIcsFiles(query: string, dateFilter: string | undefined, zon
 
 interface CalendarSync { syncTriggered: boolean; syncComplete: boolean }
 
-async function triggerSync(): Promise<CalendarSync> {
-  try {
-    const bin = await vdirsyncerBin();
-    // Calendar mutations are already saved locally. Synchronize only their
-    // owner pair, once, with a deadline; never retry the mutation on sync failure.
-    const result = await runBin(bin, ["sync", "calendar_radicale"], { timeout: 30000 });
-    if (result.exitCode !== 0) log.warn("Radicale calendar sync did not complete", { exitCode: result.exitCode });
-    return { syncTriggered: true, syncComplete: result.exitCode === 0 };
-  } catch (err) {
-    log.warn("Failed to trigger vdirsyncer sync", { error: err });
-    return { syncTriggered: false, syncComplete: false };
-  }
-}
-
 function syncNotice(sync: CalendarSync): string {
   return sync.syncComplete ? "" : " (local change saved; Radicale sync did not complete; run calendar sync rather than repeating the change)";
 }
 
-/* ════════════════════════════════════════════════════════════════ */
-/*  Consolidated tool                                              */
-/* ════════════════════════════════════════════════════════════════ */
+function newEventArgs(event: {
+  summary: string; date: string; startTime?: string | null; endTime?: string | null;
+  endDate?: string; calendar?: string; location?: string | null; description?: string | null;
+  repeat?: string; until?: string;
+}): string[] {
+  const args = ["new"];
+  if (event.calendar) args.push("-a", event.calendar);
+  if (event.repeat) args.push("--repeat", event.repeat);
+  if (event.until) args.push("--until", `${event.until}${event.startTime ? " 23:59" : ""}`);
+  if (event.startTime) {
+    const [hour, minute] = event.startTime.split(":").map(Number);
+    const end = event.endTime || `${String((hour + 1) % 24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    args.push(event.date, event.startTime, ...(event.endDate ? [event.endDate] : []), end, event.summary);
+  } else {
+    args.push(event.date, ...(event.endDate ? [event.endDate] : []), event.summary);
+  }
+  if (event.location) args.push("--location", event.location);
+  if (event.description) args.push("::", event.description);
+  return args;
+}
 
-export function calendarTools(): ToolDef[] {
+export function calendarTools(options: { khalBin?: string; khalConfig?: string } = {}): ToolDef[] {
+  // Nix binds khalt's binary and isolated Radicale config. Keep the prefix at
+  // this boundary so every read and write uses the same calendar collection.
+  const khal = bindCommand(cachedBinary([
+    ...(options.khalBin ? [options.khalBin] : []), "khal", "/etc/profiles/per-user/eric/bin/khal",
+  ]), { maxBuffer: 2 * 1024 * 1024 }, options.khalConfig ? ["-c", options.khalConfig] : []);
+  const vdirsyncer = bindCommand(cachedBinary([
+    "vdirsyncer", "/etc/profiles/per-user/eric/bin/vdirsyncer",
+  ]), { maxBuffer: 2 * 1024 * 1024 });
+
+  async function khalList(start: string, end: string): Promise<CalendarEvent[]> {
+    const { stdout, stderr, exitCode } = await khal([
+      "list",
+      "--format", "{start-time}|{end-time}|{title}|{location}",
+      start,
+      end,
+    ], { timeout: 3500 });
+    if (exitCode !== 0) throw new Error(`khal list failed: ${stderr}`);
+    return parseKhalOutput(stdout);
+  }
+
+  async function triggerSync(): Promise<CalendarSync> {
+    try {
+      // Calendar mutations are already saved locally. Synchronize only their
+      // owner pair, once, with a deadline; never retry the mutation on sync failure.
+      const result = await vdirsyncer( ["sync", "calendar_radicale"], { timeout: 30000 });
+      if (result.exitCode !== 0) log.warn("Radicale calendar sync did not complete", { exitCode: result.exitCode });
+      return { syncTriggered: true, syncComplete: result.exitCode === 0 };
+    } catch (err) {
+      log.warn("Failed to trigger vdirsyncer sync", { error: err });
+      return { syncTriggered: false, syncComplete: false };
+    }
+  }
+
   return [
     {
       name: "hwc_calendar",
@@ -408,7 +354,6 @@ export function calendarTools(): ToolDef[] {
             enum: ["list", "create", "edit", "delete", "sync"],
             description: "Action to perform",
           },
-          // [list] params
           range: {
             type: "string",
             enum: ["today", "week", "custom"],
@@ -417,7 +362,6 @@ export function calendarTools(): ToolDef[] {
           start: { type: "string", description: "[list/create] Start date YYYY-MM-DD" },
           end: { type: "string", description: "[list] End date YYYY-MM-DD (defaults to start)" },
           timezone: { type: "string", description: "[list] IANA timezone (default: America/Denver)" },
-          // [create] params
           summary: { type: "string", description: "[create/edit] Event title" },
           date: { type: "string", description: "[create] Start date YYYY-MM-DD (required)" },
           startTime: { type: "string", description: "[create/edit] Start time HH:MM (omit for all-day)" },
@@ -428,11 +372,9 @@ export function calendarTools(): ToolDef[] {
           calendar: { type: "string", description: "[create] khal calendar name (omit = default)" },
           location: { type: "string", description: "[create/edit] Event location" },
           description: { type: "string", description: "[create/edit] Event description" },
-          // [delete/edit] params
           query: { type: "string", description: "[delete/edit] Search text to find the event" },
           filter_date: { type: "string", description: "[delete/edit] YYYY-MM-DD start date to narrow search (first occurrence for recurring events)" },
           confirm: { type: "boolean", description: "[delete/edit] If true, apply; if false (default), preview" },
-          // [edit] params
           newSummary: { type: "string", description: "[edit] New event title" },
           newDate: { type: "string", description: "[edit] New date YYYY-MM-DD" },
           newStartTime: { type: "string", description: "[edit] New start time HH:MM" },
@@ -444,8 +386,6 @@ export function calendarTools(): ToolDef[] {
       },
       handler: async (args: Record<string, unknown>): Promise<ToolResult> => {
         const action = args.action as string;
-
-        // ── list ─────────────────────────────────────────────────
         if (action === "list") {
           try {
             const range = (args.range as string) || "today";
@@ -481,7 +421,6 @@ export function calendarTools(): ToolDef[] {
               };
             }
 
-            // custom range
             const start = args.start as string;
             const end = (args.end as string) || start;
             if (!start || !DATE_RE.test(start) || !DATE_RE.test(end)) {
@@ -498,12 +437,9 @@ export function calendarTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Failed to list calendar events", err, "Check that khal is installed and vdirsyncer has synced at least once");
           }
         }
-
-        // ── sync ─────────────────────────────────────────────────
         if (action === "sync") {
           try {
-            const bin = await vdirsyncerBin();
-            const { exitCode, stdout, stderr } = await runBin(bin, ["sync"], { timeout: 30000 });
+            const { exitCode, stdout, stderr } = await vdirsyncer(["sync"], { timeout: 30000 });
             if (exitCode !== 0) {
               return { status: "error", message: "vdirsyncer sync failed", error: stderr.trim() || "non-zero exit code", error_type: "COMMAND_FAILED" };
             }
@@ -512,8 +448,6 @@ export function calendarTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Failed to run vdirsyncer sync", err, "Check vdirsyncer is installed and iCloud credentials are configured");
           }
         }
-
-        // ── create ───────────────────────────────────────────────
         if (action === "create") {
           try {
             const summary = args.summary as string;
@@ -548,30 +482,11 @@ export function calendarTools(): ToolDef[] {
                 (args.until !== undefined && (!args.repeat || !validDate(args.until) || args.until < date))) {
               return mcpError({ type: "VALIDATION_ERROR", message: "Choose a valid repeat frequency and an until date on or after the start." });
             }
-            const khalArgs: string[] = [...khalConfigArgs(), "new"];
-            if (calendar) khalArgs.push("-a", calendar);
-            if (args.repeat) khalArgs.push("--repeat", args.repeat as string);
-            if (args.until) khalArgs.push("--until", `${args.until}${startTime ? " 23:59" : ""}`);
+            const khalArgs = newEventArgs({summary, date, startTime, endTime, endDate, calendar,
+              location, description, repeat: args.repeat as string | undefined, until: args.until as string | undefined});
 
-            if (startTime) {
-              const end = endTime || (() => {
-                const [h, m] = startTime.split(":").map(Number);
-                const endH = (h + 1) % 24;
-                return `${String(endH).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-              })();
-              khalArgs.push(date, startTime, ...(endDate ? [endDate] : []), end, summary);
-            } else if (endDate) {
-              khalArgs.push(date, endDate, summary);
-            } else {
-              khalArgs.push(date, summary);
-            }
-
-            if (location) khalArgs.push("--location", location);
-            if (description) khalArgs.push("::", description);
-
-            const bin = await khalBin();
             log.debug("khal new", { args: khalArgs });
-            const { exitCode, stdout, stderr } = await runBin(bin, khalArgs, { timeout: 10000 });
+            const { exitCode, stdout, stderr } = await khal(khalArgs, { timeout: 10000 });
 
             if (exitCode !== 0) {
               return mcpError({ type: "COMMAND_FAILED", message: "Failed to create calendar event", error: stderr.trim() || stdout.trim() || "khal returned non-zero", suggestion: "Check that the date/time format is correct and khal is properly configured", context: { date, startTime, endTime, summary } });
@@ -588,8 +503,6 @@ export function calendarTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Failed to create calendar event", err, "Check that khal is installed and calendar storage is accessible");
           }
         }
-
-        // ── delete ───────────────────────────────────────────────
         if (action === "delete") {
           try {
             const query = args.query as string;
@@ -636,8 +549,6 @@ export function calendarTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Failed to delete calendar event", err, "Check that vdirsyncer calendar storage is accessible");
           }
         }
-
-        // ── edit ─────────────────────────────────────────────────
         if (action === "edit") {
           try {
             const query = args.query as string;
@@ -711,23 +622,10 @@ export function calendarTools(): ToolDef[] {
             // remove the old file only once that worked. The old order (delete,
             // then `khal new` with no -a) lost the event whenever khal had no
             // default calendar, which is the case for the khalt config.
-            const khalArgs: string[] = [...khalConfigArgs(), "new", "-a", await khalCalendarOf(event.path)];
-            if (finalStartTime) {
-              const end = finalEndTime || (() => {
-                const [h, m] = finalStartTime.split(":").map(Number);
-                const endH = (h + 1) % 24;
-                return `${String(endH).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-              })();
-              khalArgs.push(finalDate, finalStartTime, end, finalSummary);
-            } else {
-              khalArgs.push(finalDate, finalSummary);
-            }
-
-            if (finalLocation) khalArgs.push("--location", finalLocation);
-            if (finalDescription) khalArgs.push("::", finalDescription);
-
-            const bin = await khalBin();
-            const { exitCode, stderr } = await runBin(bin, khalArgs, { timeout: 10000 });
+            const khalArgs = newEventArgs({summary: finalSummary, date: finalDate,
+              startTime: finalStartTime, endTime: finalEndTime, calendar: await khalCalendarOf(event.path),
+              location: finalLocation, description: finalDescription});
+            const { exitCode, stderr } = await khal(khalArgs, { timeout: 10000 });
 
             if (exitCode !== 0) {
               return mcpError({ type: "COMMAND_FAILED", message: "Could not create the updated event, so the original was kept unchanged", error: stderr.trim(), suggestion: "Check the khal calendar name and arguments, then retry", context: { original: event.summary, changes } });

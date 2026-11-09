@@ -1,54 +1,71 @@
-/**
- * Safe shell command executor — uses execFile (no shell interpolation).
- * All tool implementations use this instead of raw child_process.
- */
-
 import { execFile } from "node:child_process";
 import type { ExecResult } from "../types.js";
 import { log } from "../log.js";
 
-const UNSAFE_PATTERN = /[;&|`$(){}]/;
+export interface CommandOptions { timeout?: number; maxBuffer?: number }
 
-/**
- * Execute a command safely with parameterized arguments.
- * NEVER passes through a shell — prevents injection.
- */
-export function safeExec(
-  command: string,
-  args: string[],
-  options: { timeout?: number; maxBuffer?: number } = {}
+// Arguments go directly to execFile, never through a shell. Mutations run once;
+// a timeout or failed process must not trigger an automatic retry.
+export function executeFile(
+  command: string, args: string[], options: CommandOptions = {},
 ): Promise<ExecResult> {
   const { timeout = 15000, maxBuffer = 1024 * 1024 } = options;
-
-  return new Promise((resolve, reject) => {
-    // Validate arguments — reject shell metacharacters
-    for (const arg of args) {
-      if (UNSAFE_PATTERN.test(arg)) {
-        reject(new Error(`Unsafe argument rejected: ${arg}`));
-        return;
-      }
-    }
-
-    log.debug("exec", { command, args });
-
+  log.debug("exec", { command, args });
+  return new Promise((resolve) => {
     execFile(command, args, { timeout, maxBuffer }, (error, stdout, stderr) => {
-      const exitCode = error && "code" in error ? (error.code as number) : 0;
+      const code = error?.code;
       resolve({
-        exitCode: typeof exitCode === "number" ? exitCode : 1,
-        stdout: stdout.toString(),
-        stderr: stderr.toString(),
+        exitCode: error ? (typeof code === "number" ? code : 1) : 0,
+        stdout: stdout?.toString() ?? "",
+        stderr: stderr?.toString() ?? "",
       });
     });
   });
 }
 
-/**
- * Execute and return stdout, throwing on non-zero exit.
- */
+export function cachedBinary(candidates: readonly string[]): () => Promise<string> {
+  // One discovery per resolver; concurrent callers wait for the same probe.
+  // Failed discovery is not retained. This never retries an actual action.
+  let pending: Promise<string> | undefined;
+  return () => pending ??= (async () => {
+    for (const bin of candidates) {
+      const exists = await new Promise<boolean>((resolve) => {
+        execFile(bin, ["--version"], { timeout: 3000 }, (error) => {
+          // Some CLIs reject --version. Only ENOENT means try the next path.
+          resolve(error?.code !== "ENOENT");
+        });
+      });
+      if (exists) return bin;
+    }
+    throw new Error(`Binary not found: ${candidates.join(", ")}`);
+  })().catch(error => {
+    pending = undefined;
+    throw error;
+  });
+}
+
+export function bindCommand(
+  binary: () => Promise<string>, defaults: CommandOptions, prefix: readonly string[] = [],
+): (args: string[], options?: CommandOptions) => Promise<ExecResult> {
+  return async (args, options = {}) =>
+    executeFile(await binary(), [...prefix, ...args], { ...defaults, ...options });
+}
+
+const UNSAFE_PATTERN = /[;&|`$(){}]/;
+
+// Preserve the existing restrictive policy for infrastructure callers. Mail
+// queries and calendar text use executeFile/bindCommand so punctuation is data.
+export async function safeExec(
+  command: string, args: string[], options: CommandOptions = {},
+): Promise<ExecResult> {
+  for (const arg of args) {
+    if (UNSAFE_PATTERN.test(arg)) throw new Error(`Unsafe argument rejected: ${arg}`);
+  }
+  return executeFile(command, args, options);
+}
+
 export async function execOrThrow(
-  command: string,
-  args: string[],
-  options?: { timeout?: number; maxBuffer?: number }
+  command: string, args: string[], options?: CommandOptions,
 ): Promise<string> {
   const result = await safeExec(command, args, options);
   if (result.exitCode !== 0) {

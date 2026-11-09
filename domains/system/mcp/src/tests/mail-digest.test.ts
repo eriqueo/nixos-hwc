@@ -325,6 +325,7 @@ describe("mail actions record local placement intent", () => {
     spawnRun.mockImplementation(() => ({...classifierChild(), stdin}));
     expect((await mailTools()[0].handler({action: "tag", query: "thread:a", tag_action: action})).status).toBe("ok");
     expect(run.mock.calls.at(-1)![1]).toEqual(["show", "--format=mbox", "--entire-thread=true", "--", "thread:a"]);
+    expect(run.mock.calls.at(-1)![2]).toEqual({timeout:10000,maxBuffer:20*1024*1024});
     expect(run.mock.calls.some((call) => call[1][0] === "tag")).toBe(false);
     expect(spawnRun.mock.calls[0][0]).toBe("/run/current-system/sw/bin/flock");
     expect(spawnRun.mock.calls[0][1].slice(0, 4)).toEqual([
@@ -465,17 +466,24 @@ it("the actual flock/start-pipe protocol separates lock refusal from runtime exi
     child.on('error',reject);
     child.stdin!.end();
   });
+  const holder = actual.spawn('flock',[lock,shell,'-c','printf ready; read release'],{stdio:['pipe','pipe','ignore']});
+  const closed = new Promise<void>(resolve=>holder.once('close',()=>resolve()));
   try {
-    const holder = actual.spawn('flock',[lock,shell,'-c','printf ready; sleep 1'],{stdio:['ignore','pipe','ignore']});
     await new Promise<void>((resolve,reject)=>{
       holder.stdout!.once('data',()=>resolve());
       holder.once('error',reject);
+      holder.once('close',()=>reject(new Error('lock holder exited before readiness')));
     });
     const prefix = ['-n','-E','75',lock,shell,'-c','printf "started\n" >&3; exec "$@"','classifier'];
     expect(await execute([...prefix,shell,'-c','exit 75'])).toEqual({code:75,start:''});
-    await new Promise<void>(resolve=>holder.once('close',()=>resolve()));
+    holder.stdin!.end('release\n');
+    await closed;
     expect(await execute([...prefix,shell,'-c','exit 75'])).toEqual({code:75,start:'started\n'});
-  } finally { await rm(dir,{recursive:true,force:true}); }
+  } finally {
+    if (!holder.stdin!.writableEnded) holder.stdin!.end();
+    await closed;
+    await rm(dir,{recursive:true,force:true});
+  }
 });
 
 it("reads threads_by_state mail reports in the status tool", async () => {
@@ -545,4 +553,22 @@ describe("mail hub metadata verbs", () => {
     run.mockImplementation((_bin, _args, _options, callback) => callback({code: 1}, "", "write failed"));
     expect((await mailTriageTools("unused")[0].handler({action, id: "a", fact: MAIL_FACTS[0]})).status).toBe("error");
   });
+});
+
+
+it("preserves literal mail queries, per-action limits and numeric command failures", async () => {
+  const tool=mailTools()[0];
+  const query='subject:"Smith & Sons" AND (tag:work OR tag:finance)';
+  run.mockReset();
+  run.mockImplementation((_bin,args,_options,callback)=>callback(null,args[0]==="count" ? "3" : "[]",""));
+  expect((await tool.handler({action:"search",query,count_only:true})).data).toMatchObject({count:3,query});
+  expect(run.mock.calls.at(-1)!.slice(1,3)).toEqual([["count",query],{timeout:15000,maxBuffer:5*1024*1024}]);
+  await tool.handler({action:"read",id:"thread:fixture"});
+  expect(run.mock.calls.at(-1)![2]).toEqual({timeout:15000,maxBuffer:10*1024*1024});
+  run.mockClear();
+  run.mockImplementation((_bin,_args,_options,callback)=>callback(Object.assign(new Error("failed"),{code:7}),"","diagnostic"));
+  const failure=await tool.handler({action:"search",query});
+  expect(failure.status).toBe("error");
+  expect(failure.context).toMatchObject({exitCode:7,query});
+  expect(run).toHaveBeenCalledTimes(1);
 });
