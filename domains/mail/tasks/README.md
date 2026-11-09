@@ -91,6 +91,8 @@ agenix secret, selected by `domains/lib/hm.nix`. Phone CalDAV setup: see the
 radicale README.
 
 ## Changelog
+- 2026-11-04: `parts/email-to-task.py` compiles its whitespace, proposal-field
+  and category-split regexes once at module load (68ff8eda). No behavior change intended.
 - 2026-09-24: Radicale is the only backend. Deleted the iCloud pair
   (`parts/vdirsyncer-pair.nix`) and the `icloud.enable`, `account`,
   `collections`, and `radicale.enable` options, plus the apple-app-pw handshake.
