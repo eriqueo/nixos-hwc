@@ -153,7 +153,7 @@ export async function dispatchNotification(
   });
 
   const receivedAt = new Date(deps.now()).toISOString();
-  const result = await dispatch(notification, targets, { breaker: deps.breaker });
+  const result = await dispatch(notification, targets, { breaker: deps.breaker, now: deps.now });
 
   log.info("dispatch complete", {
     notificationId: notification.id,

@@ -6,7 +6,7 @@
  * concrete logger.
  */
 
-import type { LogLevel } from "../config.js";
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface Logger {
   debug(msg: string, fields?: Record<string, unknown>): void;

@@ -2,22 +2,18 @@
  * SMTP channel adapter.
  *
  * Sends a Notification as plain-text email via an SMTP relay (typically
- * Proton Bridge on loopback). Auth credentials are read from a file
- * path at startup — never logged.
+ * Proton Bridge on loopback). Auth credentials arrive from the composition root at startup — never logged.
  *
  * `send` resolves with a DeliveryResult (never rejects). Connection /
  * greeting / socket timeouts are capped so a stuck SMTP server doesn't
  * hang the dispatcher.
  */
 
-import { readFileSync } from "node:fs";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Channel } from "../ports/channel.js";
 import type { Notification, DeliveryResult, Priority } from "../core/types.js";
 import { detailBody } from "../core/types.js";
 
-// Fixed patterns are shared; stateful uses reset their cursor below.
-const makeSmtpChannelPatternRegex = /\s+$/u;
 
 const PRIORITY_LABEL: Record<Priority, string> = {
   1: "P1 CRITICAL",
@@ -36,8 +32,8 @@ export interface SmtpChannelOpts {
     /** Send STARTTLS after EHLO. For Proton Bridge on loopback: false. */
     readonly requireTls: boolean;
     readonly login: string;
-    /** Absolute path to a file containing the SMTP password. */
-    readonly passwordFile: string;
+    /** Credential loaded once by the composition root. */
+    readonly password: string;
     readonly from: string;
     readonly to: string;
     readonly timeoutMs: number;
@@ -86,9 +82,9 @@ export function renderBody(notif: Notification): string {
 }
 
 export function makeSmtpChannel(opts: SmtpChannelOpts): Channel {
-  // Read the password ONCE at construction. If the secret rotates, the
-  // service needs a restart — same contract as Discord webhook URLs.
-  const password = readFileSync(opts.params.passwordFile, "utf8").replace(makeSmtpChannelPatternRegex, "");
+  // The composition root loads credentials once. Rotation requires a restart,
+  // matching the Discord webhook contract.
+  const password = opts.params.password;
 
   // Build the transporter ONCE; nodemailer pools the underlying TCP
   // socket per send within `pool: true`. For our low-volume use the

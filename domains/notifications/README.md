@@ -9,6 +9,8 @@ Delivery infrastructure — how messages reach humans.
 
 ## Structure
 
+Pipeline and circuit dispatch share an injected clock. The executive meaning bound has one core owner, channel credentials load at the composition root, and logger vocabulary lives in its port.
+
 The dispatcher parses query parameters with URLSearchParams and shares fixed module patterns in request, Alertmanager and SMTP parsing. Delivery and audit behavior stay unchanged.
 
 `send/notify-scripts.nix` owns the service failure adapter in both manager scopes.
@@ -45,6 +47,8 @@ notifications/
 
 ## Changelog
 - 2026-11-09: Add the `discord-projects` channel (`#projects`, secret `discord-webhook-projects`) and move the `projects` topic to it from `discord-ops`. A P1 on that topic still adds SMTP.
+
+- 2026-11-09: Pass the pipeline clock through circuit dispatch; move log-level ownership to the logger port and SMTP secret loading to the composition root; share the executive meaning bound and remove unused parser/schema exports.
 - 2026-11-04: `notify/parts/routes.nix` — new `projects` topic (tracker digest from morning-briefing) routed to `discord-ops` until a projects channel exists.
 - 2026-11-02: Remove query-only URL parsing and hoist fixed dispatcher patterns.
 - 2026-09-30: Add terminal-only user-scope service failure handling in the existing producer. Intermediate retries and deliberate stops send nothing. Unreadable unit state or failed delivery exits nonzero and logs locally. The system branch retains its30-second recovery warning/critical behavior. No new sender or channel.

@@ -19,13 +19,6 @@ import { PrioritySchema } from "./notification.js";
 
 // ── channels ───────────────────────────────────────────────────────────
 
-/** Adapter tag. New adapters must be added here + handled in main.ts. */
-export const AdapterSchema = z.union([
-  z.literal("discord"),
-  z.literal("smtp"),
-  z.literal("log-only"),
-]);
-
 /** Discord-specific channel params. */
 const DiscordParamsSchema = z.object({
   /** Absolute path to a file containing the webhook URL (agenix-mounted). */

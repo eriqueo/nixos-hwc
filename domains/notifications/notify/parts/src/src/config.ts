@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 import { parseRuntimeConfig, type RuntimeConfig } from "./schemas/runtime-config.js";
 import type { TransitionMode } from "./core/transition.js";
 
-export type LogLevel = "debug" | "info" | "warn" | "error";
+import type { LogLevel } from "./ports/log.js";
 
 export interface ServiceConfig {
   readonly bindAddr: string;

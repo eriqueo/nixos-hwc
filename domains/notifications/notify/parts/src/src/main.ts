@@ -104,7 +104,7 @@ function buildChannel(cfg: ChannelConfig, log: Logger): Channel {
       return makeSmtpChannel({
         id: cfg.id,
         name: cfg.name,
-        params: cfg.params,
+        params: { ...cfg.params, password: loadSecret(cfg.params.passwordFile) },
       });
     case "log-only":
       return makeLogOnlyChannel({

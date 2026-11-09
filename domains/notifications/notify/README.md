@@ -42,7 +42,9 @@ See `~/.claude/plans/hashed-snacking-crab.md` for the full design rationale and 
 
 Inbound (**shells**) translate external requests into the canonical `Notification` shape; **core** is pure (types, routing, dispatch, circuit logic); **outbound adapters** implement the `Channel` port. Swapping Discord for Slack is a new adapter file + a Nix data row — no core change.
 
-## File layout
+## Structure
+
+`ports/log.ts` owns log levels. `main.ts` loads channel credentials. The pipeline passes its clock to dispatch; the executive meaning bound lives beside its core type.
 
 ```
 notify/
@@ -367,6 +369,8 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 | 1.7 | ✅ deployed   | `hwc-notify` CLI + `hwc_notify` MCP tool. |
 
 ## Changelog
+
+- 2026-11-09: Pass the pipeline clock through circuit dispatch; move log-level ownership to the logger port and SMTP secret loading to the composition root; share the executive meaning bound and remove unused parser/schema exports.
 
 - **2026-09-07**: The executive brief stopped deleting the body. Since
   2026-08-29 a notification with an `executive` block rendered `meaning` in
