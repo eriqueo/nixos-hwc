@@ -55,7 +55,8 @@ let
     checkPhase = ''
       runHook preCheck
       export HWC_MAIL_CLASSIFIER_CONTRACT_FILE=${mailClassifierContract}
-      npm test
+      # Bound module-transform contention while the release builds other packages.
+      npm test -- --maxWorkers=2 --minWorkers=1
       runHook postCheck
     '';
   };
