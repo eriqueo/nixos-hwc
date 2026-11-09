@@ -5,7 +5,7 @@
  */
 
 import type { Logger, LoggerFactoryOpts } from "../ports/log.js";
-import type { LogLevel } from "../config.js";
+import type { LogLevel } from "../ports/log.js";
 
 const LEVEL_ORDER: Record<LogLevel, number> = {
   debug: 10,

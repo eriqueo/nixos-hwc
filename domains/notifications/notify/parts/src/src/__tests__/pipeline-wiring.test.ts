@@ -351,3 +351,21 @@ test("both HTTP handlers dispatch through the pipeline and nothing else", () => 
     "the /webhook/alertmanager handler must dispatch through the pipeline",
   );
 });
+
+
+test("pipeline clock controls circuit opening and cooldown", async () => {
+  const h = makeHarness({ decision: null, okChannels: new Set() });
+  let time = T0;
+  const deps = { ...h.deps, now: () => time,
+    breaker: new CircuitBreaker({ failureThreshold: 1, cooldownMs: 100 }) };
+  await dispatchNotification(deps, firingAlert(), silentLog);
+  assert.ok(deps.breaker.status().every((s) => s.openUntil === T0 + 100));
+  const sends = () => h.events.filter((e) => e.startsWith("send:")).length;
+  assert.equal(sends(), 2);
+  time = T0 + 99;
+  await dispatchNotification(deps, firingAlert(), silentLog);
+  assert.equal(sends(), 2, "cooldown prevents channel calls");
+  time = T0 + 100;
+  await dispatchNotification(deps, firingAlert(), silentLog);
+  assert.equal(sends(), 4, "injected clock expiry permits another attempt");
+});

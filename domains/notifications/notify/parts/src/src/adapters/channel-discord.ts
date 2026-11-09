@@ -14,7 +14,7 @@
 
 import type { Channel } from "../ports/channel.js";
 import type { Notification, DeliveryResult, ExploreTarget, Priority } from "../core/types.js";
-import { detailBody } from "../core/types.js";
+import { detailBody, EXECUTIVE_MEANING_LIMIT } from "../core/types.js";
 
 const COLOR_BY_PRIORITY: Record<Priority, number> = {
   1: 0xe74c3c, // red — critical
@@ -72,7 +72,7 @@ const LIMIT = {
  * explore 1024 + field names 28 + footer 2048 = 4856 worst case, leaving 1144
  * — more than the 1024 field allowance — for Details.
  */
-const MEANING_LIMIT = 1000;
+
 
 const DETAIL_FIELD_NAME = "Details";
 
@@ -117,7 +117,7 @@ export function renderDiscordEmbed(notif: Notification): DiscordEmbed {
   // Legacy (no executive): the body is the whole message and stays the
   // description, byte-for-byte as before.
   const description = executive
-    ? truncate(executive.meaning, MEANING_LIMIT)
+    ? truncate(executive.meaning, EXECUTIVE_MEANING_LIMIT)
     : truncate(notif.body, LIMIT.DESCRIPTION);
 
   if (executive) {
@@ -136,7 +136,7 @@ export function renderDiscordEmbed(notif: Notification): DiscordEmbed {
         DETAIL_FIELD_NAME.length +
         fields.reduce((n, f) => n + f.name.length + f.value.length, 0);
       const budget = Math.max(0, Math.min(LIMIT.FIELD_VALUE, LIMIT.TOTAL - used));
-      // budget is ≥ 1024 for any schema-parsed notification (see MEANING_LIMIT);
+      // budget is ≥ 1024 for any schema-parsed notification (see EXECUTIVE_MEANING_LIMIT);
       // the guard is for hand-built Notifications that ignore those bounds.
       if (budget > 0) {
         fields.push({ name: DETAIL_FIELD_NAME, value: fitDetail(detail, budget, executive.explore) });

@@ -20,13 +20,13 @@ export interface DispatchOpts {
   /** Optional breaker. When omitted, every channel is attempted. */
   readonly breaker?: CircuitBreaker;
   /** Time source — injected so tests don't have to wait wall-clock. */
-  readonly now?: () => number;
+  readonly now: () => number;
 }
 
 export async function dispatch(
   notification: Notification,
   channels: readonly Channel[],
-  opts: DispatchOpts = {},
+  opts: DispatchOpts,
 ): Promise<DispatchResult> {
   if (channels.length === 0) {
     return {
@@ -38,7 +38,7 @@ export async function dispatch(
     };
   }
 
-  const now = opts.now ?? Date.now;
+  const now = opts.now;
   const breaker = opts.breaker;
 
   const results = await Promise.all(

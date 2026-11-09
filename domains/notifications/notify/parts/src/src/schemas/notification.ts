@@ -4,14 +4,13 @@
  * Per engineering-principles.md Principle 2 (Parse, Don't Validate —
  * Contracts at Boundaries): every byte crossing a trust boundary is parsed by this schema
  * before core touches it. HTTP request bodies, CLI arg payloads, MCP
- * tool inputs all go through `parseNotificationInput` (lenient — fills
- * defaults like a generated id and occurredAt) or `parseNotification`
- * (strict — for stored / re-serialized notifications where every field
- * is already canonical).
+ * tool inputs go through `safeParseNotificationInput`, which fills
+ * defaults like a generated id and occurredAt after validation.
  */
 
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
+import { EXECUTIVE_MEANING_LIMIT } from "../core/types.js";
 import type { Notification } from "../core/types.js";
 
 /** Priority enum, exposed as Zod for schema reuse. */
@@ -41,7 +40,7 @@ const ExploreTargetSchema = z.discriminatedUnion("kind", [
 
 export const ExecutiveBriefSchema = z.object({
   kind: z.enum(["action", "decision", "watch", "handled", "fyi"]),
-  meaning: z.string().min(1).max(1000),
+  meaning: z.string().min(1).max(EXECUTIVE_MEANING_LIMIT),
   recommendation: z.string().min(1).max(500),
   explore: ExploreTargetSchema,
 });
@@ -79,32 +78,12 @@ export const NotificationInputSchema = z.object({
 
 export type NotificationInput = z.infer<typeof NotificationInputSchema>;
 
-/**
- * Parse inbound JSON into a canonical Notification, server-filling
- * id and occurredAt when omitted. Throws on invalid shape.
- */
-export function parseNotificationInput(raw: unknown): Notification {
-  const input = NotificationInputSchema.parse(raw);
-  return {
-    id: input.id ?? randomUUID(),
-    title: input.title,
-    body: input.body,
-    ...(input.executive !== undefined ? { executive: input.executive } : {}),
-    priority: input.priority,
-    topic: input.topic,
-    source: input.source,
-    tags: input.tags,
-    context: input.context,
-    occurredAt: input.occurredAt ?? new Date().toISOString(),
-  };
-}
-
 /** Result of a non-throwing parse — mirrors zod.safeParse. */
 export type ParseResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly issues: readonly z.ZodIssue[] };
 
-/** Non-throwing wrapper around parseNotificationInput. */
+/** Parse input and fill server defaults after validation succeeds. */
 export function safeParseNotificationInput(raw: unknown): ParseResult<Notification> {
   const result = NotificationInputSchema.safeParse(raw);
   if (!result.success) {

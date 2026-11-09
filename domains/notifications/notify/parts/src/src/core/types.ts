@@ -19,6 +19,8 @@ export type ExploreTarget =
   | { readonly kind: "record"; readonly label: string; readonly target: string };
 
 /** Outcome-first human presentation. Optional during expand-first migration. */
+export const EXECUTIVE_MEANING_LIMIT = 1000;
+
 export interface ExecutiveBrief {
   readonly kind: "action" | "decision" | "watch" | "handled" | "fyi";
   readonly meaning: string;
