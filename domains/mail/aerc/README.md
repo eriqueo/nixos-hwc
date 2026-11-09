@@ -254,6 +254,8 @@ aerc, msmtp, isync, w3m, notmuch, urlscan, ripgrep, glow, pandoc, chafa, poppler
    `proton/Labels/<name>/`.
 
 ## Changelog
+- 2026-11-04: `parts/plain-text-filter.py` compiles its hostname and
+  whitespace regexes once at module load (68ff8eda). No behavior change intended.
 - 2026-10-24: Expose read-only launch facts and derive the account header from
   the same logical name for the optional Workbench foreground Mail helper.
   Update the fork pin to preserve pending explicit queries during startup and

@@ -11,15 +11,15 @@ npx playwright install chromium
 
 ## Auth
 
-First run requires a one-time interactive login to capture session cookies:
+First run requires a one-time interactive login into a persistent browser profile:
 
 ```bash
 node index.mjs --login --headed
 ```
 
-This opens a browser. Log in to Facebook manually, press Enter in the terminal, and the session is saved to `./data/session.json`. Subsequent runs reuse this session headlessly.
+This opens Chromium with `launchPersistentContext` on `./data/browser-profile`. Log in to Facebook (passkeys work). The script polls every 2 seconds for the `c_user` cookie and saves the profile when it appears; no Enter press is needed. Subsequent runs reuse the profile headlessly.
 
-If the session expires (you'll see "Session expired"), re-run the login step.
+A scrape checks for the `c_user` cookie first. Without it the script exits with "Not logged in. Run with --login --headed first."; re-run the login step.
 
 ## Usage
 
@@ -37,7 +37,7 @@ node index.mjs jobtread -n 50 -d comments
 node index.mjs jobtread -n 100 -q
 
 # Custom paths
-node index.mjs jobtread --db ./mydata/jt.db --session ./mydata/session.json
+node index.mjs jobtread -o ./mydata/jt.json --profile ./mydata/browser-profile
 ```
 
 ### Options
@@ -46,8 +46,8 @@ node index.mjs jobtread --db ./mydata/jt.db --session ./mydata/session.json
 |------|-------------|---------|
 | `-n, --posts` | Number of posts to collect | 50 |
 | `-d, --depth` | `posts` or `comments` | posts |
-| `--db` | SQLite database path | `./data/posts.db` |
-| `--session` | Session state file | `./data/session.json` |
+| `-o, --output` | Write JSON to file | stdout |
+| `--profile` | Browser profile directory | `./data/browser-profile` |
 | `--headed` | Show the browser window | off |
 | `--login` | Interactive login mode | — |
 | `-q, --quiet` | Minimal output | off |
@@ -63,13 +63,13 @@ Each run is idempotent — posts with the same ID are updated (engagement number
 
 ## How It Works
 
-1. Launches Chromium with saved session cookies
+1. Launches Chromium on the persistent browser profile
 2. Navigates to the group feed
 3. Hooks `page.on('response')` to intercept FB's GraphQL API calls — same data the Tampermonkey script captures, but via Playwright's network layer instead of fetch/XHR hooks
 4. Routes responses by `fb_api_req_friendly_name` — only parses `GroupsCometFeed` for posts, `CometSinglePostDialogContentQuery` for full comments, `CommentsListPaginationQuery` for paginated replies
 5. Scrolls with human-like cadence (random distance + delay) to trigger feed loading
-6. Optionally navigates to each post URL to expand comments — scrolls the comment section, then multi-pass clicks "N Replies" / "View more replies" buttons to capture nested reply threads
-7. Persists to SQLite with `INSERT ... ON CONFLICT UPDATE` for clean dedup
+6. With `-d comments`, clicks each post's link in the feed to open its dialog and waits for `CometSinglePostDialogContentQuery` to fire (headless FB renders no `role="dialog"`). Dialog scrolling and multi-pass "N Replies" / "View more replies" clicks run only when a dialog overlay is present (headed mode). Posts not found in the DOM are skipped
+7. Writes the collected posts as JSON to stdout or `-o <path>`
 
 ### Post IDs
 
@@ -80,6 +80,10 @@ Posts are identified by FB's canonical post ID extracted from the URL (`/posts/1
 - Comments from later runs attach to the original post record
 
 ## Schema
+
+> Unverified: this section and "Cron" describe a SQLite store (`store.mjs`,
+> `--db`). No `store.mjs` exists in this directory, and the current `index.mjs`
+> only writes JSON.
 
 **posts** — `post_id, group_url, author, body, source, url, timestamp, reactions, comment_count, first_seen, last_seen`
 
@@ -117,11 +121,27 @@ SELECT depth, COUNT(*) FROM comments GROUP BY depth;
 ## Structure
 
 ```
-├── index.mjs    CLI, browser lifecycle, scroll loop, comment expansion
-├── parse.mjs    FB GraphQL response parsers (ported from API Monitor)
-├── store.mjs    SQLite persistence layer
-├── data/
-│   ├── posts.db       ← created on first run
-│   └── session.json   ← created on login
-└── package.json
+├── Containerfile      Playwright v1.59.1-noble image; ENTRYPOINT node index.mjs
+├── index.mjs          CLI, browser lifecycle, scroll loop, comment expansion, JSON export
+├── parse.mjs          FB GraphQL response parsers (ported from API Monitor)
+├── package.json       playwright pinned to 1.59.1
+├── package-lock.json
+├── README.md
+└── data/
+    └── browser-profile/   ← created on login (not tracked)
 ```
+
+## Changelog
+
+- 2026-11-04: `index.mjs` and `parse.mjs` hoist fixed regexes to module scope
+  (68ff8eda). No behavior change intended.
+- 2026-05-21: Removed `shell.nix` (5da97868).
+- 2026-05-15: `package-lock.json` updated (80d78d4a).
+- 2026-05-13: Comment mode opens each post by clicking its feed link and waits
+  for the dialog query signal; scroll/reply expansion runs only when a dialog
+  overlay exists (5cf2ab77, 2d15e31f, aa12b637, b6f1fc59 — commit titles say
+  "jobber mcp"; behavior is taken from the diff).
+- 2026-05-11: Login moved from `storageState` (`--session`, Enter prompt) to a
+  persistent profile (`--profile`, `launchPersistentContext`) with `c_user`
+  cookie polling. Playwright pinned to 1.59.1 in `package.json` and the
+  Containerfile image. `shell.nix` added for laptop login (later removed).

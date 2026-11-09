@@ -116,6 +116,12 @@ journalctl -u podman-qbittorrent -f
 
 ## Changelog
 
+- **2026-08-20**: The VPN assertion in `parts/config.nix` now uses the shared
+  `helpers.mkVpnAssertions` against `hwc.networking.gluetun.instances` (default
+  tunnel `gluetun`): VPN mode requires that instance to be declared and enabled,
+  replacing the check on `hwc.networking.gluetun.enable` (0f102aa4, gluetun
+  became multi-instance).
+
 - **2026-08-01**: Split `privacy.enable` into per-protocol toggles
   (`anonymousMode`/`dht`/`pex`/`lsd`) and turned **DHT + PeX back on** by
   default. The blanket-off posture was redundant with the gluetun tunnel (the

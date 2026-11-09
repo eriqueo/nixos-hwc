@@ -67,6 +67,13 @@ board UI + admin API; public Cloudflare Tunnel exposes ONLY
 
 ## Changelog
 
+- 2026-11-04: `hwc-crm` orders after and requires `postgresql-setup.service`
+  instead of `postgresql.service`, plus `postgresql-application-roles.service`
+  when application roles are declared; that role operator's tool is a restart
+  trigger. The service, the Messenger import wrapper and the lead_scout ingest
+  get `localPeerEnvironment` for local peer auth. The inline readiness loop is
+  replaced by the shared `lib/mkHttpReady.nix` probe on `/health`
+  (e73231d1, 89188e8c, 70895a80).
 - 2026-10-27: CRM startup waits for HTTP/database health before dependent
   Rolodex and sequence timers can run. Read-only probes stop after 20 attempts;
   timer POSTs are not retried.
