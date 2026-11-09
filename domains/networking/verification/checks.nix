@@ -1,5 +1,5 @@
 # Pure verification function; not a NixOS or Home Manager module.
-{ lib, pkgs, self }:
+{ lib, pkgs, self, repoRoot }:
 {
 
 public-webhook-ingress = let
@@ -296,4 +296,102 @@ assert lib.assertMsg (lib.hasInfix "${ownerName}:${port}" work.services.caddy.ex
   && lib.hasInfix "reverse_proxy http://127.0.0.1:${toString work.hwc.automation.n8n.port}" work.services.caddy.extraConfig)
   "n8n compatibility: work does not serve the local application";
 pkgs.runCommand "n8n-route-compatibility" {} ''touch "$out"'';
+
+briefing-mcp-routing = let
+  c = self.nixosConfigurations.hwc-work.config;
+  route = lib.findFirst (r: r.name == "briefing") null c.hwc.networking.shared.effectiveRoutes;
+  fixture = pkgs.writeText "briefing-mcp-routing.json" (builtins.toJSON {
+    caddy = c.services.caddy.extraConfig;
+    hostname = "briefing.${c.hwc.networking.shared.vhostDomain}";
+    inherit (route) root;
+    upstream = lib.removePrefix "http://" (lib.head route.api).upstream;
+    source = repoRoot + "/domains/business/morning-briefing/dashboard";
+  });
+in pkgs.runCommand "briefing-mcp-routing" {
+  nativeBuildInputs = [ pkgs.python3 c.services.caddy.package ];
+} ''
+  python3 - ${fixture} <<'PY'
+  import copy, http.server, json, pathlib, shutil, socket, subprocess, sys, threading, time, urllib.request
+  f = json.loads(pathlib.Path(sys.argv[1]).read_text())
+  pathlib.Path('production.Caddyfile').write_text(f['caddy'])
+  adapted = json.loads(subprocess.check_output(['caddy', 'adapt', '--config', 'production.Caddyfile', '--adapter', 'caddyfile']))
+  matches = []
+  def find(value):
+      if isinstance(value, dict):
+          if any(f['hostname'] in m.get('host', []) for m in value.get('match', [])):
+              matches.append(value)
+          for child in value.values(): find(child)
+      elif isinstance(value, list):
+          for child in value: find(child)
+  find(adapted)
+  assert len(matches) == 1, 'expected one actual briefing host route'
+  site = pathlib.Path('site').resolve()
+  shutil.copytree(f['source'], site)
+  class Gateway(http.server.BaseHTTPRequestHandler):
+      def do_GET(self):
+          self.send_response(201); self.end_headers(); self.wfile.write(b'gateway fixture')
+      def log_message(self, *args): pass
+  backend = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Gateway)
+  threading.Thread(target=backend.serve_forever, daemon=True).start()
+  def substitute(value):
+      if isinstance(value, dict): return {k: substitute(v) for k, v in value.items()}
+      if isinstance(value, list): return [substitute(v) for v in value]
+      if value == f['root']: return str(site)
+      if value == f['upstream']: return '127.0.0.1:' + str(backend.server_port)
+      return value
+  actual = substitute(matches[0])
+  def exercise(route):
+      with socket.socket() as sock:
+          sock.bind(('127.0.0.1', 0)); port = sock.getsockname()[1]
+      config = {'admin': {'disabled': True}, 'apps': {'http': {'servers': {'fixture': {
+          'listen': ['127.0.0.1:' + str(port)], 'routes': [route]
+      }}}}}
+      pathlib.Path('fixture.json').write_text(json.dumps(config))
+      with open('runtime.log', 'a') as log:
+          process = subprocess.Popen(['caddy', 'run', '--config', 'fixture.json'], stdout=subprocess.DEVNULL, stderr=log)
+          try:
+              for attempt in range(100):
+                  try:
+                      with socket.create_connection(('127.0.0.1', port), timeout=.1): break
+                  except OSError: time.sleep(.02)
+              else: raise AssertionError('Caddy fixture did not start')
+              def read(path):
+                  request = urllib.request.Request('http://127.0.0.1:' + str(port) + path, headers={'Host': f['hostname']})
+                  with urllib.request.urlopen(request, timeout=3) as response:
+                      return response.status, response.headers, response.read()
+              for path in ['/mcp', '/mcp/session']:
+                  status, headers, body = read(path)
+                  assert status == 201 and body == b'gateway fixture', path
+              status, headers, body = read('/mcp-client.mjs')
+              assert status == 200 and body == (site / 'mcp-client.mjs').read_bytes(), 'MCP proxy captured the static transport'
+              assert 'javascript' in headers['Content-Type'], headers['Content-Type']
+              status, headers, body = read('/view-policy.json')
+              assert status == 200 and json.loads(body)['schemaVersion'] == 1
+          finally:
+              process.terminate(); process.wait(timeout=5)
+  try:
+      exercise(actual)
+      bad = copy.deepcopy(actual)
+      replaced = []
+      def broaden(value):
+          if isinstance(value, dict):
+              if value.get('path') == ['/mcp', '/mcp/*']:
+                  value['path'] = ['/mcp*']; replaced.append(True)
+              for child in value.values(): broaden(child)
+          elif isinstance(value, list):
+              for child in value: broaden(child)
+      broaden(bad)
+      assert replaced, 'MCP matcher missing from adapted production route'
+      try: exercise(bad)
+      except AssertionError as error:
+          assert 'captured the static transport' in str(error), error
+          print('seeded broad MCP proxy rejected')
+      else: raise AssertionError('broad MCP proxy regression was accepted')
+  finally:
+      backend.shutdown(); backend.server_close()
+  print('actual briefing API and static assets route independently')
+  PY
+  touch "$out"
+'';
+
 }

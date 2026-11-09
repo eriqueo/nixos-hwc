@@ -23,7 +23,7 @@ Provides network infrastructure that other domains depend on:
 `internalContainerNetworks` declares application-private Podman bridges. Startup validates internal routing, DNS, driver and IPv6 before dependent containers start.
 
 Static vhosts declare API handlers as a list of exact path patterns, upstreams, optional methods, Origin requirements and upstream headers. API handlers and SPA files are mutually exclusive; runtime secret-file placeholders never enter the browser bundle.
-Both callers use this list: estimator's private APIs and briefing's existing `/mcp*` proxy.
+Both callers use this list: estimator's private APIs and briefing's `/mcp` endpoint and `/mcp/*` child paths.
 
 The public n8n origin admits only the Quo receiver retained by Eric. Estimator
 customer/job reads and estimate writes stay on their configured tailnet URL.
@@ -102,6 +102,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-09: Keep the briefing MCP proxy within its path namespace so shared JavaScript assets remain static files. Verify real Caddy routing, module MIME type and the former broad-prefix failure.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 

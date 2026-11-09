@@ -390,7 +390,7 @@ in
       name = "briefing";
       mode = "vhost";
       root = "${nixosDir}/domains/business/morning-briefing/dashboard";
-      api = [{ paths = [ "/mcp*" ]; upstream = "http://127.0.0.1:6200"; }];
+      api = [{ paths = [ "/mcp" "/mcp/*" ]; upstream = "http://127.0.0.1:6200"; }];
     }
 
     # Refinery — read-only Kanban board for the gauntlet hopper, name-based
