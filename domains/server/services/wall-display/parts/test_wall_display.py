@@ -6,6 +6,8 @@ test entry point without mixing fixture setup into service startup.
 import datetime as dt
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import threading
@@ -27,7 +29,8 @@ config = dict(port=8424, stateDir=str(root), assets=str(root), devices=specs,
               noaa=dict(point="45,-111", place="Bozeman", userAgent="test"),
               taskLists=dict(family="Family", groceries="Groceries"),
               links=dict(home="https://calendar.test/?add=1", week="https://calendar.test/?add=1",
-                         groceries="https://todo.test/groceries"), apps=dict(gatewayUrl="http://invalid", paths=dict(groceries="/groceries")))
+                         groceries="https://todo.test/groceries"), apps=dict(gatewayUrl="http://invalid", paths=dict(groceries="/groceries"),
+                         paletteFile=str(Path(__file__).resolve().parents[4] / "business/workbench/hub/palette.css")))
 (root / "config.json").write_text(json.dumps(config))
 os.environ["WALL_CONFIG"] = str(root / "config.json")
 import screens
@@ -36,6 +39,90 @@ import server
 
 
 class DisplayContract(unittest.TestCase):
+    def test_tasks_categories_are_additive_and_completion_window_is_preserved(self):
+        import icalendar
+        day = dt.date(2026, 11, 9)
+        def todo(uid, **fields):
+            t = icalendar.Todo()
+            for k, v in dict(UID=uid, SUMMARY=uid, **fields).items():
+                t.add(k, v)
+            return t
+        tagged = todo("tagged", CATEGORIES=["+kitchen", "@shop", "wood; finish"], DUE=day, PRIORITY=2)
+        tagged.add("CATEGORIES", ["+studio"])
+        done = todo("done", STATUS="COMPLETED", COMPLETED=dt.datetime(2026, 11, 8, tzinfo=apps.TZ))
+        old = todo("old", STATUS="COMPLETED", COMPLETED=dt.datetime(2026, 10, 1, tzinfo=apps.TZ))
+        foreign = todo("foreign", RRULE={"FREQ": "WEEKLY", "UNTIL": dt.date(2027, 1, 1)})
+        rows = [icalendar.Todo.from_ical(t.to_ical()) for t in
+                [tagged, done, old, foreign, todo("plain"), todo("cancelled", STATUS="CANCELLED")]]
+        with patch.object(apps, "task_lists", return_value=[("/hwc/", "hwc")]), patch.object(screens, "components", return_value=rows):
+            result = apps.read_tasks(day)[0]["tasks"]
+        by_id = {t["uid"]: t for t in result}
+        self.assertEqual(set(by_id), {"tagged", "done", "foreign", "plain"})
+        self.assertEqual(by_id["tagged"]["categories"], ["+kitchen", "@shop", "wood; finish", "+studio"])
+        self.assertEqual(by_id["plain"]["categories"], [])
+        self.assertEqual(by_id["foreign"]["repeat"], "foreign")
+        self.assertTrue(result[-1]["done"])
+
+    def test_tasks_production_filter_sort_handles_optional_categories_and_done(self):
+        # Run the shipped JS function, including its real render call site below.
+        start = apps.TASKS_JS.index("function filteredTasks(")
+        stop = apps.TASKS_JS.index("function rememberFilters(", start)
+        program = apps.TASKS_JS[start:stop] + r'''
+const assert = require('node:assert/strict');
+const task = (uid, summary, list, priority, due, done, categories) => ({uid, summary, list, priority, due, done, categories});
+const S = {lists:[{name:'hwc',tasks:[task('z','Zulu','hwc',1,'2026-11-09',false,['+kitchen','@shop']),task('a','Alpha','hwc',0,null,false),task('d','Done','hwc',1,'2020-01-01',true,['+kitchen'])]}, {name:'Family',tasks:[task('b','Beta','Family',2,'2026-11-08',false,['@phone'])]}]};
+const base = {list:'',project:'',context:'',search:'',sort:'due'};
+for (const [sort, expected] of [['due',['b','z','a','d']],['priority',['z','b','a','d']],['title',['a','b','z','d']]]) assert.deepEqual(filteredTasks(S,{...base,sort}).map(t=>t.uid), expected);
+assert.deepEqual(filteredTasks(S,{...base,project:'+kitchen',context:'@shop'}).map(t=>t.uid),['z']);
+assert.deepEqual(filteredTasks(S,{...base,search:'FAMILY'}).map(t=>t.uid),['b']);
+assert.deepEqual(filteredTasks(S,{...base,search:'@phone'}).map(t=>t.uid),['b']);
+assert.deepEqual(filteredTasks(S,{...base,list:'hwc',search:'missing'}),[]);
+'''
+        result = subprocess.run(["node", "-e", program], capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('const tasks = filteredTasks(S, {list:sel', apps.TASKS_JS)
+
+    def test_tasks_served_theme_and_sibling_shells(self):
+        from types import SimpleNamespace
+        send = unittest.mock.Mock()
+        handler = SimpleNamespace(send=send)
+        app = apps.TasksApp(lambda: None)
+        app.get(handler, "/")
+        page = send.call_args.args[2]
+        self.assertIn(Path(config["apps"]["paletteFile"]).read_text(), page)
+        self.assertIn('id="create" hidden', page)
+        self.assertIn('id="search"', page)
+        self.assertIn('id="sort"', page)
+        self.assertIn('const tasks = filteredTasks', page)
+        self.assertNotIn("@@", page)
+        app.get(handler, apps.GROCERY_PATH)
+        grocery = send.call_args.args[2]
+        self.assertIn(apps.CSS, grocery)
+        self.assertNotIn('id="create"', grocery)
+        self.assertIn('id="a-repeat-controls"', grocery)
+        self.assertIn(apps.CSS, apps.CalendarApp.page)
+        self.assertNotIn(apps.TASKS_CSS, apps.CalendarApp.page)
+
+    def test_tasks_repeat_edit_delete_reopen_and_failed_gateway_use_existing_writer(self):
+        with patch.object(apps, "find_task", return_value=dict(due="2026-11-09")), patch.object(apps, "tasks_state", return_value={}), patch.object(apps, "gateway_call", return_value={}) as gateway:
+            apps.task_update(None, dict(uid="fixture", action="edit", repeat="monthly", repeatUntil="2027-01-09"))
+            self.assertEqual(gateway.call_args.args, ("hwc_tasks_update", dict(uid="fixture", action="edit", recurrence=dict(frequency="monthly", startDate="2026-11-09", until="2027-01-09"))))
+            apps.task_update(None, dict(uid="fixture", action="edit", repeat=""))
+            self.assertIsNone(gateway.call_args.args[1]["recurrence"])
+            apps.task_update(None, dict(uid="fixture", action="reopen"))
+            self.assertEqual(gateway.call_args.args[1], dict(uid="fixture", action="reopen"))
+            gateway.reset_mock()
+            with self.assertRaises(apps.Invalid):
+                apps.task_update(None, dict(uid="fixture", action="delete"))
+            gateway.assert_not_called()
+            apps.task_update(None, dict(uid="fixture", action="delete", confirm=True))
+            self.assertEqual(gateway.call_args.args[1], dict(uid="fixture", action="delete"))
+            gateway.side_effect = apps.GatewayError("synthetic failure")
+            gateway.reset_mock()
+            with self.assertRaises(apps.GatewayError):
+                apps.task_update(None, dict(uid="fixture", action="edit", summary="Keep my input"))
+            self.assertEqual(gateway.call_count, 1)
+
     def test_cooking_proxy_is_readonly_bounded_and_does_not_rotate(self):
         from http.server import BaseHTTPRequestHandler
         class Meals(BaseHTTPRequestHandler):
@@ -320,8 +407,185 @@ class DisplayContract(unittest.TestCase):
             thread.join()
 
 
+# Run in the synthetic page with eval(await (await fetch('/fixture/checks')).text()).
+# These checks drive the shipped DOM, request handlers, validators and fake gateway.
+TASKS_BROWSER_CHECKS = r"""(async () => {
+  const checks = [], q = s => document.querySelector(s);
+  const assert = (ok, message) => { if (!ok) throw Error(message); checks.push(message); };
+  const fixture = async query => (await fetch('/fixture?' + (query || ''))).json();
+  const pause = () => new Promise(resolve => setTimeout(resolve, 20));
+  const settled = async () => { for (let i = 0; i < 150; i++) { if (!document.body.hasAttribute('aria-busy')) { await pause(); return; } await pause(); } throw Error('Mutation did not settle'); };
+  const button = (scope, label) => [...q(scope).querySelectorAll('button')].find(n => n.textContent.replace(/\d+$/, '').trim() === label);
+  const input = (selector, value, event='change') => { q(selector).value = value; q(selector).dispatchEvent(new Event(event, {bubbles:true})); };
+  const click = async (scope, label) => { button(scope,label).click(); await settled(); };
+  const open = uid => { const n = q('[data-task="'+uid+'"]'); n.focus(); n.click(); };
+  const escape = () => document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  const calls = async () => (await fixture()).calls;
+  await fixture('reset=1&mode=normal'); await load();
+  if (!q('#sheet').hidden) escape();
+  q('#clear-filters').click();
+  assert(q('#create').hidden,'creation starts closed');
+  assert(q('#result-count').textContent.startsWith('9 of 9'),'all loaded active counts');
+  button('#chips','hwc').click(); button('#categories','+kitchen').click(); button('#categories','@desk').click();
+  assert(q('#result-count').textContent.startsWith('1 of 9'),'intersect list/project/context');
+  assert(new URL(location.href).searchParams.get('project') === '+kitchen','filter address retains project');
+  q('#clear-filters').click();
+  for (const mode of ['due','priority','title']) {
+    input('#sort',mode); const rows = [...q('#list').querySelectorAll('li')];
+    assert(rows.at(-1).classList.contains('done'),'completed below active for '+mode);
+  }
+  input('#search','@phone','input'); assert(q('#result-count').textContent.startsWith('2 of 9'),'search includes categories');
+  input('#search','no-such-task','input'); assert(q('#list').textContent.includes('No active tasks match'),'filtered empty state');
+  q('#clear-filters').click(); input('#sort','due');
+  q('#new-task').click(); assert(document.activeElement.id === 'a-sum','Add focuses task input'); escape();
+  assert(q('#create').hidden && document.activeElement.id === 'new-task','Add Escape restores focus');
+  open('repeat');
+  assert(document.activeElement.getAttribute('aria-label') === 'summary' && q('.workspace').inert,'edit focuses and isolates dialog');
+  const first=q('#panel input'), last=[...q('#panel').querySelectorAll('button')].filter(n=>n.getClientRects().length).at(-1);
+  last.focus(); last.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));
+  assert(document.activeElement === first,'dialog Tab wraps');
+  input('#panel select[aria-label="Repeat"]','monthly'); await click('#panel','Save');
+  let call=(await calls()).at(-1);
+  assert(call.args.recurrence.frequency === 'monthly' && call.args.recurrence.until === '2027-01-01','repeat-only edit reaches gateway');
+  assert(q('#sheet').hidden && document.activeElement.dataset.task === 'repeat','saved edit restores task focus');
+  open('foreign'); input('#panel input[aria-label="summary"]','Foreign title changed'); await click('#panel','Save');
+  assert(!('recurrence' in (await calls()).at(-1).args),'foreign schedule omitted on title edit');
+  q('[aria-label="complete Check the dust collector"]').click(); await settled();
+  call=(await calls()).at(-1); assert(call.args.expectedDue === '2026-11-09','repeat completion carries expectedDue');
+  assert(q('[data-task="repeat"]').textContent.includes('Nov 16'),'repeat stays active at next date');
+  q('.done-group').open=true; q('[aria-label="reopen Send the cabinet drawings"]').click(); await settled();
+  assert(!q('[data-task="drawings"]').closest('li').classList.contains('done'),'reopen returns task to active');
+  open('hinges'); let count=(await calls()).length; await click('#panel','Delete…'); await click('#panel','Keep it');
+  assert((await calls()).length === count,'delete cancellation has no gateway effect');
+  await click('#panel','Delete…'); await click('#panel','Delete');
+  assert(!q('[data-task="hinges"]') && (await calls()).at(-1).args.action === 'delete','confirmed delete uses existing endpoint');
+  q('#new-task').click(); input('#a-sum','Order screws +kitchen @shop (A) due:tomorrow'); input('#a-list','hwc'); input('#a-due','2026-11-10'); input('#a-pri','2');
+  q('#create details').open=true; input('#a-repeat-controls select','weekly'); input('#a-repeat-controls input','2027-01-01');
+  q('#add').requestSubmit(); await settled(); call=(await calls()).at(-1);
+  assert(call.tool === 'hwc_tasks_add' && call.args.summary === 'Order screws +kitchen @shop (A) due:tomorrow','one-line dialect passes unchanged to existing writer');
+  assert(call.args.list === 'hwc' && call.args.priority === 2 && call.args.recurrence.frequency === 'weekly','creation fields reach existing validator');
+  assert(q('#create').hidden && !q('#a-sum').value && q('#status').textContent.includes('Saved'),'successful add closes and clears form with saved state');
+  await fixture('mode=write-error'); open('samples'); input('#panel input[aria-label="summary"]','Keep my unsaved title'); count=(await calls()).length;
+  await click('#panel','Save');
+  assert(!q('#sheet').hidden && q('#panel input').value === 'Keep my unsaved title','failed save retains form input');
+  assert((await calls()).length === count+1 && q('#status').textContent.includes('Refresh tasks before retrying'),'failed mutation is not retried');
+  escape(); assert(q('#sheet').hidden && !q('.workspace').inert,'Escape clears dialog isolation');
+  await fixture('mode=load-error'); count=q('#list').querySelectorAll('li').length; await load();
+  assert(q('#freshness').dataset.stale === 'true' && q('#list').querySelectorAll('li').length === count,'failed refresh preserves rows and labels stale data');
+  await fixture('mode=readonly'); await load();
+  assert(q('#new-task').disabled && [...q('#list').querySelectorAll('.tick')].every(n=>n.disabled),'read-only disables all mutations');
+  open('samples'); assert([...q('#panel').querySelectorAll('input,select')].every(n=>n.disabled),'read-only task details cannot edit');
+  assert(document.activeElement.textContent === 'Close','read-only dialog focuses Close'); escape();
+  assert(!q('.workspace').inert && q('#sheet').hidden && document.activeElement.dataset.task === 'samples','read-only Escape restores task focus and interaction');
+  await fixture('mode=empty'); await load(); assert(q('#list').textContent.includes('No active tasks.'),'unfiltered empty state');
+  await fixture('reset=1&mode=normal'); await load();
+  const visible=[...document.querySelectorAll('button,input,select,summary')].filter(n=>n.getClientRects().length);
+  assert(visible.every(n=>n.getBoundingClientRect().height >= 44),'visible controls at least 44px');
+  assert([...document.querySelectorAll('input,select')].filter(n=>n.getClientRects().length).every(n=>parseFloat(getComputedStyle(n).fontSize)>=16),'visible inputs at least 16px');
+  assert(document.documentElement.scrollWidth <= innerWidth,'no horizontal overflow');
+  return {passed:checks.length,checks,width:innerWidth};
+})()"""
+
+
+def serve_tasks_fixture():
+    """One loopback service, in-memory data only, no renderer/voice worker.
+
+    Reproduce with this file --serve-tasks. Stops after 15 minutes. The
+    unreachable gateway is replaced at its seam; every mutation is recorded.
+    Uses <1 MiB fixture data, within the 128 MiB scratch budget.
+    """
+    import icalendar
+    from contextlib import ExitStack
+    from urllib.parse import parse_qs, urlsplit
+    today = dt.date(2026, 11, 9)
+    rows, calls = [], []
+    mode = {"name": "normal"}
+    def reset():
+        rows.clear(); calls.clear()
+        for uid, title, list_, due, pri, cats, done in [
+            ("hinges", "Order cabinet hinges", "hwc", "2026-11-08", 1, ["+kitchen", "@shop"], False),
+            ("samples", "Review finish samples", "hwc", "2026-11-09", 2, ["+kitchen", "@desk"], False),
+            ("timber", "Call the timber yard", "hwc", "2026-11-10", 1, ["+studio", "@phone"], False),
+            ("furnace", "Book furnace service", "Family", "2026-11-12", 0, ["@phone"], False),
+            ("trail", "Walk the north trail", "Family", None, 0, [], False),
+            ("drawings", "Send the cabinet drawings", "hwc", "2026-11-09", 3, ["+kitchen", "@desk"], True),
+            ("milk", "Milk", "Groceries", None, 0, [], False),
+            ("sweep", "Sweep the workshop", "hwc", "2026-11-09", 0, ["@shop"], False),
+            ("repeat", "Check the dust collector", "hwc", "2026-11-09", 0, ["@shop"], False),
+            ("foreign", "Foreign repeating reminder", "Family", "2026-11-10", 0, [], False),
+        ]:
+            t = icalendar.Todo()
+            for k, v in dict(UID=uid, SUMMARY=title, PRIORITY=pri).items(): t.add(k, v)
+            if due: t.add("DUE", dt.date.fromisoformat(due))
+            if cats: t.add("CATEGORIES", cats)
+            if done:
+                t.add("STATUS", "COMPLETED"); t.add("COMPLETED", dt.datetime(2026, 11, 9, 10, tzinfo=apps.TZ))
+            if uid in ("repeat", "foreign"):
+                t.add("RRULE", {"FREQ": "WEEKLY", "UNTIL": dt.date(2027, 1, 1)})
+                if uid == "repeat": t.add("X-HWC-REPEAT", "fixed-v1")
+            rows.append((list_, icalendar.Todo.from_ical(t.to_ical())))
+    reset()
+    def lists():
+        if mode["name"] == "load-error": raise RuntimeError("Synthetic Radicale outage")
+        return [("/"+n+"/", n) for n in ("hwc", "Family", "Groceries")]
+    def components(href, *_):
+        return [] if mode["name"] == "empty" else [t for n, t in rows if "/"+n+"/" == href]
+    def gateway(tool, args):
+        calls.append({"tool": tool, "args": args})
+        if mode["name"] == "write-error": raise apps.GatewayError("Synthetic gateway refusal")
+        if tool == "hwc_tasks_add":
+            t = icalendar.Todo(); t.add("UID", "added-"+str(len(calls))); t.add("SUMMARY", args["summary"])
+            rows.append((args["list"], t))
+        else:
+            t = next(t for _, t in rows if str(t["UID"]) == args["uid"])
+        if args.get("action") == "delete": rows[:] = [(n, item) for n, item in rows if item is not t]
+        elif args.get("action") == "complete":
+            if "X-HWC-REPEAT" in t:
+                t["DUE"] = icalendar.vDDDTypes(t.decoded("DUE") + dt.timedelta(days=7))
+            else:
+                t["STATUS"] = "COMPLETED"; t["COMPLETED"] = icalendar.vDDDTypes(dt.datetime(2026, 11, 9, tzinfo=apps.TZ))
+        elif args.get("action") == "reopen":
+            t["STATUS"] = "NEEDS-ACTION"; t.pop("COMPLETED", None)
+        for key in ("summary", "due", "priority"):
+            if key in args:
+                t.pop(key, None)
+                if args[key]: t.add(key, dt.date.fromisoformat(args[key]) if key == "due" else args[key])
+        if "recurrence" in args:
+            t.pop("RRULE", None); t.pop("X-HWC-REPEAT", None)
+            if args["recurrence"]:
+                r = args["recurrence"]; rule = {"FREQ": r["frequency"].upper()}
+                if r.get("until"): rule["UNTIL"] = dt.date.fromisoformat(r["until"])
+                t.add("RRULE", icalendar.vRecur.from_ical(icalendar.vRecur(rule).to_ical().decode())); t.add("X-HWC-REPEAT", "fixed-v1")
+        return {"message": "Saved in synthetic fixture"}
+    class Handler(server.Handler):
+        def host_app(self): return server.HOST_APPS["calendar" if self.path.startswith("/calendar-fixture") else "todo"]
+        def from_tailnet(self): return mode["name"] != "readonly"
+        def do_GET(self):
+            if self.path == "/fixture/checks": return self.send(200, "text/javascript", TASKS_BROWSER_CHECKS)
+            if self.path.startswith("/fixture"):
+                q = parse_qs(urlsplit(self.path).query)
+                if "reset" in q: reset()
+                if "mode" in q: mode["name"] = q["mode"][0]
+                return self.json(200, {"calls": calls, "mode": mode["name"]})
+            if self.path == "/calendar-fixture": return self.send(200, "text/html", apps.CalendarApp.page)
+            return super().do_GET()
+        def log_message(self, *_): pass
+    with ExitStack() as stack:
+        stack.enter_context(patch.object(apps, "now", return_value=dt.datetime(2026, 11, 9, 12, tzinfo=apps.TZ)))
+        stack.enter_context(patch.object(apps, "task_lists", side_effect=lists))
+        stack.enter_context(patch.object(screens, "components", side_effect=components))
+        stack.enter_context(patch.object(apps, "gateway_call", side_effect=gateway))
+        http = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        deadline = threading.Timer(900, http.shutdown); deadline.daemon = True; deadline.start()
+        print(f"Synthetic Tasks fixture: http://localhost:{http.server_port}/", flush=True)
+        try: http.serve_forever()
+        except KeyboardInterrupt: pass
+        finally: deadline.cancel(); http.server_close()
+
+
 if __name__ == "__main__":
     try:
-        unittest.main()
+        if sys.argv[1:] == ["--serve-tasks"]: serve_tasks_fixture()
+        else: unittest.main()
     finally:
         fixture.cleanup()

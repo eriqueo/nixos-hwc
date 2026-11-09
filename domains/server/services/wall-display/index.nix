@@ -215,6 +215,8 @@ let
     devices = cfg.devices;
     apps = {
       inherit gatewayUrl;
+      # Reuse the Workbench web palette producer; Tasks adds layout only.
+      paletteFile = "${../../../business/workbench/hub/palette.css}";
       paths.groceries = groceryPath;
       readOnlyCalendars = lib.attrNames radicale.mirrors;
     };
