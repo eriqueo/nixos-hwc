@@ -28,6 +28,7 @@ domains/business/paperless/
 ├── index.nix              # Option definitions + imports
 ├── sys.nix                # System packages + email-to-paperless command
 ├── README.md              # This file
+├── paperless_integration_spec.md # Phased integration spec (design document)
 ├── parts/
     ├── config.nix         # Paperless + Tika/Gotenberg containers, env generation, cleanup timer
     ├── directories.nix    # tmpfiles rules for storage directories (SOLE producer)
@@ -126,6 +127,8 @@ hwc.business.paperless = {
 - `paperless-cleanup.service` / `paperless-cleanup.timer` — daily staging/export cleanup
 
 ## Changelog
+- 2026-11-04: `scripts/email-to-paperless.py` compiles its whitespace and
+  filename-stem regexes once at module load (68ff8eda). No behavior change intended.
 - 2026-11-03: Declare restricted database ownership, protected password environment delivery and provisioning/rotation dependencies.
 
 - 2026-11-02: Repair the existing application's Python, image-processing, compression, certificate and OS dependencies. Actual codecs, OCR, Office parser and restored PostgreSQL15.19 consumers pass; all74tables and authenticated document API fingerprints match old/new/restored. Application/schema stays3.1.3.

@@ -38,24 +38,29 @@ Inbound: one HTTP endpoint (Phase 2.2). Core: Lead entity + per-source validatio
 ```
 leads/
 ├── README.md                                # This file.
-├── index.nix                                # Charter Law 6 module.
+├── index.nix                                # Charter Law 6 module; package checkPhase runs tests.
 └── parts/
+    ├── jt-mappings.nix                      # JobTread org/custom-field registry (shared with hwc-crm).
+    ├── migrations/                          # 001-canonical-lead-extensions.sql, 002-reports.sql.
+    ├── workflows/                           # Archived n8n calculator-lead workflow exports.
     └── src/                                 # TypeScript service.
-        ├── package.json                     # type=module, zod runtime dep.
+        ├── package.json                     # type=module; `npm test` builds then runs node --test.
+        ├── package-lock.json
         ├── tsconfig.json                    # ES2023, NodeNext, strict.
         └── src/
             ├── main.ts                      # Entry — HTTP server, wiring.
             ├── config.ts                    # Late-binding env loader.
-            ├── core/
-            │   ├── types.ts                 # Lead, LeadSource, ProjectType (Phase 2.2 fills out).
-            │   └── errors.ts                # Structured LeadsError.
-            ├── ports/
-            │   └── log.ts                   # Logger interface.
-            └── adapters/
-                └── log-stderr.ts            # Structured JSON to stderr.
+            ├── rate-limit.ts
+            ├── schemas/lead.ts
+            ├── core/                        # types, errors, hmac, jt-graph, notify-payload,
+            │                                #   customer-email, report, build-report.
+            ├── ports/                       # log, store, reports, jt, notify, customer-email.
+            ├── adapters/                    # log-stderr, store-postgres, store-reports-postgres,
+            │                                #   jt-jobtread, notify-http, email-bridge.
+            └── __tests__/read-paths.test.ts # Projection checks against a throwaway Postgres.
 ```
 
-Phase 2.2+ will fill out `schemas/`, additional `core/` modules, `ports/{audit,store,jt,notify}.ts`, and matching `adapters/`. The shape mirrors hwc-notify deliberately — same patterns, same hardening, same deps-update wrapper.
+The shape mirrors hwc-notify deliberately — same patterns, same hardening, same deps-update wrapper.
 
 ## Runtime
 
@@ -141,6 +146,16 @@ Hardening: same set as hwc-notify (`NoNewPrivileges`, `ProtectSystem=strict`, `P
 
 ## Changelog
 
+- **2026-11-04** — Narrower reads (68ff8eda). Lead queries no longer select
+  `source`; a new `store.jtIds()` reads only the four JT id columns for the
+  case-id lookup in `main.ts`. `reports.byId()` returns a `ReportView` without
+  `lead_id`/`viewed_at` and omits the payload of revoked reports. Query strings
+  are parsed with `URLSearchParams` instead of `new URL()`, and fixed regexes
+  are module-scope. The package build now runs `read-paths.test.ts` against a
+  throwaway Postgres cluster (`doCheck`, `checkPhase`).
+- **2026-11-03** — `hwc-leads` orders after and requires
+  `postgresql-setup.service` and gets `localPeerEnvironment` for local peer auth
+  (2caba40d).
 - **2026-10-09** — `parts/jt-mappings.nix` gained `costItemCustomFields.needsConfirmation` (hwc-crm only): the boolean JobTread cost item field that marks preliminary budget lines whose quantity is not traced to the customer's calculator answers.
 - **2026-10-05** — `parts/jt-mappings.nix` `jobSync` gained `stagePhases` and `wonPhases` (hwc-crm D62): the Job Funnel's Visited, Budgeting and Budget Sent stages mirror JobTread Phase 2–4, and a change to Phase 5 or later moves the lead to Won. Texts verified against the live Phase options on 2026-10-05.
 - **2026-09-19** — `parts/jt-mappings.nix` gained `jobSync` (hwc-crm D45): the Deferred phase, the default phase and the CRM-loss-reason → `Job Lost Reason` map. Its presence turns on hwc-crm's two-way job link. The tunnel route for `crm.iheartwoodcraft.com` (`machines/server/config.nix`) now also admits `/hooks/jt`, JobTread's webhook into the CRM.
