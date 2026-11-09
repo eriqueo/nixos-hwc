@@ -28,6 +28,17 @@ Brain MCP shares fixed module patterns and compiles caller-supplied replacement 
 
 Calendar phone writes consume the gateway's sync receipt; they preserve the saved local result and show a sync failure without another wait.
 
+The full Tasks app consumes Workbench's existing web palette through `apps.paletteFile`.
+Tasks lead its phone/desktop layout; Add and repeat fields open on demand. List,
+project and context filters combine with search and due/priority/title ordering.
+Counts name the loaded selection and the seven-day completed window. Writes keep
+the existing gateway, recurrence validation and explicit delete confirmation.
+`parts/test_wall_display.py --serve-tasks` runs a bounded in-memory fixture with
+no live providers. In its browser page, run
+`(async () => eval(await (await fetch('/fixture/checks')).text()))()` for the DOM,
+mutation, error, read-only and focus regressions. Groceries and Calendar keep
+their existing shells; wall scenes keep grayscale rendering.
+
 Brain MCP public clients use the `.com` OAuth gateway and Service Auth origin;
 `native/ai/brain-mcp/AUTH.md` records the private path and remaining alias cleanup.
 Direct Brain MCP access uses its existing listener with a `tailscale0`-only
@@ -93,7 +104,8 @@ domains/server/
 │   ├── radicale/         # Self-hosted CalDAV (tasks.hwc.*, two-way task sync)
 │   └── wall-display/     # TRMNL scenes + tablet rotation, scene review and held Meals cooking routes; Family Home, week/month calendar, weather, tasks, groceries; fixed scene routes, shared tablet button bar and common calendar display grouping; QR-linked phone apps and contract tests
 │       └── parts/        #   server.py (protocol, host dispatch, renderer, web client), screens.py (screens, CalDAV reads),
-│                         #   apps.py (todo.* Tasks and calendar.* Calendar phone apps; writes via the MCP gateway),
+│                         #   apps.py (Workbench-themed full Tasks; existing Groceries/Calendar; gateway-only writes),
+│                         #   test_wall_display.py (contracts + bounded synthetic Tasks browser fixture),
 │                         #   voice.py (tap-to-talk: whisper → DX2 → Piper, writes need confirmation)
 └── deploy/       # Deployment helpers
 ```
@@ -110,6 +122,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-11-09: Refine full Tasks with the shared Workbench palette, disclosed creation/repeat fields, list/project/context filters, search and due/priority/title ordering. Keep completion below active tasks and show loaded scope, stale/error and saved states. Wire repeat-only edits through the existing validator; retain foreign schedules and restore dialog focus, including read-only details. Add synthetic browser and production-wiring regressions; deployment remains with the integration owner.
 
 - 2026-11-04: Select runtime-only HTTP framing repairs for Meals and Piper,
   preserving service behavior, model inputs and persistent data paths.

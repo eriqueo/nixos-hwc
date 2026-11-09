@@ -24,6 +24,7 @@ calendar, restoring the old event if the create fails.
 """
 import datetime as dt
 import json
+from pathlib import Path
 import re
 import sys
 import time
@@ -228,10 +229,15 @@ def read_tasks(today):
                              or completed.date() < today - dt.timedelta(days=DONE_DAYS)):
                     continue
                 due = screens.local(t.decoded("DUE")) if "DUE" in t else None
+                categories = t.get("CATEGORIES") or []
+                categories = categories if isinstance(categories, list) else [categories]
                 tasks.append({
                     "uid": str(t["UID"]),
                     "summary": str(t.get("SUMMARY", "")).strip() or "(untitled)",
                     "list": name,
+                    # Additive read field; use the same decoded categories as todui.
+                    "categories": [str(c) for entry in categories
+                                   for c in getattr(entry, "cats", [entry])],
                     "due": (due.date() if isinstance(due, dt.datetime) else due).isoformat() if due else None,
                     "dueTime": iso_time(due) if isinstance(due, dt.datetime) else None,
                     "priority": int(t.get("PRIORITY", 0) or 0),
@@ -790,8 +796,8 @@ function sheet(build) {
   const s = $("#sheet"), p = $("#panel"); p.replaceChildren(...build(() => { s.hidden = true; }));
   s.hidden = false; const f = p.querySelector("input,select,textarea,button"); if (f) f.focus();
 }
-document.addEventListener("keydown", e => { if (e.key === "Escape") $("#sheet").hidden = true; });
-document.addEventListener("click", e => { if (e.target.id === "sheet") e.target.hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !document.body.classList.contains("tasks-app")) $("#sheet").hidden = true; });
+document.addEventListener("click", e => { if (e.target.id === "sheet" && !document.body.classList.contains("tasks-app")) e.target.hidden = true; });
 const PRI = ["", "A", "B", "C", "D", "E", "F", "G", "H", "I"];
 const fmtDay = iso => { const d = new Date(iso + "T12:00:00"); return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); };
 """
@@ -806,7 +812,7 @@ SHELL = """<!doctype html>
 <div id="status" class="status" role="status" aria-live="polite"></div>
 <script>{common}{script}</script></body></html>"""
 
-TASKS_BODY = """
+GROCERIES_BODY = """
 <header><div class="bar"><h1>Tasks</h1><button id="reload" aria-label="refresh">↻</button></div>
 <div class="chips" id="chips" role="toolbar" aria-label="lists"></div></header>
 <main>
@@ -824,11 +830,132 @@ TASKS_BODY = """
 <div id="list"></div>
 </main>"""
 
+TASKS_CSS = """
+:root{color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+body{background:var(--color-base-800);color:var(--color-cream-200);font:16px/1.5 var(--font-body);min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+button,input,select{font:inherit;font-size:16px;min-height:44px;border:1px solid var(--color-base-600);border-radius:var(--radius-md);background:var(--color-base-900);color:var(--color-cream-100);padding:8px 12px;max-width:100%}
+button,summary{cursor:pointer;touch-action:manipulation}button:hover{border-color:var(--color-copper)}button:disabled{opacity:.5;cursor:not-allowed}
+button.ink{background:var(--color-copper);color:var(--color-base-900);border-color:var(--color-copper);font-weight:600}
+:focus-visible{outline:2px solid var(--color-copper);outline-offset:3px}
+input,select{width:100%;min-width:0}label{display:block;color:var(--color-cream-300);font-size:14px;margin:12px 0 4px}
+header{border-bottom:1px solid var(--color-base-600);padding:calc(var(--space-lg) + env(safe-area-inset-top)) var(--space-xl) var(--space-lg);background:var(--color-base-900)}
+.bar,.actions{display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap}.bar{justify-content:space-between;max-width:1320px;margin:auto}
+h1,h3{font:600 28px/1.2 var(--font-display);color:var(--color-cream-100)}.eyebrow{font:12px var(--font-mono);color:var(--color-cream-300)}
+.workspace{display:grid;grid-template-columns:240px minmax(0,1fr);max-width:1368px;margin:auto;min-height:calc(100dvh - 100px)}
+aside{border-right:1px solid var(--color-base-600);padding:16px 20px;background:var(--color-base-900);min-width:0}
+summary{min-height:44px;display:flex;align-items:center;gap:8px;font-weight:600;color:var(--color-cream-100)}summary::before{content:'›';color:var(--color-copper)}details[open]>summary::before{content:'⌄'}
+.nav-label{margin:20px 0 6px;color:var(--color-cream-300);font:12px var(--font-mono)}.chips{display:grid;gap:4px}.chips button{text-align:left;display:flex;gap:8px;justify-content:space-between;border-color:transparent;background:transparent;overflow-wrap:anywhere}
+.chips button[aria-pressed=true]{background:var(--color-base-700);border-color:var(--color-copper);color:var(--color-cream-100)}.count{font:12px var(--font-mono);color:var(--color-cream-300);align-self:center}
+main{padding:var(--space-xl);min-width:0}.content-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-md);flex-wrap:wrap;margin-bottom:var(--space-lg)}
+h2{font-size:16px;color:var(--color-cream-100);font-weight:600}#scope{font:600 24px var(--font-display)}.toolbar{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:12px;margin-bottom:12px}.toolbar label{margin-top:0}
+.note,.meta,.empty{color:var(--color-cream-300);font-size:14px}.note{padding:8px 0}.empty{padding:24px 0}.meta{display:block;margin-top:4px}.row .meta{font-size:13px}.tag{color:var(--color-copper)}
+.group{margin-top:24px;border-bottom:1px solid var(--color-base-600);padding-bottom:8px}.group.today{color:var(--color-copper)}ul{list-style:none}
+li.row{display:flex;align-items:center;gap:12px;min-width:0;padding:8px 0;border-bottom:1px solid var(--color-base-700)}
+.tick{width:44px;height:44px;flex:0 0 44px;padding:0;font-size:22px}.body{flex:1;min-width:0;text-align:left;border:0;background:transparent;padding:8px 0;font-weight:400}.title{display:block;overflow-wrap:anywhere;color:var(--color-cream-100)}
+.late .due{color:var(--color-coral)}.done .title{text-decoration:line-through;color:var(--color-cream-300)}.done .tick{color:var(--color-green)}.done-group{margin-top:24px}
+#create{margin-bottom:24px;padding:16px;background:var(--color-base-900);border:1px solid var(--color-base-600);border-radius:var(--radius-lg)}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.actions{margin-top:16px}.actions button{min-width:88px}
+.status{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);background:var(--color-base-900);color:var(--color-cream-100);border:1px solid var(--color-copper);border-radius:var(--radius-md);padding:12px 16px;z-index:5;font-size:14px}.status:empty{display:none}
+.sheet{position:fixed;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--color-base-900) 80%,transparent);padding:16px}.panel{background:var(--color-base-800);border:1px solid var(--color-base-600);border-radius:var(--radius-lg);width:100%;max-width:600px;max-height:calc(100dvh - 32px);overflow-y:auto;padding:24px}.panel h3{font-size:24px}.confirm{border:1px solid var(--color-coral);padding:16px;margin-top:16px}.panel .actions{justify-content:flex-end}
+#freshness{color:var(--color-cream-300);font-size:13px}#freshness[data-stale=true]{color:var(--color-gold)}
+@media(max-width:760px){header{padding:calc(12px + env(safe-area-inset-top)) 16px 12px}.workspace{display:block}aside{border-right:0;border-bottom:1px solid var(--color-base-600);padding:8px 16px}main{padding:16px}.toolbar{grid-template-columns:minmax(0,1fr) 125px;gap:8px}.grid3{grid-template-columns:1fr}.sheet{padding:8px}.panel{max-height:calc(100dvh - 16px);padding:20px 16px calc(20px + env(safe-area-inset-bottom))}h1{font-size:24px}.bar>.actions{margin:0}.content-head{margin-bottom:12px}#create{padding:12px}.status{bottom:calc(8px + env(safe-area-inset-bottom))}}
+"""
+
+TASKS_BODY = """
+<header><div class="bar"><div><span class="eyebrow">HWC · Workbench</span><h1>Tasks</h1></div>
+<div class="actions"><button id="reload" aria-label="Refresh tasks">↻</button><button id="new-task" class="ink" aria-expanded="false" aria-controls="create" disabled>+ Add task</button></div></div></header>
+<div class="workspace"><aside><details id="filters" open><summary>Lists &amp; filters</summary>
+<p class="nav-label">LISTS · ACTIVE</p><nav id="chips" class="chips" aria-label="Task lists"></nav>
+<div id="categories"></div><button id="clear-filters" hidden>Clear filters</button>
+</details></aside><main>
+<section id="create" hidden aria-labelledby="create-title"><h2 id="create-title">New task</h2>
+<form id="add" autocomplete="off"><label for="a-sum">Task</label><input id="a-sum" maxlength="200" placeholder="Order hinges +kitchen @shop (A) due:tomorrow" required>
+<p class="note">Use +project, @context, (A)–(I), or due:today / tomorrow / YYYY-MM-DD. Choose the list below.</p>
+<div class="grid3"><div><label for="a-list">List</label><select id="a-list"></select></div><div><label for="a-due">Due date</label><input id="a-due" type="date"></div><div><label for="a-pri">Priority</label><select id="a-pri"></select></div></div>
+<details><summary>Repeat schedule</summary><div id="a-repeat-controls"></div></details>
+<div class="actions"><button class="ink" type="submit">Add task</button><button id="cancel-add" type="button">Cancel</button></div></form></section>
+<div class="content-head"><h2 id="scope">All lists</h2><span id="freshness" role="status">Loading tasks…</span></div>
+<div class="toolbar"><div><label for="search">Search tasks</label><input id="search" type="search" placeholder="Title, list, +project or @context"></div><div><label for="sort">Order by</label><select id="sort"><option value="due">Due date</option><option value="priority">Priority</option><option value="title">Title</option></select></div></div>
+<p id="result-count" class="note" aria-live="polite"></p>
+<p class="note" id="ro" hidden>Read-only. Changes need a tailnet device and the task gateway.</p>
+<div id="list" aria-busy="true"><p class="empty">Loading tasks…</p></div>
+</main></div>"""
+
 TASKS_JS = r"""
 const addRepeat = repeatControls("", "", true);
 $("#a-repeat-controls").append(...addRepeat.nodes);
 const groceryPage = location.pathname === @@GROCERY_PATH@@, groceryList = @@GROCERY_LIST@@;
 let S = null, sel = groceryPage ? groceryList : localStorage.getItem("tasks.list") || "";
+const taskPage = !groceryPage;
+const params = new URLSearchParams(location.search);
+let project = params.get("project") || "", context = params.get("context") || "";
+if (taskPage && params.has("list")) sel = params.get("list");
+function filteredTasks(state, filters) {
+  const needle = filters.search.trim().toLocaleLowerCase();
+  const title = (a, b) => a.summary.localeCompare(b.summary);
+  const due = (a, b) => (a.due || "9999").localeCompare(b.due || "9999") || (a.dueTime || "23:59").localeCompare(b.dueTime || "23:59");
+  const priority = (a, b) => (a.priority || 10) - (b.priority || 10);
+  return state.lists.filter(l => !filters.list || l.name === filters.list).flatMap(l => l.tasks)
+    .filter(t => (!filters.project || (t.categories || []).includes(filters.project)) &&
+      (!filters.context || (t.categories || []).includes(filters.context)) &&
+      (!needle || [t.summary, t.list, ...(t.categories || [])].join(" ").toLocaleLowerCase().includes(needle)))
+    .sort((a, b) => Number(a.done) - Number(b.done) ||
+      (filters.sort === "title" ? title(a, b) : filters.sort === "priority" ? priority(a, b) || due(a, b) || title(a, b) : due(a, b) || priority(a, b) || title(a, b)));
+}
+function rememberFilters() {
+  if (!taskPage) return;
+  const q = new URLSearchParams(location.search);
+  for (const [key, value] of Object.entries({list:sel, project, context, search:$("#search").value, sort:$("#sort").value})) {
+    if (value && !(key === "sort" && value === "due")) q.set(key, value); else q.delete(key);
+  }
+  history.replaceState(null, "", location.pathname + (q.size ? "?" + q : ""));
+}
+function showCreate(show) {
+  $("#create").hidden = !show; $("#new-task").setAttribute("aria-expanded", String(show));
+  (show ? $("#a-sum") : $("#new-task")).focus();
+}
+function taskSheet(build) {
+  if (!taskPage) return sheet(build);
+  const s = $("#sheet"), p = $("#panel"), trigger = document.activeElement;
+  const content = document.querySelector(".workspace"), header = $("header");
+  function close() {
+    s.hidden = true; content.inert = header.inert = false;
+    document.removeEventListener("keydown", keys); s.removeEventListener("click", backdrop);
+    // A successful mutation re-renders rows. Restore to the same task if it remains.
+    const target = trigger.isConnected ? trigger : Array.from(document.querySelectorAll("[data-task]")).find(n => n.dataset.task === trigger.dataset.task) || $("#new-task");
+    target.focus();
+  }
+  function keys(e) {
+    if (e.key === "Escape") { e.preventDefault(); close(); }
+    if (e.key !== "Tab") return;
+    const nodes = Array.from(p.querySelectorAll("button,input,select,textarea,[tabindex]"))
+      .filter(n => !n.disabled && n.getClientRects().length);
+    const first = nodes[0], last = nodes[nodes.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  function backdrop(e) { if (e.target === s) close(); }
+  p.replaceChildren(...build(close)); s.hidden = false;
+  p.querySelector("h3").id = "task-dialog-title"; p.setAttribute("aria-labelledby", "task-dialog-title");
+  document.addEventListener("keydown", keys); s.addEventListener("click", backdrop);
+  content.inert = header.inert = true;
+  Array.from(p.querySelectorAll("input,select,textarea,button")).find(n => !n.disabled && n.getClientRects().length)?.focus();
+}
+async function taskWrite(path, body, saving) {
+  if (!taskPage) return write(path, body, saving);
+  if (loading) { say("Wait for tasks to refresh before saving.", true); return null; }
+  if (busy) return null;
+  // Mutations are explicitly non-retriable. Refresh before a manual retry if their outcome is uncertain.
+  const controls = Array.from(document.querySelectorAll("#panel button,#add button,.tick,#new-task"));
+  const disabled = controls.map(n => n.disabled); controls.forEach(n => { n.disabled = true; });
+  try {
+    const j = await write(path, body, saving);
+    if (!j) say("Save could not be confirmed. Refresh tasks before retrying. " + $("#status").textContent, true);
+    return j;
+  } finally { controls.forEach((n, i) => { n.disabled = disabled[i]; }); }
+}
 function priOptions(select, cur) {
   select.replaceChildren(el("option", { value: 0 }, "prio –"),
     ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(p => el("option", { value: p }, "(" + PRI[p] + ")")));
@@ -845,12 +972,29 @@ function render(state) {
   if (sel && !names.includes(sel) && !groceryPage) sel = "";
   $("#chips").replaceChildren(...["", ...names].map(n => el("button", {
     "aria-pressed": String(n === sel), onclick: () => { sel = n; localStorage.setItem("tasks.list", n); render(S); }
-  }, n || "All")));
+  }, n || (taskPage ? "All lists" : "All"), taskPage ? el("span", {class:"count"}, S.lists.filter(l => !n || l.name === n).flatMap(l => l.tasks).filter(t => !t.done).length) : null)));
   const aList = $("#a-list"), keep = aList.value;
   aList.replaceChildren(...names.map(n => el("option", { value: n }, n)));
   aList.value = sel || (names.includes(keep) ? keep : (names.includes("hwc") ? "hwc" : names[0] || ""));
   if (!$("#a-pri").options.length) priOptions($("#a-pri"), 0);
   $("#ro").hidden = S.canWrite; $("#add").hidden = !S.canWrite;
+  if (taskPage) {
+    $("#new-task").disabled = !S.canWrite || !names.length;
+    if (!S.canWrite) { $("#create").hidden = true; $("#new-task").setAttribute("aria-expanded", "false"); }
+    const tags = [...new Set(S.lists.filter(l => !sel || l.name === sel).flatMap(l => l.tasks).flatMap(t => t.categories || []))].sort();
+    $("#categories").replaceChildren(...[["+", "Projects", project], ["@", "Contexts", context]].flatMap(([prefix, label, value]) => {
+      const choices = tags.filter(t => t.startsWith(prefix));
+      if (value && !choices.includes(value)) choices.unshift(value);
+      if (!choices.length) return [];
+      return [el("p", {class:"nav-label"}, label.toUpperCase()), el("div", {class:"chips", role:"group", "aria-label":label},
+        ["", ...choices].map(tag => el("button", {"aria-pressed":String(tag === value), onclick:() => {
+          if (prefix === "+") project = tag; else context = tag; render(S);
+        }}, tag || "Any " + label.toLowerCase())))];
+    }));
+    $("#scope").textContent = [sel || "All lists", project, context].filter(Boolean).join(" · ");
+    $("#clear-filters").hidden = !sel && !project && !context && !$("#search").value;
+    rememberFilters();
+  }
   if (groceryPage) {
     $("#chips").hidden = true;
     aList.value = groceryList; aList.disabled = true;
@@ -859,31 +1003,39 @@ function render(state) {
     $("#add").hidden = !S.canWrite || !names.includes(groceryList);
     if (!names.includes(groceryList)) say("Grocery list is unavailable; no items can be added.", true);
   }
-  const tasks = S.lists.filter(l => !sel || l.name === sel).flatMap(l => l.tasks);
+  const tasks = filteredTasks(S, {list:sel, project:taskPage ? project : "", context:taskPage ? context : "",
+    search:taskPage ? $("#search").value : "", sort:taskPage ? $("#sort").value : "due"});
   const open = tasks.filter(t => !t.done), done = tasks.filter(t => t.done);
-  const groups = [
+  const groups = taskPage && $("#sort").value !== "due" ? [["Active tasks", open]] : [
     ["Overdue", open.filter(t => t.due && t.due < S.today)],
     ["Today", open.filter(t => t.due === S.today)],
     ["Upcoming", open.filter(t => t.due && t.due > S.today)],
     ["No date", open.filter(t => !t.due)],
   ];
   const out = groups.filter(([, ts]) => ts.length).map(([name, ts]) =>
-    [el("h2", { class: name === "Today" ? "today" : "" }, name + " · " + ts.length), el("ul", {}, ts.map(row))]);
-  if (!open.length) out.push(el("p", { class: "empty" }, "nothing to do"));
-  if (done.length) out.push(el("details", {}, el("summary", {}, "Done this week · " + done.length), el("ul", {}, done.map(row))));
+    [el("h2", { class: (taskPage ? "group" : "") + (name === "Today" ? " today" : "") }, name + " · " + ts.length), el("ul", {}, ts.map(row))]);
+  if (!open.length) out.push(el("p", { class: "empty" }, taskPage ? (!names.length ? "No task lists are available. Refresh to try again." : sel || project || context || $("#search").value ? "No active tasks match these filters. Clear filters to see more." : "No active tasks. Add a task when you are ready.") : "nothing to do"));
+  if (done.length) out.push(el("details", {class:"done-group"}, el("summary", {}, (taskPage ? "Done in the last 7 days" : "Done this week") + " · " + done.length), el("ul", {}, done.map(row))));
   $("#list").replaceChildren(...out.flat());
+  if (taskPage) {
+    const total = S.lists.flatMap(l => l.tasks).filter(t => !t.done).length;
+    $("#result-count").textContent = open.length + " of " + total + " active tasks loaded · " + done.length + " completed here (last 7 days)";
+    $("#list").setAttribute("aria-busy", "false");
+  }
 }
 function row(t) {
   const late = !t.done && t.due && t.due < S.today;
-  const meta = [dueLabel(t), t.priority ? "(" + PRI[t.priority] + ")" : "", sel ? "" : t.list, t.recurring ? "repeats" : ""].filter(Boolean).join(" · ");
+  const meta = (taskPage ? [t.priority ? "(" + PRI[t.priority] + ")" : "", t.list, t.recurring ? "repeats" : "", ...(t.categories || [])] :
+    [dueLabel(t), t.priority ? "(" + PRI[t.priority] + ")" : "", sel ? "" : t.list, t.recurring ? "repeats" : ""]).filter(Boolean).join(" · ");
   return el("li", { class: "row" + (t.done ? " done" : "") + (late ? " late" : "") },
     el("button", { class: "tick", "aria-label": (t.done ? "reopen " : "complete ") + t.summary, disabled: !S.canWrite,
       onclick: () => update({ uid: t.uid, action: t.done ? "reopen" : "complete", expectedDue: t.due }, t.done ? "reopening…" : "completing…") }, t.done ? "✓" : ""),
-    el("button", { class: "body", onclick: () => edit(t) }, el("span", { class: "title" }, t.summary), meta ? el("span", { class: "meta" }, meta) : null));
+    el("button", { class: "body", "data-task":t.uid, onclick: () => edit(t) }, el("span", { class: "title" }, t.summary),
+      taskPage ? el("span", {class:"meta"}, el("span", {class:"due"}, dueLabel(t)), t.due && meta ? " · " : "", meta) : meta ? el("span", {class:"meta"}, meta) : null));
 }
-async function update(body, saving) { const j = await write("/api/update", body, saving); if (j) render(j.state); return j; }
+async function update(body, saving) { const j = await taskWrite("/api/update", body, saving); if (j) render(j.state); return j; }
 function edit(t) {
-  sheet(close => {
+  taskSheet(close => {
     const sum = el("input", { value: t.summary, maxlength: 200, "aria-label": "summary" });
     const due = el("input", { type: "date", value: t.due || "", "aria-label": "due" });
     const repeat = repeatControls(t.repeat || (t.recurring ? "foreign" : ""), t.repeatUntil || "", true);
@@ -894,6 +1046,7 @@ function edit(t) {
         el("button", { type: "button", onclick: () => { confirmBox.hidden = true; } }, "Keep it"),
         el("button", { class: "ink", type: "button", onclick: async () => { if (await update({ uid: t.uid, action: "delete", confirm: true }, "deleting…")) close(); } }, "Delete")));
     const ro = !S.canWrite;
+    if (ro) [sum, due, pri, ...repeat.nodes.flatMap(n => [n, ...n.querySelectorAll("input,select")])].forEach(n => { if ("disabled" in n) n.disabled = true; });
     return [el("h3", {}, ro ? "Task" : "Edit task"), el("p", { class: "meta" }, t.list + (t.done ? " · done" : "")),
       el("label", {}, "Summary"), sum, el("label", {}, "Due"), due, el("label", {}, "Priority"), pri, ...repeat.nodes,
       el("div", { class: "actions" },
@@ -904,6 +1057,8 @@ function edit(t) {
           if (sum.value.trim() !== t.summary) b.summary = sum.value;
           if (due.value !== (t.due || "")) b.due = due.value;
           if (+pri.value !== t.priority) b.priority = +pri.value;
+          const schedule = repeat.value();
+          if (taskPage && schedule.repeat !== "foreign" && (schedule.repeat !== (t.repeat || (t.recurring ? "foreign" : "")) || schedule.repeatUntil !== (t.repeatUntil || ""))) Object.assign(b, schedule);
           if (Object.keys(b).length === 2) return close();
           if (await update(b)) close();
         } }, "Save")),
@@ -915,10 +1070,41 @@ $("#add").addEventListener("submit", async e => {
   const b = { summary: $("#a-sum").value, list: $("#a-list").value, priority: +$("#a-pri").value };
   if ($("#a-due").value) b.due = $("#a-due").value;
   if (!groceryPage) Object.assign(b, addRepeat.value());
-  const j = await write("/api/add", b, "adding…");
-  if (j) { addRepeat.reset(); $("#a-sum").value = ""; $("#a-due").value = ""; $("#a-pri").value = "0"; render(j.state); }
+  const j = await taskWrite("/api/add", b, "Adding task…");
+  if (j) { addRepeat.reset(); $("#a-sum").value = ""; $("#a-due").value = ""; $("#a-pri").value = "0"; render(j.state); if (taskPage) showCreate(false); }
 });
-async function load() { try { render(await api("/api/state")); } catch (e) { say("could not load: " + e.message, true); } }
+let loading = false;
+async function load() {
+  if (loading || busy) return;
+  loading = true; $("#reload").disabled = true;
+  if (taskPage) { $("#freshness").textContent = "Refreshing tasks…"; $("#list").setAttribute("aria-busy", "true"); }
+  try {
+    render(await api("/api/state"));
+    if (taskPage) { $("#freshness").textContent = "Loaded at " + new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}); $("#freshness").dataset.stale = "false"; say(""); }
+  } catch (e) {
+    if (taskPage) {
+      $("#freshness").textContent = S ? "Showing last loaded tasks · refresh failed" : "Tasks could not load";
+      $("#freshness").dataset.stale = "true";
+      if (!S) $("#list").replaceChildren(el("p", {class:"empty"}, "Tasks could not load. Use Refresh tasks to try again."));
+    }
+    say("Could not load tasks: " + e.message, true);
+  } finally { loading = false; $("#reload").disabled = false; if (taskPage) $("#list").setAttribute("aria-busy", "false"); }
+}
+if (taskPage) {
+  document.body.classList.add("tasks-app");
+  $("meta[name=theme-color]").content = getComputedStyle(document.documentElement).getPropertyValue("--color-base-900").trim();
+  const mobile = matchMedia("(max-width:760px)");
+  $("#filters").open = !mobile.matches;
+  mobile.addEventListener("change", e => { $("#filters").open = !e.matches; });
+  $("#search").value = params.get("search") || "";
+  $("#sort").value = ["due", "priority", "title"].includes(params.get("sort")) ? params.get("sort") : "due";
+  $("#search").addEventListener("input", () => { if (S) render(S); });
+  $("#sort").addEventListener("change", () => { if (S) render(S); });
+  $("#clear-filters").addEventListener("click", () => { sel = project = context = ""; localStorage.setItem("tasks.list", ""); $("#search").value = ""; render(S); });
+  $("#new-task").addEventListener("click", () => showCreate($("#create").hidden));
+  $("#cancel-add").addEventListener("click", () => showCreate(false));
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#create").hidden && $("#sheet").hidden) showCreate(false); });
+}
 $("#reload").addEventListener("click", load);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !busy) load(); });
 load();
@@ -1043,10 +1229,10 @@ load(view).then(() => { if (new URLSearchParams(location.search).get("add") === 
 """
 
 
-def _page(title, body, script):
+def _page(title, body, script, css=CSS):
     # Plain replacement: the CSS and JS are full of braces str.format would read.
     out = SHELL
-    for key, value in (("title", title), ("css", CSS), ("body", body), ("common", COMMON_JS), ("script", script)):
+    for key, value in (("title", title), ("css", css), ("body", body), ("common", COMMON_JS), ("script", script)):
         out = out.replace("{" + key + "}", value, 1)
     return out
 
@@ -1054,8 +1240,9 @@ def _page(title, body, script):
 COMMON_JS = COMMON_JS.replace("@@REPEATS@@", json.dumps(REPEATS))
 TASKS_JS = TASKS_JS.replace("@@GROCERY_LIST@@", json.dumps(screens.TASK_LISTS["groceries"]))
 TASKS_JS = TASKS_JS.replace("@@GROCERY_PATH@@", json.dumps(GROCERY_PATH))
-TasksApp.page = _page("Tasks", TASKS_BODY, TASKS_JS)
-TasksApp.pages = {GROCERY_PATH: _page("Groceries", TASKS_BODY.replace("<h1>Tasks</h1>", "<h1>Groceries</h1>"), TASKS_JS)}
+# Startup validates the configured palette path by reading it once. No browser file access.
+TasksApp.page = _page("Tasks", TASKS_BODY, TASKS_JS, Path(APPS["paletteFile"]).read_text() + TASKS_CSS)
+TasksApp.pages = {GROCERY_PATH: _page("Groceries", GROCERIES_BODY.replace("<h1>Tasks</h1>", "<h1>Groceries</h1>"), TASKS_JS)}
 CalendarApp.page = _page("Calendar", CAL_BODY, CAL_JS)
 
 # First host label → app (server.py merges this into HOST_APPS).
