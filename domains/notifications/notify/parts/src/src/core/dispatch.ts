@@ -1,16 +1,4 @@
-/**
- * Dispatch — pure orchestration of a Notification across channels.
- *
- * Phase 1.2: send to every registered channel concurrently and
- * aggregate results. No routing logic yet (that arrives in 1.3 as
- * a data-driven match-list); for now the caller decides which
- * channels apply.
- *
- * Errors from individual channels are absorbed into per-channel
- * DeliveryResults — `dispatch` never throws. The HTTP shell uses
- * the DispatchResult to compute a response code (200 if all ok,
- * 207 if mixed, 502 if all failed).
- */
+/** Fan out to selected channels; adapter failures become delivery results. */
 
 import type { Notification, DispatchResult, DeliveryResult } from "./types.js";
 import type { Channel } from "../ports/channel.js";
@@ -43,7 +31,6 @@ export async function dispatch(
 
   const results = await Promise.all(
     channels.map(async (ch): Promise<DeliveryResult> => {
-      // Circuit breaker check — skip the channel without calling send().
       if (breaker && !breaker.shouldAttempt(ch.id, now())) {
         return {
           channelId: ch.id,

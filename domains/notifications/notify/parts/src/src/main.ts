@@ -1,16 +1,4 @@
-/**
- * hwc-notify — entry point.
- *
- * Phase 1.3 wiring:
- *   1. loadConfig()            — env + runtime-config.json
- *   2. buildChannels()         — channel instances from the data table
- *   3. mounted shells:
- *        GET  /health          — liveness, with channel + route summary
- *        POST /notify          — schema-validated, routed dispatch
- *
- * Adding a channel or routing rule is now a Nix-only change: append to
- * parts/channels.nix or parts/routes.nix, `nixos-rebuild switch`, done.
- */
+/** HTTP composition root for notification delivery. */
 
 import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -35,7 +23,10 @@ import type { ChannelConfig } from "./schemas/runtime-config.js";
 // Fixed patterns are shared; stateful uses reset their cursor below.
 const loadSecretPatternRegex = /\s+$/u;
 
-const MAX_BODY_BYTES = 32 * 1024;
+// Covers 64k-character bodies even when JSON escapes each character.
+// Context and batch metadata still share a bounded request envelope.
+const MAX_BODY_BYTES = 1024 * 1024;
+class BodyTooLarge extends Error {}
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -44,8 +35,8 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
     req.on("data", (chunk: Buffer) => {
       total += chunk.length;
       if (total > MAX_BODY_BYTES) {
-        reject(new Error(`request body exceeded ${MAX_BODY_BYTES} bytes`));
-        req.destroy();
+        chunks.length = 0;
+        reject(new BodyTooLarge(`request body exceeded ${MAX_BODY_BYTES} bytes`));
         return;
       }
       chunks.push(chunk);
@@ -82,12 +73,10 @@ function statusFromDispatch(attempted: number, succeeded: number): number {
   return 207;
 }
 
-/** Read the secret file for a discord channel; trim trailing whitespace. */
 function loadSecret(filepath: string): string {
   return readFileSync(filepath, "utf8").replace(loadSecretPatternRegex, "");
 }
 
-/** Materialize one ChannelConfig into a Channel instance. */
 function buildChannel(cfg: ChannelConfig, log: Logger): Channel {
   switch (cfg.adapter) {
     case "discord": {
@@ -115,7 +104,6 @@ function buildChannel(cfg: ChannelConfig, log: Logger): Channel {
   }
 }
 
-/** Build all channels and return them keyed by id for routing lookup. */
 function buildChannelMap(
   config: ServiceConfig,
   log: Logger,
@@ -231,7 +219,7 @@ function main(): void {
           raw = await readJsonBody(req);
         } catch (err) {
           reqLog.warn("body parse error", { err: err instanceof Error ? err.message : String(err) });
-          writeJson(res, 400, {
+          writeJson(res, err instanceof BodyTooLarge ? 413 : 400, {
             code: "VALIDATION_ERROR",
             message: err instanceof Error ? err.message : "invalid request body",
           });
@@ -270,7 +258,7 @@ function main(): void {
           reqLog.warn("alertmanager body parse error", {
             err: err instanceof Error ? err.message : String(err),
           });
-          writeJson(res, 400, {
+          writeJson(res, err instanceof BodyTooLarge ? 413 : 400, {
             code: "VALIDATION_ERROR",
             message: err instanceof Error ? err.message : "invalid request body",
           });

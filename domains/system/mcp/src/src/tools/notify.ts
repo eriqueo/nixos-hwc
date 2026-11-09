@@ -92,7 +92,12 @@ async function httpGet(path: string): Promise<unknown> {
   return res.json();
 }
 
-async function httpPost(path: string, body: unknown): Promise<unknown> {
+interface DispatchResponse {
+  readonly httpStatus: number;
+  readonly data: unknown;
+}
+
+async function httpPost(path: string, body: unknown): Promise<DispatchResponse> {
   const res = await fetch(`${NOTIFY_BASE}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -102,6 +107,43 @@ async function httpPost(path: string, body: unknown): Promise<unknown> {
   // structured DispatchResult — surface them as data, not errors.
   const data = await res.json().catch(() => null);
   return { httpStatus: res.status, data };
+}
+
+/** Interpret delivery counts once, at the dispatcher response boundary. */
+function deliveryResult(response: DispatchResponse): ToolResult<DispatchResponse> {
+  const fail = (message: string, validation = false): ToolResult<DispatchResponse> => ({
+    ...mcpError({
+      type: validation ? "VALIDATION_ERROR" : "UNAVAILABLE",
+      message,
+      suggestion: "Inspect the returned dispatch data and hwc_notify recent before sending again; some channels may already have received it.",
+    }),
+    data: response,
+  });
+  if (![200, 202, 207, 502].includes(response.httpStatus)) {
+    return fail(`Dispatcher rejected notification (HTTP ${response.httpStatus})`, response.httpStatus === 400);
+  }
+  const raw = response.data;
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return fail("Dispatcher returned no valid delivery counts; delivery is unknown");
+  }
+  const { attempted, succeeded, failed } = raw as Record<string, unknown>;
+  const count = (n: unknown): n is number => typeof n === "number" && Number.isSafeInteger(n) && n >= 0;
+  if (!count(attempted) || !count(succeeded) || !count(failed) || succeeded + failed !== attempted) {
+    return fail("Dispatcher returned invalid delivery counts; delivery is unknown");
+  }
+  const expectedStatus = attempted === 0 ? 202 : succeeded === attempted ? 200 : succeeded === 0 ? 502 : 207;
+  if (response.httpStatus !== expectedStatus) {
+    return fail("Dispatcher status conflicts with delivery counts; inspect the dispatch data");
+  }
+  if (attempted === 0) return fail("Notification reached no channels; inspect dispatcher routing");
+  if (succeeded === 0) return fail(`Notification delivery failed on all ${attempted} channels`);
+  return {
+    status: failed === 0 ? "ok" : "partial",
+    message: failed === 0
+      ? `Notification delivered to all ${attempted} channels`
+      : `Notification delivered to ${succeeded}/${attempted} channels; inspect failed channels before sending again`,
+    data: response,
+  };
 }
 
 export function notifyTools(): ToolDef[] {
@@ -147,7 +189,7 @@ export function notifyTools(): ToolDef[] {
                   .filter((t) => t.length > 0);
               }
               const result = await httpPost("/notify", payload);
-              return { status: "ok", message: "notification dispatched", data: result };
+              return deliveryResult(result);
             }
             case "recent": {
               const params = new URLSearchParams();

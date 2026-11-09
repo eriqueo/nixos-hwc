@@ -18,6 +18,7 @@ let
       })
       (f (builtins.intersectAttrs (builtins.functionArgs f) context));
   groups = [
+    (group "domains/notifications" "domain" (repoRoot + "/domains/notifications/verification/checks.nix"))
     (group "workspace/nixos-dev" "shared" (repoRoot + "/workspace/nixos-dev/verification/checks.nix"))
     (group "domains/media" "domain" (repoRoot + "/domains/media/verification/checks.nix"))
     (group "domains/networking" "domain" (repoRoot + "/domains/networking/verification/checks.nix"))

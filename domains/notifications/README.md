@@ -9,6 +9,8 @@ Delivery infrastructure — how messages reach humans.
 
 ## Structure
 
+`send/post.nix` shares shell delivery checks; `verification/` tests generated shell commands against a local HTTP fixture.
+
 Pipeline and circuit dispatch share an injected clock. The executive meaning bound has one core owner, channel credentials load at the composition root, and logger vocabulary lives in its port.
 
 The dispatcher parses query parameters with URLSearchParams and shares fixed module patterns in request, Alertmanager and SMTP parsing. Delivery and audit behavior stay unchanged.
@@ -47,6 +49,8 @@ notifications/
 
 ## Changelog
 - 2026-11-09: Add the `discord-projects` channel (`#projects`, secret `discord-webhook-projects`) and move the `projects` topic to it from `discord-ops`. A P1 on that topic still adds SMTP.
+
+- 2026-11-09: Accept long schema-valid bodies within a 1 MiB HTTP envelope; reject oversized requests with 413. Both shell CLIs share delivery-count validation and fail on partial/unrouted delivery. Replace source-text HTTP assertions with real HTTP/audit checks.
 
 - 2026-11-09: Pass the pipeline clock through circuit dispatch; move log-level ownership to the logger port and SMTP secret loading to the composition root; share the executive meaning bound and remove unused parser/schema exports.
 - 2026-11-04: `notify/parts/routes.nix` — new `projects` topic (tracker digest from morning-briefing) routed to `discord-ops` until a projects channel exists.
