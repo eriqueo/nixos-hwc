@@ -3,6 +3,7 @@
  */
 
 import { mapReads } from "../executors/concurrency.js";
+import { bindCommand, cachedBinary, executeFile } from "../executors/shell.js";
 import { execFile, spawn } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
@@ -12,7 +13,6 @@ import type { ToolDef, ToolResult } from "../types.js";
 import { log } from "../log.js";
 import { mcpError, catchError } from "../errors.js";
 
-// Fixed patterns are shared; stateful uses reset their cursor below.
 const loadSearchRegistryPatternRegex = /\r?\n/;
 const classifierMutationTestRegex = /^[0-9a-f]{64}$/;
 const clearAllCustomOpsPatternRegex = /tag:([a-zA-Z0-9_/-]+)/g;
@@ -37,15 +37,10 @@ const mailToolsTestRegex2 = /^[+-][a-zA-Z0-9_:/.@-]+$/;
 const parseAddressesPatternRegex = /<([^>]+)>/;
 const mailToolsPatternRegex2 = /^<|>$/g;
 
-/* ════════════════════════════════════════════════════════════════ */
-/*  Constants                                                      */
-/* ════════════════════════════════════════════════════════════════ */
-
 const HOME = homedir();
 const MAIL_HEALTH_STATE = join(HOME, ".local/state/mail-health");
 const MAIL_SYNC_STATUS = process.env.HWC_MAIL_SYNC_STATUS || join(HOME, ".local/state/mail-sync/status.json");
 const MAILDIR = join(HOME, "400_mail/Maildir");
-const SYSTEMCTL = process.env.HWC_SYSTEMCTL_BIN || "systemctl";
 
 interface SyncStatus {
   schemaVersion: number;
@@ -250,65 +245,9 @@ for (const acct of ACCOUNTS) {
   }
 }
 
-/* ════════════════════════════════════════════════════════════════ */
-/*  Binary resolution                                              */
-/* ════════════════════════════════════════════════════════════════ */
-
-const NOTMUCH_CANDIDATES = ["notmuch", `/etc/profiles/per-user/eric/bin/notmuch`];
-const MSMTP_CANDIDATES = ["msmtp", `/etc/profiles/per-user/eric/bin/msmtp`];
-
-let _notmuch: string | null = null;
-let _msmtp: string | null = null;
-
-async function resolveBin(candidates: string[]): Promise<string> {
-  for (const bin of candidates) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        execFile(bin, ["--version"], { timeout: 3000 }, (err) => {
-          if (err && (err as NodeJS.ErrnoException).code === "ENOENT") reject(err);
-          else resolve();
-        });
-      });
-      return bin;
-    } catch {
-      continue;
-    }
-  }
-  throw new Error(`Binary not found in: ${candidates.join(", ")}`);
-}
-
-async function notmuchBin(): Promise<string> {
-  if (!_notmuch) _notmuch = await resolveBin(NOTMUCH_CANDIDATES);
-  return _notmuch;
-}
-
-async function msmtpBin(): Promise<string> {
-  if (!_msmtp) _msmtp = await resolveBin(MSMTP_CANDIDATES);
-  return _msmtp;
-}
-
-/* ════════════════════════════════════════════════════════════════ */
-/*  Executors                                                      */
-/* ════════════════════════════════════════════════════════════════ */
-
-function notmuchExec(
-  bin: string,
-  args: string[],
-  opts: { timeout?: number; maxBuffer?: number } = {},
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  const { timeout = 15000, maxBuffer = 5 * 1024 * 1024 } = opts;
-  return new Promise((resolve) => {
-    log.debug("notmuch", { args });
-    execFile(bin, args, { timeout, maxBuffer }, (error, stdout, stderr) => {
-      const code = error && "code" in error ? (error.code as number) : 0;
-      resolve({
-        exitCode: typeof code === "number" ? code : 1,
-        stdout: stdout?.toString() ?? "",
-        stderr: stderr?.toString() ?? "",
-      });
-    });
-  });
-}
+const notmuchBin = cachedBinary(["notmuch", "/etc/profiles/per-user/eric/bin/notmuch"]);
+const msmtpBin = cachedBinary(["msmtp", "/etc/profiles/per-user/eric/bin/msmtp"]);
+const notmuchExec = bindCommand(notmuchBin, { maxBuffer: 5 * 1024 * 1024 });
 
 function msmtpSend(
   bin: string,
@@ -356,7 +295,7 @@ export async function classifierMutation(
 ): Promise<ClassifierOutcome> {
   try {
     const bin = await notmuchBin();
-    const selected = await notmuchExec(bin,
+    const selected = await notmuchExec(
       ["show", "--format=mbox", "--entire-thread=true", "--", query],
       { timeout: 10_000, maxBuffer: 20 * 1024 * 1024 });
     if (selected.exitCode !== 0) return {message: (selected.stderr || "notmuch selection failed").slice(0, 300), retrySafe: false};
@@ -411,10 +350,6 @@ export async function classifierMutation(
     return {message: String(error).slice(0, 300), retrySafe: false};
   }
 }
-
-/* ════════════════════════════════════════════════════════════════ */
-/*  Helpers                                                        */
-/* ════════════════════════════════════════════════════════════════ */
 
 async function readSafe(path: string): Promise<string | null> {
   try {
@@ -530,11 +465,7 @@ async function walkMaildir(
   }
 }
 
-/* ════════════════════════════════════════════════════════════════ */
-/*  Exported executors (used by morning-status)                    */
-/* ════════════════════════════════════════════════════════════════ */
-
-export async function executeMailHealth(): Promise<ToolResult> {
+async function executeMailHealth(): Promise<ToolResult> {
   try {
     const result: Record<string, unknown> = {};
     const now = Math.floor(Date.now() / 1000);
@@ -588,10 +519,9 @@ export async function executeMailHealth(): Promise<ToolResult> {
     }
 
     try {
-      const nm = await notmuchBin();
       const [cntRes, urRes] = await Promise.all([
-        notmuchExec(nm, ["count"]),
-        notmuchExec(nm, ["count", "tag:unread"]),
+        notmuchExec(["count"]),
+        notmuchExec(["count", "tag:unread"]),
       ]);
       if (cntRes.exitCode === 0) {
         const total = parseInt(cntRes.stdout.trim(), 10) || 0;
@@ -631,11 +561,7 @@ export async function executeMailHealth(): Promise<ToolResult> {
   }
 }
 
-/* ════════════════════════════════════════════════════════════════ */
-/*  Consolidated tool                                              */
-/* ════════════════════════════════════════════════════════════════ */
-
-export function mailTools(): ToolDef[] {
+export function mailTools(systemctl = "systemctl"): ToolDef[] {
   return [
     {
       name: "hwc_mail",
@@ -650,7 +576,6 @@ export function mailTools(): ToolDef[] {
             enum: ["search", "read", "send", "reply", "tag", "sync", "commands", "health", "accounts", "folders"],
             description: "Action to perform",
           },
-          // [search] params
           query: {
             type: "string",
             description: "[search/tag] Notmuch query or saved search name (inbox, state:do, domain:hwc, fact:finance, history:business)",
@@ -659,13 +584,11 @@ export function mailTools(): ToolDef[] {
           command_id: { type: "string", description: "[commands] Accepted command ID; omit to inspect pending commands and uncertain effects" },
           offset: { type: "number", description: "[search] Skip first N results" },
           count_only: { type: "boolean", description: "[search] Return message count only (default false)" },
-          // [read] params
           id: {
             type: "string",
             description: "[read] Thread or message ID (thread:XXXX or id:msgid@host)",
           },
           entireThread: { type: "boolean", description: "[read] Show entire thread (default false)" },
-          // [send] params
           to: { type: "string", description: "[send] Recipient(s), comma-separated" },
           subject: { type: "string", description: "[send] Subject line" },
           body: { type: "string", description: "[send/reply] Plain text body" },
@@ -674,13 +597,11 @@ export function mailTools(): ToolDef[] {
           bcc: { type: "string", description: "[send] BCC address(es)" },
           account: { type: "string", description: "[send/reply] msmtp account (default proton-hwc)" },
           inReplyTo: { type: "string", description: "[send] Message-ID for threading" },
-          // [reply] params
           threadId: {
             type: "string",
             description: "[reply] Thread or message ID to reply to",
           },
           replyAll: { type: "boolean", description: "[reply] Include all original recipients (default false)" },
-          // [tag] params
           tag_action: {
             type: "string",
             enum: [
@@ -694,20 +615,16 @@ export function mailTools(): ToolDef[] {
             items: { type: "string" },
             description: "[tag] Raw tag ops: '+tag' to add, '-tag' to remove",
           },
-          // [sync] params
           wait: {
             type: "boolean",
             description: "[sync] Wait for sync to complete (default true, max 2 min)",
           },
-          // [folders] params
           folder_account: { type: "string", description: "[folders] Filter to account (e.g. 'proton')" },
         },
         required: ["action"],
       },
       handler: async (args): Promise<ToolResult> => {
         const action = args.action as string;
-
-        // ── health ──────────────────────────────────────────────
         if (action === "health") {
           return executeMailHealth();
         }
@@ -732,8 +649,6 @@ export function mailTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Command receipts unavailable", error, "Run mail-classifier review-transport");
           }
         }
-
-        // ── search ──────────────────────────────────────────────
         if (action === "search") {
           try {
             const rawQuery = args.query as string;
@@ -743,10 +658,9 @@ export function mailTools(): ToolDef[] {
             const query = resolveQuery(rawQuery);
             const wasResolved = query !== rawQuery;
             const countOnly = (args.count_only as boolean) ?? false;
-            const nm = await notmuchBin();
 
             if (countOnly) {
-              const res = await notmuchExec(nm, ["count", query]);
+              const res = await notmuchExec(["count", query]);
               if (res.exitCode !== 0) {
                 return mcpError({ type: "COMMAND_FAILED", message: "notmuch count failed", error: res.stderr.slice(0, 300), suggestion: "Check query syntax", context: { query } });
               }
@@ -758,7 +672,6 @@ export function mailTools(): ToolDef[] {
             const off = (args.offset as number) || 0;
 
             const res = await notmuchExec(
-              nm,
               ["search", "--format=json", `--limit=${lim}`, `--offset=${off}`, query],
               { timeout: 10000 },
             );
@@ -785,8 +698,6 @@ export function mailTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Search failed", err, "Is notmuch installed and the Xapian database accessible?");
           }
         }
-
-        // ── read ─────────────────────────────────────────────────
         if (action === "read") {
           try {
             const id = args.id as string;
@@ -794,10 +705,8 @@ export function mailTools(): ToolDef[] {
               return mcpError({ type: "VALIDATION_ERROR", message: "id is required for action=read" });
             }
             const entireThread = (args.entireThread as boolean) ?? false;
-            const nm = await notmuchBin();
 
             const res = await notmuchExec(
-              nm,
               ["show", "--format=json", "--include-html", `--entire-thread=${entireThread}`, "--body=true", id],
               { timeout: 15000, maxBuffer: 10 * 1024 * 1024 },
             );
@@ -811,8 +720,6 @@ export function mailTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Read failed", err, "Is notmuch installed and the message ID valid?");
           }
         }
-
-        // ── tag ──────────────────────────────────────────────────
         if (action === "tag") {
           try {
             const rawQuery = args.query as string;
@@ -866,8 +773,7 @@ export function mailTools(): ToolDef[] {
               return mcpError({ type: "VALIDATION_ERROR", message: "Specify tag_action or tags.", suggestion: "Use hwc_mail_triage for recorded workflow-state changes" });
             }
 
-            const nm = await notmuchBin();
-            const res = await notmuchExec(nm, ["tag", ...ops, "--", query]);
+            const res = await notmuchExec(["tag", ...ops, "--", query]);
             if (res.exitCode !== 0) {
               return mcpError({ type: "COMMAND_FAILED", message: "notmuch tag failed", error: res.stderr.slice(0, 500), suggestion: "Check that the query matches existing messages and the Xapian DB is writable", context: { query, ops } });
             }
@@ -879,8 +785,6 @@ export function mailTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Tag failed", err, "Check notmuch binary and Xapian DB write permissions");
           }
         }
-
-        // ── send ─────────────────────────────────────────────────
         if (action === "send") {
           try {
             const to = args.to as string;
@@ -926,8 +830,6 @@ export function mailTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Send failed", err, "Is msmtp installed and configured? Is Proton Bridge running?");
           }
         }
-
-        // ── reply ────────────────────────────────────────────────
         if (action === "reply") {
           try {
             const threadId = args.threadId as string;
@@ -937,10 +839,8 @@ export function mailTools(): ToolDef[] {
             }
             const replyAll = (args.replyAll as boolean) ?? false;
             const accountOverride = args.account as string | undefined;
-            const nm = await notmuchBin();
 
             const res = await notmuchExec(
-              nm,
               ["show", "--format=json", "--entire-thread=false", "--body=false", threadId],
               { timeout: 10000 },
             );
@@ -1082,24 +982,14 @@ export function mailTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Reply failed", err, "Is msmtp installed and configured? Is Proton Bridge running?");
           }
         }
-
-        // ── sync ─────────────────────────────────────────────────
         if (action === "sync") {
           try {
             const wait = (args.wait as boolean) ?? true;
 
             if (wait) {
               const before = await readSyncStatus().catch(() => null);
-              const result = await new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve) => {
-                execFile(SYSTEMCTL, ["--user", "start", "--wait", "mbsync.service"], { timeout: 120000, maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-                  const code = error && "code" in error ? (error.code as number) : 0;
-                  resolve({
-                    exitCode: typeof code === "number" ? code : 1,
-                    stdout: stdout?.toString() ?? "",
-                    stderr: stderr?.toString() ?? "",
-                  });
-                });
-              });
+              const result = await executeFile(systemctl, ["--user", "start", "--wait", "mbsync.service"],
+                { timeout: 120000, maxBuffer: 1024 * 1024 });
 
               const projection = await readSyncStatus().catch(() => null);
               if (projection?.schemaVersion === 2) {
@@ -1128,7 +1018,7 @@ export function mailTools(): ToolDef[] {
               }
               return { status: "ok", message: "Core sync unit completed", data: { output: result.stdout.slice(-500) } };
             } else {
-              const proc = spawn(SYSTEMCTL, ["--user", "start", "mbsync.service"], { detached: true, stdio: "ignore" });
+              const proc = spawn(systemctl, ["--user", "start", "mbsync.service"], { detached: true, stdio: "ignore" });
               proc.unref();
               return { status: "ok", message: "Core sync unit queued" };
             }
@@ -1136,8 +1026,6 @@ export function mailTools(): ToolDef[] {
             return catchError("INTERNAL_ERROR", "Sync failed", err, "Inspect mbsync.service and the mail sync status projection");
           }
         }
-
-        // ── accounts ─────────────────────────────────────────────
         if (action === "accounts") {
           return {
             status: "ok",
@@ -1151,8 +1039,6 @@ export function mailTools(): ToolDef[] {
             },
           };
         }
-
-        // ── folders ──────────────────────────────────────────────
         if (action === "folders") {
           try {
             const account = args.folder_account as string | undefined;
@@ -1162,9 +1048,8 @@ export function mailTools(): ToolDef[] {
             await walkMaildir(baseDir, MAILDIR, folders);
 
             try {
-              const nm = await notmuchBin();
               await mapReads(folders, async (f) => {
-                const res = await notmuchExec(nm, ["count", `folder:${f.name}`]);
+                const res = await notmuchExec(["count", `folder:${f.name}`]);
                 if (res.exitCode === 0) {
                   f.count = parseInt(res.stdout.trim(), 10) || 0;
                 }
