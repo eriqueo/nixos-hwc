@@ -10,39 +10,36 @@
 // Emits ONE JSON object on stdout:
 //   { sections: {jobs, leads, overdue, tasks, weekly_snapshot}, alerts: [...], errors: [...] }
 // Every section is best-effort: a tool failure lands in `errors` (surfaced as a
-// dashboard alert by run.sh) instead of killing the run. Exit code is 0 unless
-// even the gateway handshake failed.
+// dashboard alert by run.sh) instead of killing the run, including when
+// a particular source is unavailable.
 
-// Fixed patterns are shared; stateful uses reset their cursor below.
-const gatherJobsTestRegex = /test/i;
-const gatherJobsTestRegex2 = /^TT-/;
-const lostTestRegex = /closed\s*lost/i;
-const gatherJobsTestRegex3 = /1\.\s*Contacted/i;
-const gatherJobsTestRegex4 = /new\s*lead/i;
+import { readFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
+import { createMcpClient } from "./dashboard/mcp-client.mjs";
 
-const GATEWAY = process.env.HWC_GATEWAY_URL || "http://127.0.0.1:6200/mcp";
+export async function gatherLive({ gatewayUrl, orgId, grantKeyFile, proposalsList, fetch: fetchRequest, readFile: readText, now }) {
+const GATEWAY = gatewayUrl;
 const FETCH_TIMEOUT_MS = 30_000;
 const JT_JOB_URL = (id) => `https://app.jobtread.com/jobs/${id}`;
 const PAVE_URL = "https://api.jobtread.com/pave";
-// Both set by index.nix: the org id from leads/parts/jt-mappings.nix (its one
-// producer) and the agenix grant key file (read at call time, never logged).
-const JT_ORG_ID = process.env.HWC_JT_ORG_ID;
-const JT_GRANT_KEY_FILE = process.env.HWC_JT_GRANT_KEY_FILE;
+const JT_ORG_ID = orgId;
+const JT_GRANT_KEY_FILE = grantKeyFile;
+const client = createMcpClient({ url: GATEWAY, fetch: fetchRequest, timeoutMs: FETCH_TIMEOUT_MS,
+  clientInfo: { name: "morning-briefing-gather", version: "1.0" } });
+const callTool = client.callTool;
 
-// ── JobTread PAVE (read-only) ────────────────────────────────────────────────
 // One organization-scoped list query. PAVE answers HTTP 413 for query
 // complexity (size × nested fields), so callers keep size ≤ 50.
-async function paveNodes(entityPlural, nodes, where, size = 50) {
+async function paveNodes(entityPlural, nodes, where) {
   if (!JT_ORG_ID || !JT_GRANT_KEY_FILE) throw new Error("JobTread not configured (HWC_JT_ORG_ID / HWC_JT_GRANT_KEY_FILE)");
-  const { readFile } = await import("node:fs/promises");
-  const grantKey = (await readFile(JT_GRANT_KEY_FILE, "utf8")).trim();
+  const grantKey = (await readText(JT_GRANT_KEY_FILE, "utf8")).trim();
   const body = {
     query: {
       $: { grantKey, notify: false },
-      organization: { $: { id: JT_ORG_ID }, [entityPlural]: { $: { where, size }, nodes } },
+      organization: { $: { id: JT_ORG_ID }, [entityPlural]: { $: { where, size: 50 }, nodes } },
     },
   };
-  const res = await fetch(PAVE_URL, {
+  const res = await fetchRequest(PAVE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -66,61 +63,6 @@ const DOCUMENT_FIELDS = {
   account: { name: {} },
 };
 
-// ── Minimal StreamableHTTP MCP client ────────────────────────────────────────
-const session = { id: null, protocolVersion: "2025-06-18", seq: 0 };
-
-async function rpc(method, params) {
-  const isNotification = method.startsWith("notifications/");
-  const body = { jsonrpc: "2.0", method, params };
-  if (!isNotification) body.id = ++session.seq;
-
-  const headers = {
-    "content-type": "application/json",
-    accept: "application/json, text/event-stream",
-  };
-  if (session.id) headers["mcp-session-id"] = session.id;
-  if (session.protocolVersion) headers["mcp-protocol-version"] = session.protocolVersion;
-
-  const res = await fetch(GATEWAY, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
-  const sid = res.headers.get("mcp-session-id");
-  if (sid) session.id = sid;
-  if (isNotification || res.status === 202) return null;
-
-  const text = await res.text();
-  if (!res.ok) throw new Error(`gateway HTTP ${res.status}: ${text.slice(0, 200)}`);
-
-  let msg = null;
-  if ((res.headers.get("content-type") || "").includes("text/event-stream")) {
-    // Take the last data: line carrying a JSON-RPC response for our id.
-    for (const line of text.split("\n")) {
-      if (!line.startsWith("data:")) continue;
-      try {
-        const j = JSON.parse(line.slice(5).trim());
-        if (j && (j.id === body.id || j.result !== undefined || j.error)) msg = j;
-      } catch { /* ignore non-JSON keepalives */ }
-    }
-  } else {
-    msg = JSON.parse(text);
-  }
-  if (!msg) throw new Error(`no JSON-RPC response for ${method}`);
-  if (msg.error) throw new Error(msg.error.message || `rpc error on ${method}`);
-  return msg.result;
-}
-
-async function callTool(name, args) {
-  const r = await rpc("tools/call", { name, arguments: args });
-  const text = (r.content || []).find((c) => c.type === "text")?.text ?? "";
-  if (r.isError) throw new Error(`${name}: ${text.slice(0, 200) || "tool error"}`);
-  try { return JSON.parse(text); } catch { return text; }
-}
-
-// ── Date helpers (local time — the box runs America/Denver) ──────────────────
-const now = new Date();
 const todayYmd = ymd(now);
 function ymd(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -140,7 +82,6 @@ function plusDays(n) {
   return ymd(d);
 }
 
-// ── Section gatherers ────────────────────────────────────────────────────────
 const out = { sections: {}, alerts: [], errors: [] };
 function fail(out, section, err) {
   out.errors.push({ section, message: String(err.message || err).slice(0, 200) });
@@ -175,16 +116,16 @@ async function gatherJobs(out) {
     url: JT_JOB_URL(j.id),
     // Test data marks itself in the job name, the account name ("Token Test
     // Client"), or a "TT-" job-name prefix.
-    is_test: gatherJobsTestRegex.test(`${j.name || ""} ${j.location?.account?.name || ""}`) || gatherJobsTestRegex2.test(j.name || ""),
+    is_test: /test/i.test(`${j.name || ""} ${j.location?.account?.name || ""}`) || /^TT-/.test(j.name || ""),
   }));
 
-  const lost = (j) => lostTestRegex.test(j.status);
+  const lost = (j) => /closed\s*lost/i.test(j.status);
   const active = mapped.filter((j) => !j.is_test && !lost(j))
     .sort((a, b) => (a.phase || "9").localeCompare(b.phase || "9"));
   out.sections.jobs = { ok: true, active };
 
   const leads = mapped
-    .filter((j) => !j.is_test && gatherJobsTestRegex3.test(j.phase) && gatherJobsTestRegex4.test(j.status))
+    .filter((j) => !j.is_test && /1\.\s*Contacted/i.test(j.phase) && /new\s*lead/i.test(j.status))
     .map((j) => ({
       name: j.account || j.name,
       job_name: j.name,
@@ -220,7 +161,7 @@ async function gatherJobs(out) {
       message: `${backlog.length} stale lead(s) >14d in "1. Contacted" (oldest ${backlog[0].days_old}d) — review for Closed Lost`,
     });
   }
-  // By Wednesday with zero new leads this week → flag it (CLAUDE.md alert rule)
+  // The Wednesday threshold comes from the standing business briefing rule.
   if (now.getDay() >= 3 && leadsThisWeek === 0) {
     out.alerts.push({ level: "warning", section: "leads", message: "0 leads received this week (as of Wednesday)" });
   }
@@ -276,7 +217,6 @@ async function gatherTasks(out) {
   out.sections.tasks = { ok: true, source: "caldav", due_today, due_this_week, overdue, unscheduled };
   // Proposed tasks from the mail dates rule wait in one list for Eric to keep, move or delete.
   // The list name has one producer (the classifier contract) and reaches us through the unit's env.
-  const proposalsList = process.env.HWC_MAIL_PROPOSALS_LIST || "Mail";
   const proposals = items.filter((t) => (t.list || "") === proposalsList).map(task).sort(byDue);
   out.sections.mail_proposals = { ok: true, list: proposalsList, items: proposals };
   if (overdue.length) {
@@ -288,27 +228,12 @@ async function gatherTasks(out) {
   }
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
-try {
-  await rpc("initialize", {
-    protocolVersion: session.protocolVersion,
-    capabilities: {},
-    clientInfo: { name: "morning-briefing-gather", version: "1.0" },
-  }).then((r) => { if (r?.protocolVersion) session.protocolVersion = r.protocolVersion; });
-  await rpc("notifications/initialized", {});
-} catch (err) {
-  // No gateway → emit an explicit, dashboard-visible failure and bail.
-  out.errors.push({ section: "gateway", message: `MCP gateway unreachable at ${GATEWAY}: ${String(err.message || err).slice(0, 150)}` });
-  process.stdout.write(JSON.stringify(out));
-  process.exit(0);
-}
-
 // Fixed three-source fan-out. Merge in source order so alert/error order stays stable.
 const gathered = await Promise.all([
   ["jobs", gatherJobs], ["overdue", gatherOverdue], ["tasks", gatherTasks],
 ].map(async ([section, gather]) => {
   const partial = { sections: {}, alerts: [], errors: [] };
-  await gather(partial).catch((e) => fail(partial, section, e));
+  await gather(partial).catch((e) => fail(partial, e.code === "MCP_INITIALIZATION_FAILED" ? "gateway" : section, e));
   return partial;
 }));
 for (const partial of gathered) {
@@ -333,4 +258,15 @@ out.sections.weekly_snapshot = {
 delete out._snapshot;
 delete out._outstanding;
 
-process.stdout.write(JSON.stringify(out));
+return out;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const out = await gatherLive({
+    gatewayUrl: process.env.HWC_GATEWAY_URL || "http://127.0.0.1:6200/mcp",
+    orgId: process.env.HWC_JT_ORG_ID, grantKeyFile: process.env.HWC_JT_GRANT_KEY_FILE,
+    proposalsList: process.env.HWC_MAIL_PROPOSALS_LIST || "Mail",
+    fetch, readFile, now: new Date(),
+  });
+  process.stdout.write(JSON.stringify(out));
+}

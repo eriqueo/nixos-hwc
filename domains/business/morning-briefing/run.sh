@@ -8,39 +8,68 @@
 
 set -euo pipefail
 
+host_exec() {
+  if [ -n "${BRIEFING_HOST:-}" ]; then
+    ssh -n -o BatchMode=yes -o ConnectTimeout=10 "${BRIEFING_HOST}" "$(printf '%q ' "$@")"
+  else
+    "$@"
+  fi
+}
+
+# systemd may exit nonzero while returning a useful Result; an absent Result
+# means no backup evidence, rather than an invented successful run.
+backup_unit_status() {
+  local unit="$1" result exitcode last_raw last=""
+  result=$(host_exec "${SYSTEMCTL}" show "${unit}.service" -p Result --value 2>/dev/null || true)
+  exitcode=$(host_exec "${SYSTEMCTL}" show "${unit}.service" -p ExecMainStatus --value 2>/dev/null || true)
+  last_raw=$(host_exec "${SYSTEMCTL}" show "${unit}.service" -p ExecMainExitTimestamp --value 2>/dev/null || true)
+  [ -n "${last_raw}" ] && last=$(date -Iseconds -d "${last_raw}" 2>/dev/null || true)
+  jq -n --arg unit "${unit}" --arg result "${result}" --arg exitcode "${exitcode}" --arg last "${last}" '
+    if $result == "" then {} else
+      {exit_status:(if $result == "success" and $exitcode == "0" then "success" else "error" end),
+       unit:$unit, service_result:$result, last_run:(if $last == "" then null else $last end)}
+    end'
+}
+
+acquire_briefing_lock() {
+  exec {BRIEFING_LOCK_FD}>"$1" || return 2
+  "${FLOCK_BIN:-/run/current-system/sw/bin/flock}" -n -E 75 "${BRIEFING_LOCK_FD}"
+}
+
+main() {
 AGENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="${AGENT_DIR}/output"
 DASHBOARD_DIR="${AGENT_DIR}/dashboard"
-PROMPTS_DIR="${AGENT_DIR}/prompts"
 LOG_FILE="${AGENT_DIR}/logs/run.log"
-LOCK_FILE="/tmp/morning-briefing.lock"
+LOCK_FILE="${BRIEFING_LOCK_FILE:-/tmp/morning-briefing.lock}"
 
 mkdir -p "${OUTPUT_DIR}" "${DASHBOARD_DIR}" "${AGENT_DIR}/logs"
 
 log() { echo "$(date -Iseconds) $*" >> "${LOG_FILE}"; }
 
-# Lock
-if [ -f "${LOCK_FILE}" ]; then
-  pid=$(cat "${LOCK_FILE}" 2>/dev/null || echo "")
-  if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
-    log "SKIP: Previous run still active (PID ${pid})"
-    exit 0
+# The open descriptor owns the lock; it is released on process exit, without
+# stale PID reuse or a check/write race. Busy runs leave the current run alone.
+if acquire_briefing_lock "${LOCK_FILE}"; then
+  :
+else
+  lock_rc=$?
+  if [ "${lock_rc}" -eq 75 ]; then
+    log "SKIP: Previous run still active"
+    return 0
   fi
-  rm -f "${LOCK_FILE}"
+  log "ERROR: cannot acquire briefing lock (exit ${lock_rc})"
+  return "${lock_rc}"
 fi
-echo $$ > "${LOCK_FILE}"
-trap 'rm -f "${LOCK_FILE}"' EXIT
 
 log "START"
 cd "${AGENT_DIR}"
 
-# ── Step 1: Main briefing ─────────────────────────────────────────────────────
 log "STEP 1: Gathering deterministic data locally (no Claude / no MCP)..."
 STEP1_START=$(date +%s)
 
 # Gather directly as eric so the headless service never depends on interactive
 # tool approvals. Laya handles mail through its bounded local socket. JobTread
-# sections use the loopback gateway below.
+# jobs and invoices use PAVE; tasks use the loopback gateway below.
 
 SYSTEMCTL="/run/current-system/sw/bin/systemctl"; [ -x "${SYSTEMCTL}" ] || SYSTEMCTL="systemctl"
 
@@ -52,18 +81,11 @@ SYSTEMCTL="/run/current-system/sw/bin/systemctl"; [ -x "${SYSTEMCTL}" ] || SYSTE
 # through the remote shell.
 # Permanent by design: journal, VPN and backup details remain source-owned.
 # A central green probe cannot replace them; five sampled SSH reads total 0.73 s.
-host_exec() {
-  if [ -n "${BRIEFING_HOST:-}" ]; then
-    ssh -n -o BatchMode=yes -o ConnectTimeout=10 "${BRIEFING_HOST}" "$(printf '%q ' "$@")"
-  else
-    "$@"
-  fi
-}
+
 KHAL_BIN="/etc/profiles/per-user/eric/bin/khal"
 
 # -- system: service counts + overall state (systemctl is read-only/always-safe) --
 SERVICES_ACTIVE=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=running --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
-SERVICES_FAILED=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=failed --no-legend 2>/dev/null | wc -l | tr -d ' ' || echo 0)
 # Failed unit NAMES, not just a count — "1 failed service(s)" with no name is
 # an alert you can't act on (2026-07-08 usability pass).
 FAILED_UNITS_JSON=$(host_exec "${SYSTEMCTL}" list-units --type=service --state=failed --no-legend --plain 2>/dev/null \
@@ -193,7 +215,6 @@ DRIFT_JSON=$(jq -n \
   }' 2>/dev/null || echo '{}')
 echo "${DRIFT_JSON}" | jq empty 2>/dev/null || DRIFT_JSON='{}'
 
-# -- alerts: computed from what we actually gathered (CLAUDE.md rules subset) --
 ALERTS_JSON=$(jq -n \
   --argjson failed "${SERVICES_FAILED}" \
   --argjson failed_units "${FAILED_UNITS_JSON}" \
@@ -262,7 +283,6 @@ WEBSITE_JSON=$(jq -n \
     dashboard: "https://stats.iheartwoodcraft.com"
   }' 2>/dev/null || echo '{}')
 echo "${WEBSITE_JSON}" | jq empty 2>/dev/null || WEBSITE_JSON='{}'
-# Alert if analytics is unreachable (tracking data being lost)
 if [ -z "${UMAMI_TOKEN}" ]; then
   ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq '. + [{level:"warning",section:"website",message:"Umami analytics unreachable — visitor tracking data may be lost"}]' 2>/dev/null || echo "${ALERTS_JSON}")
 fi
@@ -298,23 +318,14 @@ fi
 #    reads). archive_count/total_size need repo access — left null here. --
 BACKUP_JSON='{}'
 BK_UNIT="borgbackup-job-hwc-backup"
-BK_RESULT=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.service" -p Result --value 2>/dev/null || echo "")
-BK_EXITCODE=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.service" -p ExecMainStatus --value 2>/dev/null || echo "")
-BK_LAST_RAW=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.service" -p ExecMainExitTimestamp --value 2>/dev/null || echo "")
-BK_NEXT_RAW=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.timer" -p NextElapseUSecRealtime --value 2>/dev/null || echo "")
-BK_LAST=""; [ -n "${BK_LAST_RAW}" ] && BK_LAST=$(date -Iseconds -d "${BK_LAST_RAW}" 2>/dev/null || echo "")
-BK_NEXT=""; [ -n "${BK_NEXT_RAW}" ] && BK_NEXT=$(date -Iseconds -d "${BK_NEXT_RAW}" 2>/dev/null || echo "")
-if [ -n "${BK_RESULT}" ]; then
-  BK_STATUS="error"
-  if [ "${BK_RESULT}" = "success" ] && [ "${BK_EXITCODE:-1}" = "0" ]; then BK_STATUS="success"; fi
-  BACKUP_JSON=$(jq -n \
-    --arg status "${BK_STATUS}" --arg unit "${BK_UNIT}" \
-    --arg last "${BK_LAST}" --arg next "${BK_NEXT}" --arg result "${BK_RESULT}" '
-    { exit_status: $status, unit: $unit, service_result: $result
-    , last_run: (if $last == "" then null else $last end)
-    , next_scheduled: (if $next == "" then null else $next end)
-    , archive_count: null, total_size: null }' 2>/dev/null || echo '{}')
-  echo "${BACKUP_JSON}" | jq empty 2>/dev/null || BACKUP_JSON='{}'
+BACKUP_JSON=$(backup_unit_status "${BK_UNIT}")
+BK_STATUS=$(jq -r '.exit_status // empty' <<<"${BACKUP_JSON}")
+if [ -n "${BK_STATUS}" ]; then
+  BK_RESULT=$(jq -r '.service_result' <<<"${BACKUP_JSON}")
+  BK_LAST=$(jq -r '.last_run // empty' <<<"${BACKUP_JSON}")
+  BK_NEXT_RAW=$(host_exec "${SYSTEMCTL}" show "${BK_UNIT}.timer" -p NextElapseUSecRealtime --value 2>/dev/null || true)
+  BK_NEXT=""; [ -n "${BK_NEXT_RAW}" ] && BK_NEXT=$(date -Iseconds -d "${BK_NEXT_RAW}" 2>/dev/null || true)
+  BACKUP_JSON=$(jq --arg next "${BK_NEXT}" '. + {next_scheduled:(if $next == "" then null else $next end), archive_count:null, total_size:null}' <<<"${BACKUP_JSON}")
   if [ "${BK_STATUS}" = "error" ]; then
     ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --arg r "${BK_RESULT}" '. + [{level:"critical",section:"backup",message:("Borg backup unit result: " + $r)}]' 2>/dev/null || echo "${ALERTS_JSON}")
   elif [ -n "${BK_LAST}" ]; then
@@ -327,18 +338,11 @@ fi
 
 # -- backup: postgres dump unit, same pattern as borg (02:35 nightly) --
 PG_UNIT="postgresql-db-backup"
-PG_RESULT=$(host_exec "${SYSTEMCTL}" show "${PG_UNIT}.service" -p Result --value 2>/dev/null || echo "")
-PG_EXITCODE=$(host_exec "${SYSTEMCTL}" show "${PG_UNIT}.service" -p ExecMainStatus --value 2>/dev/null || echo "")
-PG_LAST_RAW=$(host_exec "${SYSTEMCTL}" show "${PG_UNIT}.service" -p ExecMainExitTimestamp --value 2>/dev/null || echo "")
-PG_LAST=""; [ -n "${PG_LAST_RAW}" ] && PG_LAST=$(date -Iseconds -d "${PG_LAST_RAW}" 2>/dev/null || echo "")
-if [ -n "${PG_RESULT}" ]; then
-  PG_STATUS="error"
-  if [ "${PG_RESULT}" = "success" ] && [ "${PG_EXITCODE:-1}" = "0" ]; then PG_STATUS="success"; fi
-  BACKUP_JSON=$(echo "${BACKUP_JSON}" | jq \
-    --arg status "${PG_STATUS}" --arg unit "${PG_UNIT}" --arg last "${PG_LAST}" --arg result "${PG_RESULT}" '
-    . + { postgres: { exit_status: $status, unit: $unit, service_result: $result
-        , last_run: (if $last == "" then null else $last end) } }' 2>/dev/null || echo "${BACKUP_JSON}")
-  echo "${BACKUP_JSON}" | jq empty 2>/dev/null || BACKUP_JSON='{}'
+PG_JSON=$(backup_unit_status "${PG_UNIT}")
+PG_STATUS=$(jq -r '.exit_status // empty' <<<"${PG_JSON}")
+if [ -n "${PG_STATUS}" ]; then
+  PG_RESULT=$(jq -r '.service_result' <<<"${PG_JSON}")
+  BACKUP_JSON=$(jq --argjson postgres "${PG_JSON}" '. + {postgres:$postgres}' <<<"${BACKUP_JSON}")
   if [ "${PG_STATUS}" = "error" ]; then
     ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --arg r "${PG_RESULT}" '. + [{level:"critical",section:"backup",message:("Postgres backup unit result: " + $r)}]' 2>/dev/null || echo "${ALERTS_JSON}")
   fi
@@ -458,7 +462,6 @@ OPS_JSON=$(jq -n \
   }' 2>/dev/null || echo '{}')
 echo "${OPS_JSON}" | jq empty 2>/dev/null || OPS_JSON='{}'
 
-# Ops alerts (append, same pattern as website/backup)
 ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq \
   --argjson svc "${SVC_FAIL_JSON}" \
   --argjson probes "${SERVICES_DOWN_JSON}" \
@@ -562,7 +565,6 @@ fi
 RESEARCH_JSON=$(timeout 30 node "${AGENT_DIR}/gather-research.mjs" 2>>"${LOG_FILE}" || echo '{}')
 echo "${RESEARCH_JSON}" | jq empty 2>/dev/null || RESEARCH_JSON='{}'
 
-# -- assemble briefing.json atomically: build .tmp, validate, then mv --
 if jq -n \
   --arg now "$(date -Iseconds)" \
   --arg overall "${OVERALL}" \
@@ -634,7 +636,6 @@ fi
 STEP1_END=$(date +%s)
 log "STEP 1: completed in $((STEP1_END - STEP1_START))s"
 
-# ── Step 1b: Live business data via the local MCP gateway ────────────────────
 # JobTread jobs/leads/overdue + CalDAV tasks, fetched by gather-live.mjs over
 # loopback JSON-RPC (:6200/mcp) — no Claude, no permission prompts. Best-effort:
 # gather errors surface as dashboard alerts; sections it couldn't fetch keep
@@ -659,7 +660,6 @@ else
   log "STEP 1b: WARN gather-live.mjs produced no valid JSON — placeholders kept"
 fi
 
-# ── Steps 2/2b/3: Mail triage (classify → tag → merge) ──────────────────────
 # One Laya runner owns classification, tags, human locks, and the case ledger.
 # The same idempotent path serves the briefing and the intraday timer.
 log "STEP 2: Mail triage (triage-mail.sh baseline)..."
@@ -672,7 +672,6 @@ fi
 STEP2_END=$(date +%s)
 log "STEP 2: completed in $((STEP2_END - STEP2_START))s"
 
-# ── Step 2c: Today Queue ─────────────────────────────────────────────────────
 # hwc_today (gateway) derives the ranked action queue from the briefing just
 # written (incl. mail triage) + its dismiss state; inject it as sections.today
 # so the dashboard and email render it statically. Best-effort: {} on failure
@@ -693,7 +692,6 @@ else
   log "STEP 2c: today queue empty or gateway unreachable — skipped"
 fi
 
-# ── Step 4: Publish to dashboard/ ────────────────────────────────────────────
 if [ -f "${OUTPUT_DIR}/briefing.json" ]; then
   if "${AGENT_DIR}/triage-mail.sh" publish; then
     log "OK: Published to dashboard/"
@@ -706,7 +704,6 @@ fi
 mkdir -p "${OUTPUT_DIR}/reports" "${OUTPUT_DIR}/dispatch"
 [ -L "${DASHBOARD_DIR}/reports" ] || ln -sfn "${OUTPUT_DIR}/reports" "${DASHBOARD_DIR}/reports"
 
-# ── Step 5: Email delivery (2026-07-06, audit 2.1: Eric wants email + workbench)
 # Renders briefing.json to a plain-text email and sends via msmtp's default
 # account (proton-hwc → eric@iheartwoodcraft.com). Best-effort: a send failure
 # logs a WARN but never fails the briefing run.
@@ -723,382 +720,14 @@ elif [ -f "${OUTPUT_DIR}/briefing.json" ] && [ -x "${MSMTP_BIN}" ]; then
   SLOT="Morning"
   if [ "${HOUR_NOW#0}" -ge 15 ] 2>/dev/null; then SLOT="Evening"
   elif [ "${HOUR_NOW#0}" -ge 11 ] 2>/dev/null; then SLOT="Midday"; fi
-  EMAIL_BODY=$(jq -r --arg dash "https://briefing.hwc.iheartwoodcraft.com" '
-    def sec(x): "\n== " + x + " ==\n";
-    ((.sections.today.items // []) | map(
-      if .source == "invoice" then "overdue" elif .source == "lead" then "leads"
-      elif .source == "task" then "tasks" elif .source == "system" then "system"
-      elif .source == "refinery" then "refinery" elif .source == "mail" then "mail"
-      else .source end) | unique) as $represented |
-    ((.alerts // []) | map(select(.section as $section | ($represented | index($section)) == null))) as $watch |
-    "Morning Briefing — " + (.generated_at // "unknown")
-    + (if ((.sections.today.items // []) | length) > 0 then
-        sec("NEEDS YOU — top " + ([.sections.today.items[:5][]] | length | tostring))
-        + ([.sections.today.items[:5][] |
-            (if .severity == "red" then "[!] " else "[ ] " end)
-            + .title + " — " + .why + " (~" + ((.effort_min // 10) | tostring) + " min)"
-            + (if .url then "\n      Explore: " + .url else "" end)
-            + (if .report then "\n      report ready: " + .report else "" end)]
-           | join("\n"))
-        + (if ((.sections.today.items | length) - 5 + (.sections.today.spillover // 0)) > 0 then
-            "\n\nExplore " + (((.sections.today.items | length) - 5 + (.sections.today.spillover // 0)) | tostring)
-            + " more: " + $dash else "" end)
-      else "" end)
-    + (if ($watch | length) > 0 then
-        sec("WATCHLIST (" + (($watch | length) | tostring) + ")")
-        + ([$watch[] | "[" + .level + "] " + .message + "\n      Explore: " + $dash] | join("\n"))
-      else "\n\nNo additional watch items." end)
-    + (if .sections.config_drift then
-        sec("CONFIG DRIFT")
-        + "reboot pending: " + ((.sections.config_drift.reboot_pending // false) | tostring)
-        + " · unpushed: " + ((.sections.config_drift.unpushed_commits // 0) | tostring)
-        + " · dirty: " + ((.sections.config_drift.dirty_files // 0) | tostring)
-        + " · generations: " + ((.sections.config_drift.generations // 0) | tostring)
-        + " · coredumps 24h: " + ((.sections.config_drift.coredumps_24h // 0) | tostring)
-      else "" end)
-    + (if .sections.system then
-        sec("SYSTEM")
-        + "services: " + ((.sections.system.services_active // 0) | tostring) + " active / "
-        + ((.sections.system.services_failed // 0) | tostring) + " failed · containers: "
-        + ((.sections.system.containers_running // 0) | tostring) + " running"
-        + ((.sections.system.storage // []) | map("\n  " + .mount + ": " + ((.percent // 0) | tostring) + "% used, " + (.available // "?") + " free") | join(""))
-        + (if .sections.backup.exit_status then
-            "\n  backup: borg " + .sections.backup.exit_status
-            + (if .sections.backup.postgres then " · postgres " + .sections.backup.postgres.exit_status else "" end)
-          else "" end)
-      else "" end)
-    + (if .sections.ops then
-        (.sections.ops as $o |
-        (if (($o.service_failures // []) | length) > 0
-          or (($o.services_down // []) | length) > 0
-          or (($o.prometheus_targets_down // []) | length) > 0
-          or (($o.journal_errors_top // []) | length) > 0
-          or (($o.disk_forecast // []) | length) > 0 then
-          sec("OVERNIGHT OPS (since " + ($o.since // "?") + ")")
-          + (($o.service_failures // []) | map("\n  ! service failed: " + .service + " @ " + .time) | join(""))
-          + (($o.services_down // []) | map("\n  ~ probe: " + .service + (if .down_now then " DOWN NOW" else " (" + ((.downtime_pct_24h // 0) | tostring) + "% downtime 24h)" end)) | join(""))
-          + (($o.prometheus_targets_down // []) | map("\n  ~ target down: " + .job + " @ " + .instance) | join(""))
-          + (($o.journal_errors_top // []) | map("\n  · journal errors: " + .unit + " ×" + (.errors | tostring)) | join(""))
-          + (($o.disk_forecast // [])[:3] | map("\n  · " + .mount + " full in ~" + (.days_to_full | tostring) + "d at current growth") | join(""))
-        else "" end)
-        + (if (($o.nightly_builds_finished // []) | length) > 0 then
-            sec("BUILT OVERNIGHT")
-            + (($o.nightly_builds_finished // []) | map("  · " + .) | join("\n"))
-          else "" end))
-      else "" end)
-    + (if (.sections.calendar.events // []) | length > 0 then
-        sec("THIS WEEK")
-        + ([.sections.calendar.events[] | "  " + (.date // ((.start // "") | split("T")[0]) // "")
-            + " " + (if .allDay then "all-day" else ((.start // "") | split("T")[1] // "") end)
-            + "  " + (.summary // "")
-            + (if .location then " — " + .location else "" end)] | join("\n"))
-      else "" end)
-    + (if (.sections.tasks // {}) | ((.overdue // []) + (.due_today // []) + (.due_this_week // [])) | length > 0 then
-        sec("TASKS")
-        + ((((.sections.tasks.overdue // []) | map("  ! OVERDUE " + (.due_date // "") + "  " + .name))
-          + ((.sections.tasks.due_today // []) | map("  · today  " + .name))
-          + ((.sections.tasks.due_this_week // []) | map("  · " + (.due_date // "") + "  " + .name))) | join("\n"))
-      else "" end)
-    + (if (.sections.mail_proposals.items // []) | length > 0 then
-        sec("FROM YOUR MAIL — " + ((.sections.mail_proposals.items | length) | tostring) + " proposed task(s) in list " + (.sections.mail_proposals.list // "Mail"))
-        + ((.sections.mail_proposals.items | map("  ? " + (.due_date // "no date") + "  " + .name)) | join("\n"))
-        + "\n  keep, move to a real list, or delete to deny (todui or tasks.hwc.iheartwoodcraft.com)"
-      else "" end)
-    + (if (.sections.leads.items // []) | length > 0 then
-        sec("LEADS (" + ((.sections.leads.items | length) | tostring) + ")")
-        + ([.sections.leads.items[] | "  " + .name
-            + (if (.job_type // "") != "" then " — " + .job_type else "" end)
-            + " (" + (.days_old | tostring) + "d old)"] | join("\n"))
-      else "" end)
-    + (if (.sections.overdue.count // 0) > 0 then
-        sec("OVERDUE INVOICES — $" + ((.sections.overdue.total_amount // 0) | round | tostring))
-        + ([.sections.overdue.items[] | "  $" + ((.amount // 0) | round | tostring) + "  " + (.job_name // .name)
-            + (if .days_past_due then " (" + (.days_past_due | tostring) + "d past due)" else "" end)] | join("\n"))
-      else "" end)
-    + (if (.sections.jobs.active // []) | length > 0 then
-        sec("ACTIVE JOBS (" + ((.sections.jobs.active | length) | tostring) + ")")
-        + ([.sections.jobs.active[] | "  #" + (.number // "?") + " " + .name + " — " + (.phase // "?") + " / " + (.status // "?")] | join("\n"))
-      else "" end)
-    + (if .mail_triage then
-        sec("MAIL")
-        + (.mail_triage as $triage | ($triage.states // ["do", "did", "look", "junk"])
-          | map(. as $state | ($triage.state_display_names[$state] // ($state | ascii_upcase))
-            + ": " + (($triage.stats[$state + "_count"] // 0) | tostring)) | join(" · "))
-        + (if .sections.mail.summary then " · " + .sections.mail.summary else "" end)
-        + (if .mail_triage.error then "\n  triage error: " + .mail_triage.error else "" end)
-        + (if ((.mail_triage.routing_rules // []) | length) > 0 then
-            "\n  routing rules: " + (((.mail_triage.routing_rules | length)) | tostring) + " active"
-            + (.mail_triage as $triage | ($triage.routing_rules // []) | map("\n    " + .sender + " + ‘" + .subject_contains + "’ → " + ($triage.state_display_names[.state] // (.state | ascii_upcase)) + " · " + (.domain | ascii_upcase)) | join(""))
-          else "" end)
-        + ((((.mail_triage | .threads_by_state).do // [])[:5]) | map("\n  ! " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
-        + ((((.mail_triage | .threads_by_state).look // [])[:5]) | map("\n  · " + (.sender // "?") + ": " + (.subject // "?") + (if .summary then "\n      " + .summary else "" end)) | join(""))
-      else "" end)
-    + (if (.sections.refinery.counts.total // 0) > 0 then
-        sec("REFINERY")
-        + "action: " + ((.sections.refinery.counts.action // 0) | tostring)
-        + " · active: " + ((.sections.refinery.counts.active // 0) | tostring)
-        + " · hopper: " + ((.sections.refinery.counts.hopper // 0) | tostring)
-        + ((((.sections.refinery | .stages).action // [])[:6]) | map("\n  ! " + (.title // .id)
-            + " [" + (.label // .state // "?") + (if .pipeline and .pipeline != "untriaged" then " · " + .pipeline else "" end) + "]"
-            + (if .reason then "\n      " + .reason else "" end)) | join(""))
-        + ((((.sections.refinery | .stages).active // [])[:5]) | map("\n  · " + (.title // .id)
-            + " [" + (.pipeline // "?") + (if .step then " · " + .step else "" end) + "]") | join(""))
-      else "" end)
-    + (if (.sections.agents.line // "") != "" then sec("AGENTS") + .sections.agents.line else "" end)
-    + (if ((.sections.research.counts.awaiting // 0) > 0
-           or ((.sections.research.lessons.themes // []) | length) > 0
-           or (.sections.research.health.staleIngest // false)) then
-        sec("RESEARCH")
-        + (if (.sections.research.health.staleIngest // false) then
-            "!! INGEST STALE — last completed run "
-            + (if .sections.research.health.ingestAgeHours
-               then ((.sections.research.health.ingestAgeHours | floor) | tostring) + "h ago"
-               else "never" end)
-            + " (expected daily). Check research-scout-arxiv.service.\n"
-          else "" end)
-        + ((.sections.research.counts.awaiting // 0) | tostring) + " article(s) waiting to be read"
-        + (((.sections.research.queue // [])[:3]) | map("\n  · " + (.title // "?")
-            + (if .tier then " [" + .tier + "]" else "" end)
-            + (if .url then "\n      " + .url else "" end)) | join(""))
-        + (if .sections.research.lessons then
-            "\nlessons: " + ((.sections.research.lessons.kept // 0) | tostring) + " kept / "
-            + ((.sections.research.lessons.skipped // 0) | tostring) + " skipped"
-            + (if .sections.research.lessons.status == "below_floor"
-               then " · not enough yet for themes"
-               else ((.sections.research.lessons.themes // []) | map("\n  ~ " + .) | join("")) end)
-          else "" end)
-        + "\nreview: " + (.sections.research.url // "https://research-scout.hwc.iheartwoodcraft.com")
-      else "" end)
-    + (if .sections.website and (.sections.website | length > 0) then
-        sec("WEBSITE")
-        + "visitors 24h: " + ((.sections.website.visitors_24h // 0) | tostring)
-        + " · pageviews 24h: " + ((.sections.website.pageviews_24h // 0) | tostring)
-        + " · 7d: " + ((.sections.website.visitors_7d // 0) | tostring) + " visitors / "
-        + ((.sections.website.pageviews_7d // 0) | tostring) + " views"
-        + "\ncalculator leads: " + ((.sections.website.leads_24h // 0) | tostring) + " today · "
-        + ((.sections.website.leads_7d // 0) | tostring) + " this week"
-        + ((.sections.website.top_pages_7d // [])[:3] | map("\n  " + .url + " (" + (.views | tostring) + ")") | join(""))
-        + "\nfull analytics: https://stats.iheartwoodcraft.com"
-      else "" end)
-    + "\n\nDashboard: https://briefing.hwc.iheartwoodcraft.com\n"
-  ' "${OUTPUT_DIR}/briefing.json" 2>/dev/null) || EMAIL_BODY=""
+  render_email() {
+    jq -r --arg format "$1" --arg slot "${SLOT}" \
+      --slurpfile policy "${AGENT_DIR}/dashboard/view-policy.json" \
+      -f "${AGENT_DIR}/email.jq" "${OUTPUT_DIR}/briefing.json"
+  }
+  EMAIL_BODY=$(render_email plain 2>>"${LOG_FILE}") || EMAIL_BODY=""
+  EMAIL_HTML=$(render_email html 2>>"${LOG_FILE}") || EMAIL_HTML=""
 
-  # HTML render — the part mail clients actually show. Every section header
-  # links to the system it reports on (JobTread / Grafana / Kuma / Umami /
-  # dashboard) and every job, lead and invoice deep-links into JobTread.
-  # The plain-text render above rides along as the multipart fallback.
-  EMAIL_HTML=$(jq -r \
-    --arg slot "${SLOT}" \
-    --arg dash "https://briefing.hwc.iheartwoodcraft.com" \
-    --arg jt "https://app.jobtread.com" \
-    --arg grafana "https://grafana.hwc.iheartwoodcraft.com" \
-    --arg svchealth "https://grafana.hwc.iheartwoodcraft.com/d/service-health" \
-    --arg stats "https://stats.iheartwoodcraft.com" \
-    --arg refinery "https://refinery.hwc.iheartwoodcraft.com" \
-    --arg repo "https://github.com/eriqueo/nixos-hwc" '
-    # Theme = the dashboard palette verbatim (dashboard/index.html :root):
-    #   bg #1d2021 · surface #282828 · border #32373c · text #d5c4a1
-    #   dim #a7aaad · amber #cf995f (links) · amber-dim #b0814d
-    #   red #bf616a (bg #2d2426, alert text #d08080) · warning text #fcbb74
-    # Section order mirrors the dashboard grid.
-    def h: tostring | @html;
-    def link(u; t): "<a href=\"" + u + "\" style=\"color:#cf995f;text-decoration:none\">" + t + "</a>";
-    def card(title; url; linktext; body):
-      "<div style=\"background:#282828;border:1px solid #32373c;border-radius:6px;padding:14px 18px;margin:0 0 12px\">"
-      + "<div style=\"font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#a7aaad;padding-bottom:8px;border-bottom:1px solid #32373c;margin-bottom:10px\">"
-      + title
-      + (if url != "" then "<span style=\"float:right;text-transform:none;letter-spacing:0\">" + link(url; linktext + " &rarr;") + "</span>" else "" end)
-      + "</div>" + body + "</div>";
-    def item(s): "<div style=\"padding:3px 0;font-size:14px;line-height:1.45;color:#d5c4a1\">" + s + "</div>";
-    def meta(s): "<span style=\"color:#a7aaad;font-size:13px\">" + s + "</span>";
-    def red(s): "<span style=\"color:#bf616a;font-weight:600\">" + s + "</span>";
-    def aurl(s):
-      if s == "ops" then $svchealth
-      elif s == "leads" or s == "overdue" or s == "jobs" then $jt
-      elif s == "website" then $stats
-      elif s == "system" or s == "backup" then $grafana
-      elif s == "config_drift" then $repo
-      elif s == "refinery" then $refinery
-      else $dash end;
-
-    .sections as $s |
-    (($s.today.items // []) | map(
-      if .source == "invoice" then "overdue" elif .source == "lead" then "leads"
-      elif .source == "task" then "tasks" elif .source == "system" then "system"
-      elif .source == "refinery" then "refinery" elif .source == "mail" then "mail"
-      else .source end) | unique) as $represented |
-    ((.alerts // []) | map(select(.section as $section | ($represented | index($section)) == null))) as $watch |
-    "<div style=\"margin:0;padding:18px 10px;background:#1d2021\">"
-    + "<div style=\"max-width:640px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif\">"
-
-    + "<div style=\"padding:6px 2px 16px;text-align:center;border-bottom:1px solid #32373c;margin-bottom:14px\">"
-    + "<div style=\"font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#b0814d\">Heartwood Briefing</div>"
-    + "<div style=\"font-size:22px;font-weight:700;color:#cf995f;margin-top:4px\">" + ($slot|h) + " &middot; " + ((.generated_at // "" | split("T")[0])|h) + "</div>"
-    + "<div style=\"font-size:13px;color:#a7aaad;margin-top:4px\">" + link($dash; "open dashboard") + "</div></div>"
-
-    + (if ($s.today.items // []) | length > 0 then
-        card("Needs you &middot; top " + (([$s.today.items[:5][]] | length | tostring)|h); $dash; "explore all";
-          ($s.today.items[:5] | map(
-            item((if .severity == "red" then red("!") else meta("&middot;") end) + " "
-              + (if .url then link(.url; ((.title // "item")|h)) else ((.title // "item")|h) end)
-              + "<br><span style=\"color:#a7aaad;font-size:13px;padding-left:14px\">" + ((.why // "")|h) + "</span>")) | join(""))
-          + (if (($s.today.items | length) - 5 + ($s.today.spillover // 0)) > 0 then
-              item(link($dash; "Explore " + ((($s.today.items | length) - 5 + ($s.today.spillover // 0))|tostring) + " more &rarr;")) else "" end))
-      else card("Needs you"; $dash; "dashboard"; item("No action needed.")) end)
-
-    + (if ($watch | length) > 0 then
-        ($watch | map(
-          (if .level == "critical" then ["#2d2426", "#bf616a", "#d08080"] else ["#2d2a24", "#cf995f", "#fcbb74"] end) as $c |
-          "<div style=\"background:" + $c[0] + ";border:1px solid " + $c[1] + ";color:" + $c[2] + ";border-radius:6px;padding:9px 12px;margin:0 0 8px;font-size:13.5px;line-height:1.4\">"
-          + "<strong>" + ((.section // "")|h) + "</strong> &middot; " + ((.message // "")|h)
-          + " &nbsp;" + link(aurl(.section // ""); "view &rarr;")
-          + "</div>") | join(""))
-      else "" end)
-
-    + (if ($s.calendar.events // []) | length > 0 then
-        card("Calendar"; ""; "";
-          ($s.calendar.events | map(
-            item(meta(((.date // ((.start // "") | split("T")[0]))|h)
-                + " " + (if .allDay then "all-day" else (((.start // "") | split("T")[1] // "")|h) end)) + " &nbsp;"
-              + (.summary|h)
-              + (if (.location // "") | startswith("http") then " &middot; " + link(.location; "join link &rarr;")
-                 elif (.location // "") != "" then " " + meta((.location|h)) else "" end))) | join("")))
-      else "" end)
-
-    + (if .mail_triage then
-        card("Mail"; $dash; "workflow";
-          item((.mail_triage as $triage | ($triage.states // ["do", "did", "look", "junk"])
-            | map(. as $state | (($triage.state_display_names[$state] // ($state | ascii_upcase)) | h)
-              + " " + (($triage.stats[$state + "_count"] // 0) | tostring)) | join(" &middot; "))
-            + (if $s.mail.summary then " &middot; " + meta(($s.mail.summary|h)) else "" end))
-          + (if .mail_triage.error then item(red("triage error: " + (.mail_triage.error|h))) else "" end)
-          + (if ((.mail_triage.routing_rules // []) | length) > 0 then
-              item(meta((((.mail_triage.routing_rules | length)) | tostring) + " active routing rule(s)"))
-              + (.mail_triage as $triage | ($triage.routing_rules // []) | map(
-                  item(meta((.sender|h) + " + &lsquo;" + (.subject_contains|h) + "&rsquo; &rarr; " + (($triage.state_display_names[.state] // (.state | ascii_upcase))|h) + " &middot; " + ((.domain | ascii_upcase)|h)))) | join(""))
-            else "" end)
-          + ((((.mail_triage | .threads_by_state).do // [])[:5]) | map(
-              item(red("!") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h)
-                + (if .summary then "<br>" + meta((.summary|h)) else "" end))) | join(""))
-          + ((((.mail_triage | .threads_by_state).look // [])[:5]) | map(
-              item(meta("&middot;") + " " + ((.sender // "?")|h) + ": " + ((.subject // "?")|h)
-                + (if .summary then "<br>" + meta((.summary|h)) else "" end))) | join("")))
-      else "" end)
-
-    + (if ($s.refinery.counts.total // 0) > 0 then
-        card("Refinery"; ($s.refinery.url // $refinery); "board";
-          item("action " + ((($s.refinery.counts.action // 0)|tostring)|h)
-            + " &middot; active " + ((($s.refinery.counts.active // 0)|tostring)|h)
-            + " &middot; hopper " + ((($s.refinery.counts.hopper // 0)|tostring)|h))
-          + ((($s.refinery | .stages).action // [])[:6] | map(
-              item((if .state == "failed" then red("&#10007;") else red("!") end) + " "
-                + (if .url then link(.url; ((.title // .id)|h)) else ((.title // .id)|h) end)
-                + " " + meta("[" + ((.label // .state // "?")|h) + (if .pipeline and .pipeline != "untriaged" then " &middot; " + (.pipeline|h) else "" end) + "]")
-                + (if .reason then "<br><span style=\"color:#a7aaad;font-size:13px;padding-left:14px\">" + (.reason|h) + "</span>" else "" end))) | join(""))
-          + ((($s.refinery | .stages).active // [])[:5] | map(
-              item(meta("&middot;") + " "
-                + (if .url then link(.url; ((.title // .id)|h)) else ((.title // .id)|h) end)
-                + " " + meta("[" + ((.pipeline // "?")|h) + (if .step then " &middot; " + (.step|h) else "" end) + "]"))) | join("")))
-      else "" end)
-
-    + (if ($s.tasks // {}) | ((.overdue // []) + (.due_today // []) + (.due_this_week // [])) | length > 0 then
-        card("Tasks"; $dash; "dashboard";
-          (($s.tasks.overdue // []) | map(item(red("OVERDUE") + " " + meta(((.due_date // "")|h)) + " &nbsp;" + (.name|h))) | join(""))
-          + (($s.tasks.due_today // []) | map(item("<strong>today</strong> &nbsp;" + (.name|h))) | join(""))
-          + (($s.tasks.due_this_week // []) | map(item(meta(((.due_date // "")|h)) + " &nbsp;" + (.name|h))) | join("")))
-      else "" end)
-
-    + (if ($s.leads.items // []) | length > 0 then
-        card("New Leads (" + (($s.leads.items | length | tostring)|h) + ")"; $jt; "JobTread";
-          ($s.leads.items | map(
-            item((if .url then link(.url; (.name|h)) else (.name|h) end)
-              + (if (.job_type // "") != "" then " " + meta((.job_type|h)) else "" end)
-              + " " + meta(((.days_old|tostring)|h) + "d old"))) | join("")))
-      else "" end)
-
-    + (if ($s.overdue.count // 0) > 0 then
-        card("Overdue Invoices &middot; $" + ((($s.overdue.total_amount // 0) | round | tostring)|h); $jt; "JobTread";
-          ($s.overdue.items | map(
-            item("<strong style=\"color:#fcbb74\">$" + (((.amount // 0) | round | tostring)|h) + "</strong> &nbsp;"
-              + (if .url then link(.url; ((.job_name // .name)|h)) else ((.job_name // .name)|h) end)
-              + (if .days_past_due then " " + meta(((.days_past_due|tostring)|h) + "d past due") else "" end))) | join("")))
-      else "" end)
-
-    + (if ($s.jobs.active // []) | length > 0 then
-        card("Active Jobs (" + (($s.jobs.active | length | tostring)|h) + ")"; $jt; "JobTread";
-          ($s.jobs.active | map(
-            item(meta("#" + ((.number // "?")|h)) + " &nbsp;"
-              + (if .url then link(.url; (.name|h)) else (.name|h) end)
-              + " " + meta(((.phase // "?")|h) + " / " + ((.status // "?")|h)))) | join("")))
-      else "" end)
-
-    + (if $s.system then
-        card("System"; $grafana; "Grafana";
-          item(((($s.system.services_active // 0)|tostring)|h) + " services &middot; "
-            + ((($s.system.services_failed // 0)|tostring)|h) + " failed &middot; "
-            + ((($s.system.containers_running // 0)|tostring)|h) + " containers")
-          + (($s.system.failed_units // []) | map(item(red("&#10007; " + (.|h)))) | join(""))
-          + (($s.system.storage // []) | map(item((.mount|h) + " " + meta(((.percent // 0)|tostring) + "% used"))) | join(""))
-          + (if $s.backup.exit_status then
-              item("backup: borg " + (($s.backup.exit_status // "?")|h)
-                + (if $s.backup.postgres then " &middot; postgres " + (($s.backup.postgres.exit_status // "?")|h) else "" end))
-            else "" end))
-      else "" end)
-
-    + (if $s.ops then ($s.ops as $o |
-        (($o.service_failures // []) | length) as $nsvc |
-        (($o.services_down // []) | length) as $nkuma |
-        (($o.journal_errors_top // []) | length) as $nerr |
-        (($o.prometheus_targets_down // []) | length) as $ndown |
-        (($o.nightly_builds_finished // []) | length) as $nnb |
-        card("Overnight Ops &middot; since " + ((($o.since // "")[5:16])|h); $svchealth; "Service Health";
-          (if ($nsvc + $nkuma + $nerr + $ndown + $nnb) == 0 then item(meta("Quiet night — no failures, no probe drops, no errors")) else
-            (($o.service_failures // []) | map(item(red("&#10007; " + (.service|h)) + " " + meta("failed @ " + ((.time // "")[11:16])))) | join(""))
-            + (($o.services_down // []) | map(item(
-                (if .down_now then red("&#10007; " + (.service|h)) + " " + meta("down now")
-                 else "~ " + (.service|h) + " " + meta(((.downtime_pct_24h // 0)|tostring) + "% downtime 24h") end))) | join(""))
-            + (($o.prometheus_targets_down // []) | map(item("~ target down: " + (.job|h) + " " + meta((.instance // "")|h))) | join(""))
-            + (($o.journal_errors_top // []) | map(item((.unit|h) + " " + meta(((.errors|tostring)|h) + " journal errors"))) | join(""))
-            + (if $nnb > 0 then item("<strong>Built overnight:</strong> " + (($o.nightly_builds_finished // []) | map(h) | join(", "))) else "" end)
-          end)
-          + (($o.disk_forecast // [])[:3] | map(item((.mount|h) + " " + meta("full in ~" + ((.days_to_full|tostring)|h) + "d at current growth"))) | join(""))))
-      else "" end)
-
-    + (if $s.weather and $s.weather.current_temp_f != null then
-        card("Weather"; ""; "";
-          item(((($s.weather.current_temp_f | round | tostring))|h) + "&deg; now &middot; "
-            + (if $s.weather.high_f != null and $s.weather.low_f != null then
-                ((($s.weather.high_f | round | tostring))|h) + "&deg;/" + ((($s.weather.low_f | round | tostring))|h) + "&deg; &middot; " else "" end)
-            + (($s.weather.conditions // "")|h)
-            + " &middot; " + meta(((($s.weather.precipitation_chance // 0)|tostring)|h) + "% precip &middot; "
-              + ((($s.weather.wind_mph // 0)|tostring)|h) + " mph wind"))
-          + (if $s.weather.outdoor_work_ok == false then item(red("&#9888; not ideal for outdoor work")) else "" end))
-      else "" end)
-
-    + (if $s.weekly_snapshot and ($s.weekly_snapshot | length) > 0 then
-        card("Weekly Snapshot"; ""; "";
-          item("active jobs " + (($s.weekly_snapshot.active_job_count // "&mdash;")|tostring)
-            + " &middot; leads this week " + (($s.weekly_snapshot.leads_received_this_week // "&mdash;")|tostring)
-            + " &middot; outstanding $" + ((($s.weekly_snapshot.invoices_outstanding_amount // 0) | round | tostring)|h)
-            + " (" + (($s.weekly_snapshot.invoices_outstanding // 0)|tostring) + ")"))
-      else "" end)
-
-    + (if $s.website and ($s.website | length > 0) then
-        card("Website"; $stats; "Umami";
-          item(((($s.website.visitors_24h // 0)|tostring)|h) + " visitors 24h &middot; "
-            + ((($s.website.visitors_7d // 0)|tostring)|h) + " visitors / "
-            + ((($s.website.pageviews_7d // 0)|tostring)|h) + " views 7d")
-          + item("calculator leads: " + ((($s.website.leads_24h // 0)|tostring)|h) + " today &middot; "
-            + ((($s.website.leads_7d // 0)|tostring)|h) + " this week")
-          + (($s.website.top_pages_7d // [])[:3] | map(item(meta((.url|h) + " — " + ((.views|tostring)|h) + " views"))) | join("")))
-      else "" end)
-
-    + "<div style=\"text-align:center;padding:10px 0 4px;font-size:12px;color:#a7aaad\">"
-    + link($dash; "dashboard") + " &nbsp;&middot;&nbsp; " + link($grafana; "grafana")
-    + " &nbsp;&middot;&nbsp; " + link($svchealth; "service health") + " &nbsp;&middot;&nbsp; " + link($jt; "jobtread")
-    + " &nbsp;&middot;&nbsp; " + link($stats; "analytics") + " &nbsp;&middot;&nbsp; " + link($refinery; "refinery")
-    + "</div></div></div>"
-  ' "${OUTPUT_DIR}/briefing.json" 2>>"${LOG_FILE}") || EMAIL_HTML=""
   if [ -n "${EMAIL_BODY}" ]; then
     NEEDS_COUNT=$(jq -r '[((.sections.today.items // []) | length), 5] | min' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo 0)
     ALERT_COUNT=$(jq -r '(.alerts // []) | length' "${OUTPUT_DIR}/briefing.json" 2>/dev/null || echo 0)
@@ -1137,3 +766,7 @@ fi
 
 tail -100 "${LOG_FILE}" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "${LOG_FILE}"
 log "DONE"
+
+}
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then main "$@"; fi

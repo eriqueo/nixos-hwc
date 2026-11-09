@@ -12,13 +12,12 @@
 # no state-changing bash. Widening this allowlist is a decision, not a patch —
 # see the proven-not-claimed law in the charter before you do.
 #
-# Triggered by the today-dispatch.path unit (DirectoryNotEmpty on dispatch/).
+# Triggered by today-dispatch.path for queued *.md cards.
 set -uo pipefail
 
 AGENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DISPATCH_DIR="${AGENT_DIR}/output/dispatch"
-# done/ must live OUTSIDE dispatch/ — the path unit triggers on
-# DirectoryNotEmpty(dispatch/), and a nested done/ would re-arm it forever.
+# Completed cards leave dispatch/ so only queued *.md cards can trigger the unit.
 DONE_DIR="${AGENT_DIR}/output/dispatch-done"
 REPORTS_DIR="${AGENT_DIR}/output/reports"
 LOG_FILE="${AGENT_DIR}/logs/dispatch.log"
@@ -30,7 +29,8 @@ log() { echo "[$(date '+%F %T')] $*" >> "${LOG_FILE}"; }
 # The CLI prints "Failed to authenticate. API Error: 401 ..." to stdout and
 # STILL EXITS 0, so the success branch below would otherwise write that error
 # text as the report and consume the card. That is how the 2026-08-19 OAuth
-# expiry went unnoticed for eight days. Pure bash: this script has no rg.
+# expiry went unnoticed for eight days. Remove this check when the CLI returns
+# a nonzero exit status for these authentication failures.
 claude_auth_failed() {
   case "$1" in
     "Failed to authenticate. API Error: 401"*) return 0 ;;
@@ -73,9 +73,7 @@ for card in "${DISPATCH_DIR}"/*.md; do
   fi
 done
 
-# Sweep non-card strays (an agent scratch file, a partial write): anything
-# left that isn't a queued .md card keeps DirectoryNotEmpty armed and makes
-# the path unit re-fire this runner forever. Quarantine, don't delete.
+# Preserve non-card strays in quarantine; only *.md cards trigger dispatch.
 for stray in "${DISPATCH_DIR}"/*; do
   [ -e "${stray}" ] || continue
   case "${stray}" in *.md) continue ;; esac

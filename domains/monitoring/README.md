@@ -13,71 +13,55 @@ Other domains register their scrape configs via `hwc.monitoring.prometheus.scrap
 
 ## Structure
 
-Prometheus checks public website headers/CSP, the HTTP-to-HTTPS redirect and privacy headers on a nonexistent report every two minutes. WebsiteSecurityCheckFailed alerts after five minutes through the existing Alertmanager route. Probes create no customer records. The website-security-probes integration check exercises the actual host Blackbox package and configuration with missing-header and missing-CSP fixtures.
+| Path | Owns |
+| --- | --- |
+| `index.nix` | Module imports and the compatibility stack toggle |
+| `prometheus/index.nix` | Host exporters/probes and central fleet aggregation |
+| `prometheus/parts/alerts.nix` | Alert rules and ordered CPU, memory and disk tiers |
+| `alerts/index.nix` | Module-gated system failure hooks, system/user notifier templates and SMART delivery wiring |
+| `alertmanager/index.nix` | Receiver fan-out and notification grouping |
+| `grafana/index.nix`, `grafana/dashboards/` | Grafana, renderer credentials and provisioned dashboards |
+| `cadvisor/`, `podman-exporter/`, `exportarr/` | Host/container/media metrics and scrape registration |
+| `homepage/index.nix`, `homepage/parts/services.nix`, other `homepage/parts/` files | Dashboard container, explicit service-link bindings and its five installed YAML files |
+| `heartbeat/` | External heartbeat for host/link failure |
+| `fleet-map/` | Bounded, atomic publication from the pinned fleet-map app |
+| `verification/checks.nix` | Pure checks registered through the local release runner |
 
-`verification/` contains pure flake checks for this capability; production modules do not import it.
-The `calculator-intake-monitoring` check covers the website's configured intake,
-safe preflight method, certificate coverage and alert pending/firing/recovery states.
-Public calculator monitoring consumes the website's configured CRM intake URL.
-The private estimator's `estimate-push` route is deliberately closed at the public
-tunnel and has no public availability probe. n8n retains its own health probe.
+Each service module declares its options in `index.nix`. Prometheus agents run
+on serving hosts; the central instance on hwc-work combines their targets and
+adds host labels. Same-name jobs must share all settings except their target
+sets. Internal monitoring probes consume the owning service's configured port.
 
-`alerts/index.nix` owns both system and user failure templates. The user template
-calls the existing notification producer with `--user`; delivery stays in notifications.
-Both templates consume literal unit names with `%i`, matching the OnFailure callers.
+CPU, memory and disk tiers declare each threshold once. Lower tiers derive
+their upper bound from the next threshold. Alert names, timing and delivery
+severity stay in the rules; the former unused severity and storage-path knobs
+have been removed. Prometheus and Alertmanager retain their existing state paths.
+The root stack toggle remains for compatibility; individual module toggles own
+activation.
 
-`fleet-map/` owns the read-only snapshot publisher; app code is a separate locked input. Its site contains only generated HTML. The production route check pins work ownership, the bounded unit and its host command path. Refresh: `sudo systemctl start fleet-map-publish`.
+`monitoring-wiring` tests port overrides, reordered Exportarr apps and fleet-job
+conflicts through the real modules. `alert-tier-exclusivity` reads generated
+expressions and samples their boundaries; `alert-rules-parse` runs promtool on
+the files the central service loads. `alert-onfailure-units` rejects hooks on
+units without an ExecStart and checks literal `%i` names for both notifier types.
 
-Homepage fleet labels/selectors use hwc-home; SMART sender derives from the local hostname.
-Homepage pins its reviewed image digest. Its config directory, five deployed YAML
-files and container IDs use the shared service identity, so tmpfiles and activation
-keep the running dashboard able to read and initialize its config.
+Public security probes check browser headers, HTTPS redirects and a nonexistent
+report's privacy policy. The calculator probe follows the website's configured
+CRM intake with a safe preflight request. Their checks exercise the actual
+Blackbox exporter and alert pending, firing and recovery states.
 
-Camera monitoring consumes Frigate native metrics and config-derived expected FPS. The Cameras dashboard distinguishes enabled cameras from disabled ones.
-
-```
-monitoring/
-├── index.nix           # Domain aggregator
-├── README.md           # This file
-├── options.nix         # Base toggle (hwc.monitoring.enable)
-├── prometheus/         # Metrics collection + alert rules
-│   ├── index.nix
-│   ├── options.nix
-│   └── parts/alerts.nix  # CPU/memory/disk tier ladders are mutually exclusive
-│                         #   (`> lower <= upper`); the numbers are proved
-│                         #   disjoint by the `alert-tier-exclusivity` flake
-│                         #   check, which reads the expressions as STRINGS —
-│                         #   `alert-rules-parse` runs promtool over the rule
-│                         #   files hwc-server actually loads, which is the only
-│                         #   thing that proves they are valid PromQL
-├── grafana/            # Dashboards, visualization + renderer token wiring
-│   ├── index.nix
-│   └── dashboards/     # Pre-configured JSON dashboards
-├── alertmanager/       # Alert routing to webhooks
-│   ├── index.nix
-│   └── options.nix
-├── cadvisor/           # Container metrics
-│   ├── index.nix
-│   └── options.nix
-├── exportarr/          # *arr application metrics
-│   ├── index.nix
-│   └── options.nix
-├── homepage/           # Service dashboard (gethomepage)
-│   ├── index.nix
-│   └── parts/
-│       ├── settings.yaml
-│       ├── services.yaml  # Active fleet services; retired Authentik removed
-│       ├── widgets.yaml
-│       ├── docker.yaml
-│       └── bookmarks.yaml
-├── alerts/             # Alert sources, thresholds, severity mapping
-└── heartbeat/          # Outbound ping to an external dead-man's switch
-    └── index.nix       #   (healthchecks.io); the watcher OFF this host
-    └── index.nix       # incl. the OnFailure= notifier list; every name in it
-                        #   is checked by the `alert-onfailure-units` flake check
-```
+Homepage installs its five YAML files from one file table with the shared service
+identity. Service links use the configured vhost domain, MCP and Prometheus ports,
+and n8n's existing public URL. `services.nix` is the sole service-tile producer;
+its generated YAML keeps the existing groups and widgets. Camera dashboards use
+Frigate metrics and configured expected FPS.
+Alertmanager delivers through notifications. The external heartbeat detects
+host or link failure. See [DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md) for release and read-only
+inspection commands.
 
 ## Changelog
+
+- 2026-11-09: Bind internal probes and Homepage links to configured ports and domains; share Exportarr bindings, Homepage installation and ordered alert tiers; reject conflicting fleet jobs. Migrate static service YAML to an explicit Nix producer. Remove unused severity, data-path and Homepage TLS-port options, clean redundant comments and refresh deployment guidance. Add override/conflict regressions and derive tier-test samples from actual bounds.
 
 - 2026-11-06: Retire the obsolete public estimator probe and alert. Follow the website's configured CRM intake URL, preserve certificate alerts and test pending/firing/recovery states.
 

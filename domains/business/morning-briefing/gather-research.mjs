@@ -19,16 +19,17 @@
 // Emits {} on any failure so the briefing degrades gracefully — the section
 // simply renders empty. It must never throw.
 
-const BASE = process.env.RESEARCH_SCOUT_URL || "http://127.0.0.1:8422";
-const PUBLIC_URL =
-  process.env.RESEARCH_SCOUT_PUBLIC_URL ||
-  "https://research-scout.hwc.iheartwoodcraft.com";
-const TIMEOUT_MS = Number(process.env.RESEARCH_SCOUT_TIMEOUT_MS || 8000);
+import { pathToFileURL } from "node:url";
+
+export async function gatherResearch({ baseUrl, publicUrl, timeoutMs, staleIngestHours, fetch: fetchRequest, now }) {
+const BASE = baseUrl;
+const PUBLIC_URL = publicUrl;
+const TIMEOUT_MS = timeoutMs;
 const TOP_N = 3;
-const STALE_INGEST_HOURS = Number(process.env.RESEARCH_SCOUT_STALE_HOURS || 36);
+const STALE_INGEST_HOURS = staleIngestHours;
 
 async function callTool(tool, body = {}) {
-  const res = await fetch(`${BASE}/api/${tool}`, {
+  const res = await fetchRequest(`${BASE}/api/${tool}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -38,7 +39,6 @@ async function callTool(tool, body = {}) {
   return res.json();
 }
 
-/** Trim a title to one briefing line. */
 function card(item, profileId) {
   return {
     title: String(item.title || "untitled").trim().slice(0, 140),
@@ -49,7 +49,6 @@ function card(item, profileId) {
   };
 }
 
-async function main() {
   let profiles = [];
   try {
     const listed = await callTool("research_profiles_list");
@@ -57,10 +56,7 @@ async function main() {
   } catch {
     // Server down or not yet migrated — report unavailable rather than {} so
     // the section can say so instead of silently vanishing.
-    process.stdout.write(
-      JSON.stringify({ url: PUBLIC_URL, available: false, counts: { awaiting: 0 } })
-    );
-    return;
+    return { url: PUBLIC_URL, available: false, counts: { awaiting: 0 } };
   }
 
   async function gatherQueue() {
@@ -121,7 +117,7 @@ async function main() {
         .filter((t) => Number.isFinite(t));
       if (done.length > 0) {
         const last = Math.max(...done);
-        const ageHours = (Date.now() - last) / 3_600_000;
+        const ageHours = (now - last) / 3_600_000;
         health = {
           lastIngestAt: new Date(last).toISOString(),
           ingestAgeHours: Math.round(ageHours * 10) / 10,
@@ -143,16 +139,21 @@ async function main() {
     gatherQueue(), gatherLessons(), gatherHealth(),
   ]);
 
-  process.stdout.write(
-    JSON.stringify({
+  return {
       url: PUBLIC_URL,
       available: true,
       counts: { awaiting, profiles: profiles.length, showing: queue.length },
       queue,
       lessons,
       health,
-    })
-  );
+  };
 }
 
-main().catch(() => process.stdout.write("{}"));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  gatherResearch({ baseUrl: process.env.RESEARCH_SCOUT_URL || "http://127.0.0.1:8422",
+    publicUrl: process.env.RESEARCH_SCOUT_PUBLIC_URL || "https://research-scout.hwc.iheartwoodcraft.com",
+    timeoutMs: Number(process.env.RESEARCH_SCOUT_TIMEOUT_MS || 8000),
+    staleIngestHours: Number(process.env.RESEARCH_SCOUT_STALE_HOURS || 36), fetch, now: Date.now(),
+  }).then((out) => process.stdout.write(JSON.stringify(out)))
+    .catch(() => process.stdout.write("{}"));
+}

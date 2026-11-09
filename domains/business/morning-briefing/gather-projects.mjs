@@ -10,21 +10,21 @@
 // TRACKER_URL      hub base (default http://127.0.0.1:8765)
 // WAIT_DAYS        a wait on Eric older than this is reported (default 7)
 
-const BASE = (process.env.TRACKER_URL || "http://127.0.0.1:8765").replace(/\/$/, "");
-const PUBLIC = (process.env.TRACKER_PUBLIC_URL || "http://hwc-work:8765").replace(/\/$/, "");
-const WAIT_DAYS = Number(process.env.WAIT_DAYS || 7);
+import { pathToFileURL } from "node:url";
 
-async function main() {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000);
-  let folio;
-  try {
-    const r = await fetch(`${BASE}/api/portfolio`, { signal: controller.signal });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    folio = await r.json();
-  } finally {
-    clearTimeout(timer);
+export async function gatherProjects({ baseUrl, publicUrl, waitDays, fetch: fetchRequest, requestTimeoutMs, totalTimeoutMs }) {
+  const BASE = baseUrl.replace(/\/$/, "");
+  const PUBLIC = publicUrl.replace(/\/$/, "");
+  // The shell allows 30 seconds. At the total deadline, stop reading cards and
+  // retain the portfolio already gathered rather than losing the whole section.
+  const budget = AbortSignal.timeout(totalTimeoutMs);
+  async function readJson(path) {
+    const signal = AbortSignal.any([budget, AbortSignal.timeout(requestTimeoutMs)]);
+    const response = await fetchRequest(`${BASE}${path}`, { signal });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
   }
+  const folio = await readJson("/api/portfolio");
   const P = folio.projects || {};
   const live = Object.values(P).filter((p) => p.status === "active");
   const url = (id, tab = "") => `${PUBLIC}/p/${encodeURIComponent(id)}${tab}`;
@@ -36,7 +36,7 @@ async function main() {
   const waits = [];
   for (const p of live) {
     for (const w of p.waits || []) {
-      if (w.on !== "eric" || w.days == null || w.days < WAIT_DAYS) continue;
+      if (w.on !== "eric" || w.days == null || w.days < waitDays) continue;
       waits.push({ id: p.id, title: p.title, ask: w.ask, days: w.days, expired: !!w.expired, url: url(p.id, "/roadmap") });
     }
   }
@@ -48,10 +48,9 @@ async function main() {
   const expiring = [];
   const withCards = live.filter((p) => p.open > 0).slice(0, 20);
   for (const p of withCards) {
+    if (budget.aborted) break;
     try {
-      const r = await fetch(`${BASE}/api/projects/${encodeURIComponent(p.id)}`);
-      if (!r.ok) continue;
-      const page = await r.json();
+      const page = await readJson(`/api/projects/${encodeURIComponent(p.id)}`);
       for (const c of page.cards || []) {
         if (c.status !== "open" || !c.expires) continue;
         const left = Math.round((new Date(c.expires + "T12:00:00") - new Date(folio.today + "T12:00:00")) / 86400000);
@@ -67,7 +66,7 @@ async function main() {
     .map((p) => ({ id: p.id, title: p.title, replans: p.replans, url: url(p.id, "/roadmap") }));
 
   const c = folio.counts || {};
-  process.stdout.write(JSON.stringify({
+  return {
     url: PUBLIC,
     available: true,
     today: folio.today,
@@ -76,7 +75,14 @@ async function main() {
     overdue, waits, expiring, churn,
     groups: (folio.groups || []).map((g) => ({ label: g.label, count: g.count, needYou: g.needYou, stale: g.stale, avgComplete: g.avgComplete })),
     actionable: overdue.length + waits.length + expiring.length + (c.products > folio.liveCap ? 1 : 0) > 0,
-  }));
+  };
 }
 
-main().catch(() => process.stdout.write("{}"));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  gatherProjects({ baseUrl: process.env.TRACKER_URL || "http://127.0.0.1:8765",
+    publicUrl: process.env.TRACKER_PUBLIC_URL || "http://hwc-work:8765",
+    waitDays: Number(process.env.WAIT_DAYS || 7), fetch,
+    requestTimeoutMs: 10_000, totalTimeoutMs: 25_000,
+  }).then((out) => process.stdout.write(JSON.stringify(out)))
+    .catch(() => process.stdout.write("{}"));
+}
