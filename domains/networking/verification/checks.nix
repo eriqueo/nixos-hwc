@@ -326,7 +326,9 @@ in pkgs.runCommand "briefing-mcp-routing" {
   find(adapted)
   assert len(matches) == 1, 'expected one actual briefing host route'
   site = pathlib.Path('site').resolve()
-  shutil.copytree(f['source'], site)
+  site.mkdir()
+  for name in ['mcp-client.mjs', 'view-policy.json']:
+      shutil.copyfile(pathlib.Path(f['source']) / name, site / name)
   class Gateway(http.server.BaseHTTPRequestHandler):
       def do_GET(self):
           self.send_response(201); self.end_headers(); self.wfile.write(b'gateway fixture')
@@ -375,7 +377,7 @@ in pkgs.runCommand "briefing-mcp-routing" {
       replaced = []
       def broaden(value):
           if isinstance(value, dict):
-              if value.get('path') == ['/mcp', '/mcp/*']:
+              if isinstance(value.get('path'), list) and set(value['path']) == {'/mcp', '/mcp/*'}:
                   value['path'] = ['/mcp*']; replaced.append(True)
               for child in value.values(): broaden(child)
           elif isinstance(value, list):

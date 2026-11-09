@@ -18,7 +18,7 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
-`verification/` contains pure flake checks for this capability; production modules do not import it. The briefing route check runs the adapted production route over isolated HTTP without certificate provisioning.
+`verification/` contains pure flake checks for this capability; production modules do not import it. The briefing route check runs the adapted production route over isolated HTTP without certificate provisioning. It copies only the static module and policy, excluding runtime report symlinks.
 
 `internalContainerNetworks` declares application-private Podman bridges. Startup validates internal routing, DNS, driver and IPv6 before dependent containers start.
 
@@ -103,7 +103,7 @@ networking/
 
 ## Changelog
 
-- 2026-11-09: Keep the briefing MCP proxy within its path namespace so shared JavaScript assets remain static files. Verify real Caddy routing, module MIME type and the former broad-prefix failure with isolated HTTP fixtures.
+- 2026-11-09: Keep the briefing MCP proxy within its path namespace so shared JavaScript assets remain static files. Verify real Caddy routing, module MIME type and the former broad-prefix failure with isolated HTTP fixtures that exclude runtime reports.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 
