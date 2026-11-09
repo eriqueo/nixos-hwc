@@ -186,6 +186,12 @@ and is NOT a refactor gate.
 
 ## Changelog
 
+- 2026-11-04: Read paths narrowed and fixed patterns hoisted (68ff8eda).
+  `export_catalog.py`, `validate_catalog.py` and `reconcile_jt_catalog.py` select
+  named columns instead of `SELECT *` / `ci.*` and compile regexes once; the JS
+  engine (`assembler.js`, `flooring.js`, `formulaEngine.js`, `preliminary.js`)
+  and `useProjectState.js` reuse module-scope regexes. No behavior change intended.
+
 - 2026-11-02: Remove browser credentials; use exact same-origin proxy routes with runtime key injection and origin/method guards. Preserve paging, draft recovery and manual write locks; rebuild tracked assets.
 
 - 2026-10-09: Preliminary plan lines carry `needsConfirmation` unless every input to their quantity traces to calculator answers (`geometry.js` `DERIVED_INPUTS` maps derived keys to raw inputs). Fixed quantities, template/preset inputs, fallbacks and allowances are marked; the CRM writes the mark to JobTread's `Needs Confirmation` cost item field.

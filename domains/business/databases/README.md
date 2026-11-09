@@ -19,8 +19,21 @@ domains/business/databases/
 ├── migrate_catalog.py           # Migration script: SQLite -> Postgres catalog_items table
 ├── export_calculator_json.py    # Export DB → calculator-bathroom.json for website calculator
 ├── export_estimator_data.py     # Export DB → tradeRates.json, templates.json, catalog_export.json
+├── CATALOG_NAMING_CONVENTION.md # Canonical catalog item naming rule
+├── migrate_canonical.sql        # Adds canonical naming columns to catalog_items
+├── populate_assembly_logic.py   # Copies assembler.js add() logic onto catalog_items
+├── seed_catalog.py              # Seeds catalog_items from canonical_catalog_FINAL.csv
+├── migrations/
+│   ├── 001-catalog-schema-split.sql   # catalog_items / assembly_rules / estimate_line_items split
+│   └── 002-estimator-site-visit.sql   # Site-visit catalogue repair (see Changelog)
 └── README.md
 ```
+
+Roles: the primary login role (`cfg.user`) is declared once for the cluster in
+`domains/data/databases/index.nix`. This module declares only `business_user`
+(a grantee in `schema.sql` and migration 001). It adds no postStart grants and
+no per-database backup registration; `hwc` is covered by the borg pre-hook's
+nightly `pg_dumpall`.
 
 ## Configuration
 
@@ -85,6 +98,18 @@ After enabling and rebuilding:
 
 ## Changelog
 
+- 2026-10-07: Added `migrations/002-estimator-site-visit.sql` (ad7d89e3), an
+  idempotent catalogue repair that leaves existing rates unchanged. It rewrites
+  `assembly_rules.condition_trigger` for shower, niche, tub and tile rules;
+  sets niche rule 26 `waste_factor = 1`; gates material purchases on new
+  `include_*_material != "no"` flags while installation follows scope; and
+  inserts site-verified panel-shower, vinyl/Marmoleum flooring and shower-door
+  items with bathroom assembly rules. Rebuild JSON with
+  `export_estimator_data.py` after applying it.
+- 2026-08-28: Removed the four `$PSQL` GRANT lines from `postgresql.postStart`
+  (never ran: `$PSQL` is undefined there) and the per-database backup
+  registration (postgresql-db-backup retired 2026-08-26). Declared
+  `business_user` via `ensureUsers` (e82ca994, 53e84228).
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain
 - 2026-03-24: Granted n8n postgres user access to hwc schema
