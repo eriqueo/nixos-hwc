@@ -98,7 +98,18 @@ let
         channelId = cfg.targets.events.channelId;
         cardPort = cfg.targets.events.cardPort;
       };
+    }
+    // lib.optionalAttrs cfg.targets.projects.enable {
+      projects = {
+        url = cfg.targets.projects.hubUrl;
+        tokenFile = projectsControlTokenFile;
+        channelId = cfg.targets.projects.channelId;
+        cardPort = cfg.targets.projects.cardPort;
+      };
     };
+  # One token, both directions: the hub posts cards to the bot's loopback
+  # ingress with it, and the bot forwards presses to the hub with it.
+  projectsControlTokenFile = "/run/agenix/${cfg.targets.projects.tokenSecret}";
   targetTokenFiles = map (target: target.tokenFile) (builtins.attrValues targets);
   targetUnits =
     lib.optional cfg.targets.leadScout "lead-scout.service"
@@ -180,6 +191,41 @@ in
       };
     };
 
+    # Project tracker cards in #projects. The tracker hub is the owning app:
+    # it posts each open decision card once and records Eric's press. The hub
+    # (a user unit in hwc.home.apps.agent-harness) reads these same values
+    # through osConfig, so the port, token and start date have one producer.
+    targets.projects = {
+      enable = lib.mkEnableOption "project decision cards with Approve/Reject buttons, backed by the tracker hub";
+      channelId = lib.mkOption {
+        type = lib.types.strMatching "^[0-9]{17,20}$";
+        default = "1569452916883066910";
+        description = "Discord channel snowflake for project decision cards (#projects).";
+      };
+      cardPort = lib.mkOption {
+        type = lib.types.port;
+        default = 8790;
+        description = "Loopback port for authenticated card delivery from the tracker hub.";
+      };
+      hubUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "http://127.0.0.1:8765";
+        description = "The tracker hub as the bot reaches it for a press.";
+      };
+      tokenSecret = lib.mkOption {
+        type = lib.types.str;
+        default = "hwc-control-projects-token";
+        description = "agenix secret name of the shared hub/bot control token.";
+      };
+      postSince = lib.mkOption {
+        type = lib.types.strMatching "^[0-9]{4}-[0-9]{2}-[0-9]{2}$";
+        default = "2026-11-09";
+        description = ''
+          Only cards created on or after this date post to Discord, so enabling
+          the target never floods the channel with old cards.'';
+      };
+    };
+
     summary = {
       enable = lib.mkEnableOption "the bounded daily summary (one channel post, only when counts changed)";
       onCalendar = lib.mkOption {
@@ -201,6 +247,10 @@ in
       # domain in /next; it must not take the whole control surface down.
       wants = [ "network-online.target" ] ++ targetUnits;
       wantedBy = [ "multi-user.target" ];
+      # The bot reads the shared token once at boot; a rotated token must
+      # restart it or every hub call is refused.
+      restartTriggers = lib.optional cfg.targets.projects.enable
+        config.age.secrets.${cfg.targets.projects.tokenSecret}.file;
 
       # Five failed starts in five minutes leave the unit visibly failed
       # rather than hammering Discord; the next deploy or an operator
@@ -339,6 +389,19 @@ in
           !cfg.targets.events.enable
           || builtins.hasAttr eventScout.controlTokenSecret config.hwc.secrets.api;
         message = "hwc-control-bot: Event Scout control token has no generated agenix mount.";
+      }
+      {
+        assertion =
+          !cfg.targets.projects.enable
+          || builtins.hasAttr cfg.targets.projects.tokenSecret config.age.secrets;
+        message = "hwc-control-bot targets Projects, so secret ${cfg.targets.projects.tokenSecret} needs a generated agenix mount.";
+      }
+      {
+        assertion =
+          !cfg.targets.projects.enable
+          || !cfg.targets.events.enable
+          || cfg.targets.projects.cardPort != cfg.targets.events.cardPort;
+        message = "hwc-control-bot: the projects and events card ports must differ.";
       }
     ];
   };

@@ -125,6 +125,7 @@ Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 - 2026-11-09: Refine full Tasks with the shared Workbench palette, disclosed creation/repeat fields, list/project/context filters, search and due/priority/title ordering. Keep completion below active tasks and show loaded scope, stale/error and saved states. Wire repeat-only edits through the existing validator; retain foreign schedules and restore dialog focus, including read-only details. Add synthetic browser and production-wiring regressions.
 
+- 2026-11-09: `native/ai/hwc-control-bot/` gains the Projects target (`targets.projects`): tracker decision cards with Approve / Reject / Answer in `#projects`, card ingress on loopback 8790, shared token `hwc-control-projects-token`. The tracker hub owns the decisions; the bot restarts when that token's ciphertext changes. Enabled on hwc-work.
 - 2026-11-04: Select runtime-only HTTP framing repairs for Meals and Piper,
   preserving service behavior, model inputs and persistent data paths.
 

@@ -106,6 +106,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-09: Tracker decision cards reach Discord. New `tracker.discordCards` (enable, token file, bot ingress, start date) feeds `hwc-tracker` and the new one-minute `tracker-post-cards` user timer. Its one producer is the system control bot's `hwc.server.ai.hwcControlBot.targets.projects`: system Home Manager reads it through osConfig and `flake.nix` hands the standalone lane the same value. The hub bounds posting (3 sends a call, 30 a day, one message per card). Stop the timer to stop posting; disable the bot target to remove both sides.
 - 2026-10-16: Pin tested legacy Close delivery retirement and the shared typed handoff parser. Preserve historical readers, late acknowledgements, occupied holds and canonical replay. Fleet enablement stays separate.
 
 - 2026-10-16: Pin the shared typed finding example and explicit Close finding bounds after fresh-context tests and installed independent Review. Result schema, strict validation, Review prompt and cleanup authority stay unchanged.

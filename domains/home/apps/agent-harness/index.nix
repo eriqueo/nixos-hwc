@@ -416,6 +416,33 @@ in
         default = "https://refinery.hwc.iheartwoodcraft.com";
         description = "The Refinery board as Eric's browser reaches it: item links and the add-to-backlog form.";
       };
+      discordCards = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            enable = lib.mkOption { type = lib.types.bool; description = "Post open decision cards to Discord and accept presses."; };
+            tokenFile = lib.mkOption { type = lib.types.str; description = "Mounted file holding the shared hub/bot control token."; };
+            ingressUrl = lib.mkOption { type = lib.types.str; description = "The control bot's loopback card ingress."; };
+            since = lib.mkOption { type = lib.types.str; description = "Cards created before this date never post."; };
+          };
+        };
+        # One producer: the control bot's `targets.projects` in the system
+        # config. Under system Home Manager this default reads it; the
+        # standalone lane receives the same value from flake.nix.
+        default =
+          let
+            bot = lib.attrByPath [ "hwc" "server" "ai" "hwcControlBot" ] null osConfig;
+            on = bot != null && bot.enable && bot.targets.projects.enable;
+          in {
+            enable = on;
+            tokenFile = if on then "/run/agenix/${bot.targets.projects.tokenSecret}" else "";
+            ingressUrl = if on then "http://127.0.0.1:${toString bot.targets.projects.cardPort}" else "";
+            since = if on then bot.targets.projects.postSince else "";
+          };
+        defaultText = lib.literalMD "derived from the system control bot's `targets.projects`; off without a system config";
+        description = ''
+          Discord decision cards through the HWC control bot. The hub posts each
+          open card once and records Eric's Approve, Reject or Answer press.'';
+      };
     };
     claudeConfigDirs = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -660,6 +687,13 @@ in
           # The Backlog tab's read model lives on the Refinery board (one store of work items).
           "TRACKER_REFINERY_URL=${cfg.tracker.refineryUrl}"
           "TRACKER_REFINERY_PUBLIC_URL=${cfg.tracker.refineryPublicUrl}"
+        ] ++ lib.optionals cfg.tracker.discordCards.enable [
+          # Discord cards: off without the token file. The hub reads the token
+          # on each control request, so a rotated token needs no restart here.
+          "TRACKER_CONTROL_TOKEN_FILE=${cfg.tracker.discordCards.tokenFile}"
+          "TRACKER_CARD_INGRESS_URL=${cfg.tracker.discordCards.ingressUrl}"
+          "TRACKER_POST_SINCE=${cfg.tracker.discordCards.since}"
+          "TRACKER_PUBLIC_URL=${cfg.tracker.url}"
         ] ++ lib.optional (workbenchSite != null)
           # Workbench area switcher: the page renders the Nix-produced registry
           # (hwc.business.workbench, the one producer of the area list) from the
@@ -669,6 +703,35 @@ in
         RestartSec = 5;
       };
       Install.WantedBy = [ "default.target" ];
+    };
+
+    # Each minute: ask the hub to post new open cards to Discord. The work runs
+    # inside the hub's single-threaded request loop, so it cannot race Eric's
+    # clicks on decisions.json. The hub bounds it (3 sends per call, 30 a day)
+    # and never repeats a card; stopping this timer stops all posting.
+    systemd.user.services.tracker-post-cards = lib.mkIf (cfg.tracker.enable && cfg.tracker.discordCards.enable) {
+      Unit = {
+        Description = "Post new tracker decision cards to Discord";
+        After = [ "hwc-tracker.service" ];
+      };
+      Service = {
+        Type = "oneshot";
+        # The token reaches curl on stdin, never in its arguments.
+        ExecStart = pkgs.writeShellScript "tracker-post-cards" ''
+          set -eu
+          printf 'header = "Authorization: Bearer %s"\n' "$(${pkgs.coreutils}/bin/cat ${cfg.tracker.discordCards.tokenFile})" \
+            | ${pkgs.curl}/bin/curl --silent --show-error --fail --max-time 30 --config - \
+                --request POST "http://127.0.0.1:${toString cfg.tracker.port}/api/control/v1/post-cards"
+        '';
+      };
+    };
+    systemd.user.timers.tracker-post-cards = lib.mkIf (cfg.tracker.enable && cfg.tracker.discordCards.enable) {
+      Unit.Description = "Post new tracker decision cards to Discord each minute";
+      Install.WantedBy = [ "timers.target" ];
+      Timer = {
+        OnCalendar = "minutely";
+        AccuracySec = "5s";
+      };
     };
 
     # Every host: posts the hub's pings for this host's T3 threads into the

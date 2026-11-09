@@ -609,6 +609,10 @@
               # osConfig into every standalone home module.
               hwc.home.apps.workbench.serverUrl = lib.mkDefault
                 self.nixosConfigurations."hwc-${name}".config.home-manager.users.eric.hwc.home.apps.workbench.serverUrl;
+              # Same handshake for the tracker's Discord cards, whose producer
+              # is the system control bot: `hms` must not switch them off.
+              hwc.home.apps.agent-harness.tracker.discordCards = lib.mkDefault
+                self.nixosConfigurations."hwc-${name}".config.home-manager.users.eric.hwc.home.apps.agent-harness.tracker.discordCards;
             }
             ({ lib, ... }: {
               _module.args = lib.optionalAttrs (m.scopedNodeRuntime or false) {
