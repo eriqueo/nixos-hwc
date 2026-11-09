@@ -485,6 +485,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+
+- 2026-11-09: Bound MCP test workers to two so concurrent release builds do not time out module imports and leak unfinished test state. Keep every test and its timeout.
 - 2026-11-02: Hoist fixed patterns, precompile CalDAV properties and remove full URL parsing from SSE query lookup.
 - 2026-11-02: Remove independent read barriers from status tools and file-backed boards; add bounded ordered scheduling and handler-level concurrency regressions.
 
@@ -743,6 +745,8 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **2026-04-02**: Root podman fix, parameter validation, `.mcp.json` registration, Phase 1-3 foundation.
 
 ## Structure
+
+The MCP package runs its full test suite with at most two workers during Nix builds.
 
 Fixed regexes live at module scope; stateful uses reset cursors or use independent matchAll iterators. CalDAV precompiles known property patterns. `tests/server-overview.test.ts` checks fixed-pattern placement and query decoding parity with the prior URL parser.
 
