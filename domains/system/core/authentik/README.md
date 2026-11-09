@@ -50,4 +50,9 @@ authentik/
 - Podman + media network (when `network.mode = "media"`)
 
 ## Changelog
+- 2026-08-28: DB provisioning declares the role via `services.postgresql.ensureUsers`
+  with `ensureDBOwnership = true` instead of `$PSQL` CREATE ROLE/GRANT lines in
+  `postgresql.postStart`, which never ran (`$PSQL` undefined, `|| true`). The
+  placeholder password is gone; authentik reaches Postgres over the podman
+  bridge under a `trust` rule (e82ca994).
 - 2026-03-26: Initial scaffolding — server/worker containers, DB provisioning, Caddy reverse proxy, secret integration

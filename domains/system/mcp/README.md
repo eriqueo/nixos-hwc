@@ -457,6 +457,9 @@ domains/system/mcp/
 
 Unit: `hwc-sys-mcp.service`
 
+`ExecStartPost` runs the shared `lib/mkHttpReady.nix` probe on `/health`
+(with its `TimeoutStartSec`), so units ordered after it wait for HTTP, not process start.
+
 ```bash
 # Check status
 systemctl status hwc-sys-mcp
@@ -485,6 +488,9 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 - **nvidia-smi PATH fallback**: GPU tool tries PATH first, then `/run/current-system/sw/bin/nvidia-smi`
 
 ## Changelog
+- 2026-11-04: `hwc-sys-mcp` gains an `ExecStartPost` HTTP readiness probe
+  (`lib/mkHttpReady.nix` on `/health`) and its `TimeoutStartSec`, so the meals
+  units' After/Requires wait for HTTP (89188e8c).
 - 2026-11-02: Hoist fixed patterns, precompile CalDAV properties and remove full URL parsing from SSE query lookup.
 - 2026-11-02: Remove independent read barriers from status tools and file-backed boards; add bounded ordered scheduling and handler-level concurrency regressions.
 
