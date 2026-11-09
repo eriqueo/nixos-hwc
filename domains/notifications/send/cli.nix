@@ -19,6 +19,7 @@ let
   cliCfg = config.hwc.notifications.send.cli;
   notifyCfg = config.hwc.notifications.notify;
   base = notifyCfg.url;
+  post = import ./post.nix { inherit pkgs; };
   logDir = "/var/log/hwc/notifications";
 
 in
@@ -122,8 +123,7 @@ EOF
         --argjson context "$context" \
         '{topic: "monitoring", title: $title, body: $body, priority: $priority,
           source: $source, tags: ["severity:\($priority|tostring)"], context: $context}')
-      curl -fsS --max-time 15 -X POST -H 'content-type: application/json' \
-        -d "$payload" "$BASE/notify"
+      printf '%s' "$payload" | ${post}/bin/hwc-notify-post "$BASE" 15
     }
 
     show_status() {
@@ -219,7 +219,7 @@ EOF
       echo "Alert sent: $TITLE ($SEVERITY)"
     else
       log "FAILED to send: [$SEVERITY] $TITLE"
-      echo "ERROR: dispatcher POST failed for: $TITLE" >&2
+      echo "ERROR: notification delivery incomplete for: $TITLE" >&2
       # Critical alerts get a wall message as last resort.
       if [ "$SEVERITY" = "critical" ]; then
         echo "CRITICAL ALERT: $TITLE - $MESSAGE" | ${pkgs.util-linux}/bin/wall 2>/dev/null || true

@@ -29,7 +29,13 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import { createServer } from "node:net";
+import { setTimeout as delay } from "node:timers/promises";
+import { DatabaseSync } from "node:sqlite";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -315,44 +321,6 @@ test("transitionMode=off skips the engine and changes nothing else", async () =>
   assert.equal(outcome.result.succeeded, 2);
 });
 
-// ── The last hole: the shells must not rebuild the pipeline themselves ─────
-
-test("both HTTP handlers dispatch through the pipeline and nothing else", () => {
-  // dist/__tests__/ → the package root → src/main.ts. Present both in the repo
-  // and inside buildNpmPackage's checkPhase, which runs from the source root.
-  const mainTs = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "src", "main.ts");
-  const src = readFileSync(mainTs, "utf8");
-
-  // The tests above cover the gate calls inside core/pipeline.ts. This covers
-  // the edge they cannot see: a handler that stops calling the pipeline and
-  // orchestrates dispatch itself. It is checked structurally, by the absence of
-  // the imports such a handler would need — a stray comment or string cannot
-  // satisfy an absence.
-  assert.ok(
-    !src.includes('from "./core/dispatch.js"'),
-    "main.ts must not import dispatch directly — a handler that can fan out on its "
-      + "own can fan out without reserving first",
-  );
-  assert.ok(
-    !src.includes('from "./core/router.js"'),
-    "main.ts must not import route directly; core/pipeline.ts owns routing",
-  );
-  assert.ok(src.includes('from "./core/pipeline.js"'), "main.ts must import the pipeline");
-
-  const marker = 'url === "/webhook/alertmanager"';
-  const split = src.indexOf(marker);
-  assert.ok(split > 0, `main.ts no longer mounts ${marker} — this check has lost its subject`);
-  assert.ok(
-    src.slice(0, split).includes("dispatchNotification(pipeline"),
-    "the /notify handler must dispatch through the pipeline",
-  );
-  assert.ok(
-    src.slice(split).includes("dispatchNotification(pipeline"),
-    "the /webhook/alertmanager handler must dispatch through the pipeline",
-  );
-});
-
-
 test("pipeline clock controls circuit opening and cooldown", async () => {
   const h = makeHarness({ decision: null, okChannels: new Set() });
   let time = T0;
@@ -368,4 +336,64 @@ test("pipeline clock controls circuit opening and cooldown", async () => {
   time = T0 + 100;
   await dispatchNotification(deps, firingAlert(), silentLog);
   assert.equal(sends(), 4, "injected clock expiry permits another attempt");
+});
+
+
+test("HTTP handlers preserve long messages, audit both entry points, and bound requests", { timeout: 15000 }, async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "notify-http-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const listener = createServer();
+  listener.listen(0, "127.0.0.1");
+  await once(listener, "listening");
+  const address = listener.address();
+  assert.ok(address && typeof address !== "string");
+  const port = address.port;
+  await new Promise<void>((resolve) => listener.close(() => resolve()));
+  const configPath = join(dir, "config.json");
+  await writeFile(configPath, JSON.stringify({ channels: [{ id: "local", name: "local", adapter: "log-only" }], defaultChannels: ["local"] }));
+  const child = spawn(process.execPath, ["--experimental-sqlite", join(dirname(fileURLToPath(import.meta.url)), "..", "main.js")], {
+    env: { ...process.env, HWC_NOTIFY_RUNTIME_CONFIG_FILE: configPath, HWC_NOTIFY_STATE_DIR: dir,
+      HWC_NOTIFY_BIND_ADDR: "127.0.0.1", HWC_NOTIFY_PORT: String(port), HWC_NOTIFY_TRANSITION_MODE: "shadow" },
+    stdio: "ignore",
+  });
+  t.after(async () => {
+    if (child.exitCode === null && child.signalCode === null) {
+      const exited = once(child, "exit");
+      child.kill("SIGTERM");
+      await exited;
+    }
+  });
+  const base = `http://127.0.0.1:${port}`;
+  let ready = false;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    try { ready = (await fetch(`${base}/health`)).ok; } catch {}
+    if (ready) break;
+    await delay(20);
+  }
+  assert.ok(ready, "dispatcher must start");
+  const post = (path: string, body: unknown) => fetch(`${base}${path}`, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+  });
+  for (const body of ["x".repeat(64000), "界".repeat(64000), "\u0001".repeat(64000)]) {
+    const res = await post("/notify", { id: "long", title: "digest", topic: "research-scout", body });
+    assert.equal(res.status, 200);
+    const result = await res.json() as { succeeded: number };
+    assert.equal(result.succeeded, 1);
+  }
+  const webhook = await post("/webhook/alertmanager", { alerts: [{ status: "firing", labels: { alertname: "Fixture" }, annotations: {}, startsAt: "2026-09-01T00:00:00Z", fingerprint: "http-fixture" }] });
+  assert.equal(webhook.status, 200);
+  await webhook.arrayBuffer();
+  const db = new DatabaseSync(join(dir, "audit.sqlite"), { readOnly: true });
+  try {
+    assert.equal(db.prepare("SELECT body FROM notifications WHERE id = 'long'").get()?.body, "x".repeat(64000));
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM alert_transitions").get()?.n, 1);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM deliveries").get()?.n, 4);
+  } finally { db.close(); }
+  const oversized = await post("/notify", { title: "oversized", topic: "test", body: "x".repeat(1024 * 1024) });
+  assert.equal(oversized.status, 413);
+  await oversized.arrayBuffer();
+  const invalid = await post("/notify", { title: "invalid", topic: "test", body: "x".repeat(64001) });
+  assert.equal(invalid.status, 400);
+  await invalid.arrayBuffer();
+  assert.equal((await fetch(`${base}/health`)).status, 200);
 });

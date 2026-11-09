@@ -44,6 +44,8 @@ Inbound (**shells**) translate external requests into the canonical `Notificatio
 
 ## Structure
 
+The HTTP fixture starts the real dispatcher and checks long messages, transition records, audit delivery counts, and request bounds.
+
 `ports/log.ts` owns log levels. `main.ts` loads channel credentials. The pipeline passes its clock to dispatch; the executive meaning bound lives beside its core type.
 
 ```
@@ -369,6 +371,8 @@ Hardening: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome=read-only`, `
 | 1.7 | ✅ deployed   | `hwc-notify` CLI + `hwc_notify` MCP tool. |
 
 ## Changelog
+
+- 2026-11-09: Accept long schema-valid bodies within a 1 MiB HTTP envelope; reject oversized requests with 413. Both shell CLIs share delivery-count validation and fail on partial/unrouted delivery. Replace source-text HTTP assertions with real HTTP/audit checks.
 
 - 2026-11-09: Pass the pipeline clock through circuit dispatch; move log-level ownership to the logger port and SMTP secret loading to the composition root; share the executive meaning bound and remove unused parser/schema exports.
 

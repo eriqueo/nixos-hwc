@@ -211,6 +211,7 @@ let
   #   hwc-notify status        # circuit-breaker state
   #   hwc-notify health
   # ────────────────────────────────────────────────────────────────────
+  notify-post = import ../send/post.nix { inherit pkgs; };
   notify-cli = pkgs.writeShellApplication {
     name = "hwc-notify";
     runtimeInputs = [ pkgs.curl pkgs.jq pkgs.coreutils ];
@@ -259,7 +260,7 @@ EOF
             --arg topic "$topic" --arg title "$title" --arg body "$body" \
             --arg source "$source" --argjson priority "$priority" --argjson tags "$tags" \
             '{topic: $topic, title: $title, body: $body, priority: $priority, source: $source, tags: $tags}')
-          curl -fsS --max-time 10 -X POST -H 'content-type: application/json' -d "$payload" "$base/notify" | jq
+          printf '%s' "$payload" | ${notify-post}/bin/hwc-notify-post "$base" 10 | jq
           ;;
         recent)
           limit=50

@@ -1,15 +1,4 @@
-/**
- * Router — pure function from Notification + routes → channel IDs.
- *
- * First-rule-wins. A rule matches when every field set in `match`
- * equals the corresponding field on the notification; an empty
- * `match` matches everything. When no rule matches, `defaultChannels`
- * is the fallback (may itself be empty, producing zero deliveries).
- *
- * Phase 1.3: exact match only on (topic, source, priority). More
- * sophisticated predicates (regex, tags-any, priority-at-most) land
- * when a real case demands them — not before.
- */
+/** First matching route wins; unmatched notifications use default channels. */
 
 import type { Notification } from "./types.js";
 import type { RoutingRule } from "../schemas/runtime-config.js";

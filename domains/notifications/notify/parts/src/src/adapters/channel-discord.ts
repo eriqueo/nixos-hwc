@@ -67,7 +67,7 @@ const LIMIT = {
 /**
  * The executive path caps the description at the schema's own `meaning` bound
  * instead of the 4096 embed bound. Same output for anything that came through
- * `parseNotificationInput` (meaning is already ≤ 1000), and it makes the
+ * `safeParseNotificationInput` (meaning is already ≤ 1000), and it makes the
  * Details budget provable: title 256 + meaning 1000 + recommendation 500 +
  * explore 1024 + field names 28 + footer 2048 = 4856 worst case, leaving 1144
  * — more than the 1024 field allowance — for Details.

@@ -9,6 +9,8 @@
 
 ## Structure
 
+MCP `hwc_notify send` reports full, partial, failed, and unrouted delivery from the dispatcher counts. It preserves response evidence on errors and never retries a send.
+
 The MCP gateway uses the shared native HTTP readiness command before its
 After/Requires consumers can start.
 
@@ -99,6 +101,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-11-09: Report notification delivery outcomes from validated dispatcher counts; retain error response data and test the actual MCP handler.
 
 - 2026-11-04: Hold MCP startup until its HTTP health endpoint responds, preventing dependent Meals preflight from racing the listener.
 
