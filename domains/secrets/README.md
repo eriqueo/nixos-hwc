@@ -89,6 +89,7 @@ these same rules instead of maintaining another host list.
 
 ## Changelog
 
+- 2026-11-09: Add `hwc-control-projects-token` (`parts/services/`), a generated 64-hex token shared by the tracker hub and the HWC control bot for project decision cards. Never displayed; encrypted to the agreed five-recipient default and checked by work host-key decryption for size and shape before publication. Generated `root:secrets / 0440` mount. REPLACEABLE: regenerate and rebuild.
 - 2026-11-09: Add `discord-webhook-projects` (`parts/services/discord-webhook/projects.age`), the `#projects` channel webhook Eric supplied. Encrypted to the agreed five-recipient default; work host-key decryption matched byte for byte. Generated `root:secrets / 0440` mount; hwc-notify restarts on ciphertext change.
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-11-03: Create four scoped PostgreSQL environment payloads and rotate only Umami's database URL password; verify work/home host-key byte parity.

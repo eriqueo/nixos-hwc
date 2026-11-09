@@ -267,6 +267,9 @@
       enable = true;
       channelId = "1545506587815313560";
     };
+    # Tracker decision cards with Approve / Reject / Answer in #projects.
+    # The tracker hub owns the decisions; this bot owns Discord transport.
+    targets.projects.enable = true;
     # One morning post, only when the counts moved since the last one.
     # 07:50: off the 07:30 minute that nightly-builds-review keeps.
     summary.enable = true;
