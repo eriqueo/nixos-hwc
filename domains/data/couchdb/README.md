@@ -73,4 +73,10 @@ hwc.data.couchdb = {
 
 ## Changelog
 
+- 2026-03-31: Default admin credential paths now read
+  `hwc.secrets.api."couchdb-admin-username"` / `"couchdb-admin-password"`
+  (falling back to `null`) instead of the
+  `couchdbAdminUsernameFile` / `couchdbAdminPasswordFile` attributes; option
+  descriptions updated to match (17b9283b).
+
 - 2026-03-25: Created README per Law 12
