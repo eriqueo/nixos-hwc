@@ -7,6 +7,8 @@ yt-dlp also supplies metadata. No NLP libraries, no LLM.
 """
 
 import asyncio
+import html
+import sys
 import json
 import logging
 import math
@@ -15,15 +17,10 @@ import re
 import tempfile
 import time
 import wave
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Callable, Optional
 
-import re as _compiled_re
 
-# Fixed patterns compile once; matching stays at the original call sites.
-__PARSE_VTT_COMPILE_RE = _compiled_re.compile(r"(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})\.(\d{3})")
-__PARSE_VTT_COMPILE_RE_2 = _compiled_re.compile(r"<[^>]+>")
-__SPLIT_BY_SENTENCES_FINDITER_RE = _compiled_re.compile(r"[^.?!]+[.?!]")
 
 
 logger = logging.getLogger("transcripts")
@@ -206,6 +203,10 @@ class Transcript:
     source: str  # human label written into the markdown, e.g. "YouTube captions (auto-generated)"
     kind: str    # "captions" | "deepgram"
     request_ids: list[str] = field(default_factory=list)
+    language: str | None = None
+    model: str | None = None
+    track: str | None = None
+    generated: bool = False
 
 
 # A 429 is per-IP, not per-video, so the cooldown is process-wide: after any
@@ -235,7 +236,7 @@ async def fetch_captions(video_id: str, langs: list[str]) -> Transcript:
 
     for attempt in range(2):
         try:
-            return await asyncio.to_thread(_fetch_yta_sync, video_id, langs)
+            return await _fetch_yta(video_id, langs)
         except TranscriptError as e:
             failures.append(e)
             logger.warning(f"{video_id}: youtube-transcript-api: {e.reason}: {e.detail}")
@@ -260,6 +261,9 @@ async def fetch_captions(video_id: str, langs: list[str]) -> Transcript:
 
 def _classify_yta_error(exc: Exception) -> TranscriptError:
     import youtube_transcript_api as yta
+    from requests import Timeout
+    if isinstance(exc, Timeout):
+        return TranscriptError("timeout", "caption network request")
     name = type(exc).__name__
     if isinstance(exc, (yta.RequestBlocked, yta.PoTokenRequired)):
         return TranscriptError("rate_limited", name)
@@ -272,53 +276,92 @@ def _classify_yta_error(exc: Exception) -> TranscriptError:
     return TranscriptError("error", f"{name}: {str(exc).strip().splitlines()[0][:200] if str(exc).strip() else ''}")
 
 
-def _fetch_yta_sync(video_id: str, langs: list[str]) -> Transcript:
-    """youtube-transcript-api >= 1.0: instance API, snippets are objects."""
-    from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
+def select_track(tracks, langs):
+    """Manual before generated; within each class use configured language order.
+    Unrequested languages are never selected. Both providers share this policy.
+    """
+    return next((t for generated in (False, True) for lang in langs for t in tracks
+                 if t["generated"] == generated and t["language"] == lang), None)
+
+
+async def _fetch_yta(video_id: str, langs: list[str]) -> Transcript:
+    # A subprocess provides a hard deadline even for a peer that trickles bytes.
+    # _run kills and reaps it on cancellation; no abandoned executor threads.
     try:
-        transcripts = YouTubeTranscriptApi().list(video_id)
-        chosen = None
-        for find in (transcripts.find_manually_created_transcript, transcripts.find_generated_transcript):
-            try:
-                chosen = find(langs)
-                break
-            except NoTranscriptFound:
-                continue
-        if chosen is None:
-            chosen = next(iter(transcripts), None)  # any language beats none
-        if chosen is None:
-            raise TranscriptError("no_captions", "no caption tracks")
-        fetched = chosen.fetch()
+        code, out, _ = await _run([sys.executable, os.path.abspath(__file__),
+                                  video_id, json.dumps(langs)], timeout=25)
+    except asyncio.TimeoutError:
+        raise TranscriptError("timeout", "primary captions deadline") from None
+    if code:
+        raise TranscriptError("error", "primary caption worker failed")
+    data = json.loads(out)
+    if "error" in data:
+        raise TranscriptError(data["error"], data["detail"])
+    data["segments"] = [Segment(**s) for s in data["segments"]]
+    return Transcript(**data)
+
+
+def _fetch_yta_sync(video_id: str, langs: list[str]) -> Transcript:
+    from youtube_transcript_api import YouTubeTranscriptApi
+    from requests import Session
+
+    class BoundedSession(Session):
+        def request(self, method, url, **kwargs):
+            kwargs["timeout"] = (5, 10)  # connect/read; worker also caps total time
+            return super().request(method, url, **kwargs)
+
+    try:
+        with BoundedSession() as session:
+            tracks = [{"language": t.language_code, "generated": t.is_generated, "value": t}
+                      for t in YouTubeTranscriptApi(http_client=session).list(video_id)]
+            selected = select_track(tracks, langs)
+            if selected is None:
+                raise TranscriptError("no_captions", "no requested language track")
+            chosen = selected["value"]
+            fetched = chosen.fetch()
     except TranscriptError:
         raise
     except Exception as e:
         raise _classify_yta_error(e) from e
-
     segments = [Segment(text=s.text, start=s.start, duration=s.duration) for s in fetched]
     if not segments:
         raise TranscriptError("no_captions", "caption track is empty")
     kind = "auto-generated" if chosen.is_generated else "manual"
-    return Transcript(segments, f"YouTube captions ({kind}, {chosen.language_code})", "captions")
+    return Transcript(segments, f"YouTube captions ({kind}, {chosen.language_code})", "captions",
+                      language=chosen.language_code, track=f"youtube-transcript-api:{chosen.language_code}:{kind}",
+                      generated=chosen.is_generated)
 
 
 async def _try_ytdlp_subs(video_id: str, langs: list[str]) -> Transcript:
-    """Fallback: download manual or auto VTT subtitles via yt-dlp and parse them."""
+    """Select the same language/type policy as the primary, then fetch one track."""
     url = f"https://www.youtube.com/watch?v={video_id}"
+    code, out, err = await _run(["yt-dlp", "--dump-json", "--skip-download", url], timeout=20)
+    if code:
+        raise classify_ytdlp_error(err)
+    info = json.loads(out)
+    tracks = [{"language": lang, "generated": generated}
+              for generated, key in ((False, "subtitles"), (True, "automatic_captions"))
+              for lang, formats in info.get(key, {}).items() if any(f.get("ext") == "vtt" for f in formats)]
+    chosen = select_track(tracks, langs)
+    if chosen is None:
+        raise TranscriptError("no_captions", "no requested language VTT track")
+    lang, generated = chosen["language"], chosen["generated"]
     with tempfile.TemporaryDirectory() as tmpdir:
-        code, _, stderr = await _run(
-            ["yt-dlp", "--write-subs", "--write-auto-subs", "--sub-langs", ",".join(langs),
-             "--sub-format", "vtt", "--skip-download", "-o", os.path.join(tmpdir, "sub"), url],
-            timeout=30,
-        )
-        for f in sorted(os.listdir(tmpdir)):
-            if f.endswith(".vtt"):
-                with open(os.path.join(tmpdir, f), encoding="utf-8") as fh:
-                    segments = _parse_vtt(fh.read())
-                if segments:
-                    return Transcript(segments, "YouTube captions (yt-dlp)", "captions")
-    if code != 0 or "ERROR" in stderr:
-        raise classify_ytdlp_error(stderr)
-    raise TranscriptError("no_captions", "yt-dlp found no subtitles")
+        code, _, err = await _run(
+            ["yt-dlp", "--write-auto-subs" if generated else "--write-subs",
+             "--sub-langs", "^" + re.escape(lang) + "$", "--sub-format", "vtt", "--skip-download",
+             "-o", os.path.join(tmpdir, "sub"), url], timeout=25)
+        if code:
+            raise classify_ytdlp_error(err)
+        path = os.path.join(tmpdir, f"sub.{lang}.vtt")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                segments = _parse_vtt(fh.read())
+            if segments:
+                kind = "auto-generated" if generated else "manual"
+                return Transcript(segments, f"YouTube captions (yt-dlp, {kind}, {lang})", "captions",
+                                  language=lang, track=f"yt-dlp:{lang}:{kind}:vtt", generated=generated)
+    raise TranscriptError("no_captions", "selected subtitle track is empty")
 
 
 # Bounded uploads: 180 s of mono 16 kHz PCM is under 8 MiB. Chunks run
@@ -465,126 +508,83 @@ async def transcribe_audio(
     if not segments:
         raise TranscriptError("deepgram_failed", "no speech recognised")
     return Transcript(segments, f"{AUDIO_PROVIDER_LABEL} speech-to-text ({model_label}) — machine transcription of the audio",
-                      AUDIO_PROVIDER, request_ids)
+                      AUDIO_PROVIDER, request_ids, language="en", model=model_label)
 
 
 def _parse_vtt(vtt_text: str) -> list[Segment]:
-    """Parse VTT subtitle file into segments."""
+    """Parse cues without deduplicating them. Invalid timing fails the source."""
+    def timestamp(value):
+        if not re.fullmatch(r"(?:[0-9]{2,}:)?[0-5][0-9]:[0-5][0-9]\.[0-9]{3}", value):
+            raise TranscriptError("error", "invalid VTT timestamp")
+        fields = value.split(":")
+        return sum(float(v) * factor for v, factor in zip(reversed(fields), (1, 60, 3600)))
+
     segments = []
-    time_pattern = __PARSE_VTT_COMPILE_RE
-    tag_pattern = __PARSE_VTT_COMPILE_RE_2
-
-    lines = vtt_text.split("\n")
-    i = 0
-    while i < len(lines):
-        m = time_pattern.match(lines[i])
-        if m:
-            start = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + int(m.group(4)) / 1000
-            end = int(m.group(5)) * 3600 + int(m.group(6)) * 60 + int(m.group(7)) + int(m.group(8)) / 1000
-            i += 1
-            text_lines = []
-            while i < len(lines) and lines[i].strip():
-                text_lines.append(lines[i].strip())
-                i += 1
-            text = " ".join(text_lines)
-            text = tag_pattern.sub("", text).strip()
-            if text:
-                segments.append(Segment(text=text, start=start, duration=end - start))
-        i += 1
-
-    # Deduplicate VTT (often has overlapping repeated lines)
-    deduped = []
-    for seg in segments:
-        if not deduped or seg.text != deduped[-1].text:
-            deduped.append(seg)
-    return deduped
-
-
-# ---------------------------------------------------------------------------
-# Cleaning
-# ---------------------------------------------------------------------------
-_FILLER_START = re.compile(
-    r"^(?:um|uh|you know|i mean|like|so)(?:[,\s])\s*",
-    re.IGNORECASE,
-)
-
-
-def _find_overlap(prev: str, curr: str) -> int:
-    """Find how many characters at the start of curr overlap with the end of prev."""
-    max_check = min(len(prev), len(curr))
-    for size in range(max_check, 0, -1):
-        if prev.endswith(curr[:size]):
-            return size
-    return 0
-
-
-def clean_transcript(segments: list[Segment], gap_threshold: float = 5.0) -> str:
-    """Clean mode: dedup, strip fillers, paragraph by gaps."""
-    if not segments:
-        return ""
-
-    # Merge overlapping auto-caption segments.
-    # YouTube auto-captions use a rolling window: each segment contains the
-    # tail of the previous segment plus new words. We extract only the NEW
-    # words from each segment to avoid duplication.
-    merged_texts: list[str] = []
-    merged_segments: list[Segment] = []
-    for seg in segments:
-        text = seg.text.strip()
-        if not text:
+    for block in re.split(r"\n[ \t]*\n", vtt_text.lstrip("\ufeff").replace("\r\n", "\n").strip()):
+        lines = block.splitlines()
+        if not lines or lines[0].startswith(("WEBVTT", "NOTE", "STYLE", "REGION")):
             continue
-        if merged_texts:
-            prev = merged_texts[-1].lower()
-            curr = text.lower()
-            # If previous text is contained in current, keep only the new suffix
-            if prev in curr:
-                idx = curr.index(prev) + len(prev)
-                new_part = text[idx:].strip()
-                if new_part:
-                    merged_texts.append(text)
-                    merged_segments.append(Segment(text=new_part, start=seg.start, duration=seg.duration))
-                continue
-            # If current is contained in previous, skip entirely (subset)
-            if curr in prev:
-                continue
-            # If they share a long common suffix/prefix overlap, extract new part
-            overlap = _find_overlap(prev, curr)
-            if overlap > len(curr) * 0.4:
-                new_part = text[overlap:].strip()
-                if new_part:
-                    merged_texts.append(text)
-                    merged_segments.append(Segment(text=new_part, start=seg.start, duration=seg.duration))
-                continue
-        merged_texts.append(text)
-        merged_segments.append(Segment(text=text, start=seg.start, duration=seg.duration))
-
-    if not merged_segments:
-        return ""
-
-    # Strip filler words at start of segments
-    cleaned = []
-    for seg in merged_segments:
-        text = _FILLER_START.sub("", seg.text).strip()
+        idx = 0 if "-->" in lines[0] else 1
+        if idx >= len(lines) or "-->" not in lines[idx]:
+            raise TranscriptError("error", "invalid VTT cue")
+        start_text, end_text = lines[idx].split("-->", 1)
+        end_fields = end_text.split()
+        if not end_fields:
+            raise TranscriptError("error", "invalid VTT timing")
+        start, end = timestamp(start_text.strip()), timestamp(end_fields[0])
+        if end <= start:
+            raise TranscriptError("error", "invalid VTT interval")
+        text = html.unescape(re.sub(r"<[^>]*>", "", " ".join(lines[idx + 1:]))).strip()
         if text:
-            cleaned.append(Segment(text=text, start=seg.start, duration=seg.duration))
+            segments.append(Segment(text, start, end - start))
+    return segments
 
-    # Group into paragraphs by timestamp gaps
+
+# Compare complete words only; apostrophes within words remain significant.
+_WORD = re.compile(r"\w+(?:['’]\w+)*", re.UNICODE)
+_FILLER_START = re.compile(r"^(?:um|uh)[, ]+", re.IGNORECASE)
+
+
+def reconcile_captions(segments: list[Segment], *, generated: bool) -> tuple[list[Segment], list[dict]]:
+    """Only overlapping generated cues qualify. At least two matching boundary
+    words are required. Punctuation/case are ignored for comparison only.
+    Keep the first spelling/punctuation, append the incoming original suffix.
+    Revised words, interior containment and single-word overlaps stay verbatim.
+    Each deletion records original segment indexes and the exact removed text.
+    """
+    result, changes = [], []
+    for i, seg in enumerate(segments):
+        text = seg.text.strip()
+        if generated and i:
+            prev = segments[i - 1]
+            if max(prev.start, seg.start) < min(prev.start + prev.duration, seg.start + seg.duration):
+                left, right = list(_WORD.finditer(prev.text)), list(_WORD.finditer(text))
+                normalize = lambda m: m.group().casefold().replace("’", "'")
+                for n in range(min(len(left), len(right)), 1, -1):
+                    if [normalize(m) for m in left[-n:]] == [normalize(m) for m in right[:n]]:
+                        cut = right[n].start() if n < len(right) else len(text)
+                        changes.append({"segment": i, "previous_segment": i - 1, "removed_words": n,
+                                        "removed_text": text[:cut]})
+                        text = text[cut:]
+                        break
+        if text:
+            result.append(Segment(text, seg.start, seg.duration))
+    return result, changes
+
+
+def clean_transcript(segments: list[Segment], gap_threshold: float = 5.0, *,
+                     remove_fillers: bool = False) -> str:
+    """Layout only by default. Reconcile known rolling captions before calling.
+    Optional filler removal covers only um/uh at a known paragraph boundary.
+    """
+    cleaned = [Segment(s.text.strip(), s.start, s.duration) for s in segments if s.text.strip()]
     paragraphs = _group_by_gaps(cleaned, gap_threshold)
-
-    # If too few paragraphs for a long transcript, fall back to sentence-based breaks
     total_text = " ".join(s.text for s in cleaned)
     if len(paragraphs) <= 2 and len(total_text) > 2000:
         paragraphs = _split_by_sentences(total_text, every=5)
-
-    # Join and capitalize first letter of each paragraph
-    result = []
-    for para in paragraphs:
-        para = para.strip()
-        if para and para[0].islower():
-            para = para[0].upper() + para[1:]
-        result.append(para)
-
-    return "\n\n".join(result)
+    if remove_fillers:
+        paragraphs = [_FILLER_START.sub("", p) for p in paragraphs]
+    return "\n\n".join(paragraphs)
 
 
 def raw_transcript(segments: list[Segment]) -> str:
@@ -617,28 +617,13 @@ def _group_by_gaps(segments: list[Segment], gap_threshold: float) -> list[str]:
     return paragraphs
 
 
-_SENTENCE_END = re.compile(r"[.?!]\s+|\s*[.?!]$")
-
-
 def _split_by_sentences(text: str, every: int = 5) -> list[str]:
-    """Split text into paragraphs every N sentences."""
-    # Split on sentence boundaries
-    parts = _SENTENCE_END.split(text)
-    # Reconstruct sentences with their terminators
-    sentences = []
-    for m in __SPLIT_BY_SENTENCES_FINDITER_RE.finditer(text):
-        sentences.append(m.group().strip())
-
-    if not sentences:
-        return [text]
-
-    paragraphs = []
-    for i in range(0, len(sentences), every):
-        chunk = " ".join(sentences[i:i + every])
-        if chunk:
-            paragraphs.append(chunk)
-
-    return paragraphs if paragraphs else [text]
+    """Insert paragraph breaks; never discard any non-whitespace character."""
+    if every < 1:
+        raise ValueError("every must be positive")
+    sentences = re.findall(r"[^.?!]*[.?!]+|[^.?!]+$", text)
+    return [" ".join(sentences[i:i + every]).strip()
+            for i in range(0, len(sentences), every)]
 
 
 # ---------------------------------------------------------------------------
@@ -672,3 +657,11 @@ def saved_video_id(header: str) -> Optional[str]:
             if video_id:
                 return video_id
     return None
+
+
+if __name__ == "__main__":
+    try:
+        result = asdict(_fetch_yta_sync(sys.argv[1], json.loads(sys.argv[2])))
+    except TranscriptError as exc:
+        result = {"error": exc.reason, "detail": exc.detail}
+    print(json.dumps(result))

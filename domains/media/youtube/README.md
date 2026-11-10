@@ -108,7 +108,17 @@ Tests (run on hwc-home with the service interpreter):
 |---------|------|-------------|
 | `transcripts` | 8100 | Transcript API + web UI |
 
+## Fidelity and diagnostics
+
+Caption selection prefers manual tracks, then generated tracks, using configured language order within each class. Unrequested languages are refused consistently by both caption providers. The selected provider, language and track type are retained. Primary caption requests use 5-second connect and 10-second read timeouts inside a worker killed and reaped after 25 seconds or cancellation.
+
+Raw output joins original segments. Clean output reconciles only generated captions with strictly overlapping timestamps and at least two matching suffix/prefix words. Comparison ignores case and punctuation; output keeps the earlier spelling and punctuation and appends the incoming original suffix. Interior matches, single-word matches and changed-word revisions remain verbatim. General formatting preserves punctuation and unfinished sentences. Filler removal defaults off; the optional helper only removes um/uh at paragraph starts. No global paragraph deletion occurs.
+
+Each new YouTube extraction also writes a version-1 `.transcript.json` beside the Markdown. It contains original timestamped segments, selected source/language/model/track, cleaned output, output mode, removed overlaps with segment indexes, Deepgram request IDs and the Markdown SHA-256. This REPLACEABLE evidence shares the saved transcript lifetime and is rebuilt by explicit re-extraction. Evidence is atomically replaced before Markdown; compare its hash before diagnosing an older Markdown if publication was interrupted. Old Markdown files remain readable and are not rewritten. Export consumers still receive the selected text, not diagnostic JSON.
+
 ## Changelog
+
+- 2026-11-10: Preserve sentence tails and semantic fillers; separate source/time-aware word overlap reconciliation from formatting; retain timestamped extraction evidence; bound caption workers and make track selection reproducible; parse WebVTT cues without deduplication.
 
 - 2026-11-09: Bound active job admission, reserve items before pacing, expose terminal failure/cancellation and test the served browser polling path.
 

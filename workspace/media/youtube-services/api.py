@@ -5,11 +5,13 @@ FastAPI service that saves YouTube transcripts and X posts/threads as Markdown.
 
 import asyncio
 import logging
+import json
+import hashlib
 import os
 import shutil
 import uuid
 import httpx
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -20,7 +22,7 @@ import uvicorn
 
 from transcript import (
     TranscriptError, extract_video_id, is_playlist_url, fetch_metadata, fetch_playlist,
-    fetch_captions, transcribe_audio, clean_transcript, raw_transcript, format_markdown,
+    fetch_captions, transcribe_audio, reconcile_captions, clean_transcript, raw_transcript, format_markdown,
     format_duration, saved_video_id,
     audio_budget, AUDIO_PROVIDER, AUDIO_PROVIDER_LABEL, DEEPGRAM_CHUNK_TIMEOUT,
 )
@@ -286,7 +288,7 @@ def _saved_result(url: str, path: Path, playlist: str) -> dict:
             "status": "exists", "playlist": playlist}
 
 
-def write_transcript(out_dir: Path, title: str, key: str, md: str) -> Path:
+def write_transcript(out_dir: Path, title: str, key: str, md: str, evidence: dict | None = None) -> Path:
     """Write atomically (temp file + rename, so a half-written file is never
     indexed). A same-day, same-title file of a different item keeps its name;
     this one gets the item's ID appended instead of overwriting it."""
@@ -296,6 +298,14 @@ def write_transcript(out_dir: Path, title: str, key: str, md: str) -> Path:
     path = out_dir / f"{stem}.md"
     if path.exists() and saved_key(_read_header(path)) != key:
         path = out_dir / f"{stem} [{key.removeprefix('x:').replace(':', ' ')}].md"
+    if evidence is not None:
+        evidence["markdown_sha256"] = hashlib.sha256(md.encode("utf-8")).hexdigest()
+        # REPLACEABLE evidence shares the Markdown lifetime. Re-extraction
+        # rebuilds it; no independent history or unbounded event log.
+        sidecar = path.with_suffix(".transcript.json")
+        side_tmp = sidecar.with_name(f".{sidecar.name}.tmp")
+        side_tmp.write_text(json.dumps(evidence, ensure_ascii=False), encoding="utf-8")
+        os.replace(side_tmp, sidecar)
     tmp = path.with_name(f".{path.name}.tmp")
     tmp.write_text(md, encoding="utf-8")
     os.replace(tmp, path)
@@ -356,10 +366,20 @@ async def _extract(url: str, mode: str, out_dir: Path, allow_audio: bool = False
     on_stage("writing file")
     segments = transcript.segments
     mode = mode if mode in ("clean", "raw") else DEFAULT_MODE
-    text = raw_transcript(segments) if mode == "raw" else clean_transcript(segments)
+    reconciled, changes = reconcile_captions(segments, generated=(
+        transcript.kind == "captions" and transcript.generated))
+    cleaned = clean_transcript(reconciled)
+    text = raw_transcript(segments) if mode == "raw" else cleaned
+    evidence = {"schema_version": 1, "video_id": video_id, "url": meta.url,
+                "source": transcript.source, "kind": transcript.kind,
+                "language": transcript.language, "model": transcript.model,
+                "track": transcript.track, "generated": transcript.generated,
+                "segments": [asdict(s) for s in segments], "cleaned_output": cleaned,
+                "output_mode": mode, "cleanup": {"overlaps_removed": len(changes), "changes": changes},
+                "transcription_request_ids": transcript.request_ids}
 
     md = format_markdown(meta, text, transcript.source)
-    filepath = write_transcript(out_dir, meta.title, video_id, md)
+    filepath = write_transcript(out_dir, meta.title, video_id, md, evidence)
 
     return {
         "url": meta.url,
@@ -369,6 +389,7 @@ async def _extract(url: str, mode: str, out_dir: Path, allow_audio: bool = False
         "transcript": text,
         "filename": str(filepath),
         "source": transcript.kind,
+        "evidence_filename": str(filepath.with_suffix(".transcript.json")),
         "transcription_request_ids": transcript.request_ids,
     }
 
