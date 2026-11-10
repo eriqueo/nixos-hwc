@@ -19,7 +19,7 @@ design note below.
 
 ```
 index.nix   # hwc.home.apps.t3code — desktop launcher + Electron shim + desktop
-            #   entry and stable URI launcher binding; pinned backend port and advertised host, so the phone's
+            #   entry, managed URI association and stable URI launcher binding; pinned backend port and advertised host, so the phone's
             #   endpoint survives a reboot; headless t3-serve unit; t3-update
             #   with a pinned staged build/native verification/recovery/promotion driver;
             #   DX2 handoff adapter using the pinned delegate helper and forwarding T3's result limit without
@@ -219,6 +219,8 @@ laptop, for ad-hoc headless use. That script is hand-installed and is not manage
 here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
+
+- 2026-11-09: Route `t3code://` through the managed desktop entry and stable profile launcher, preserving URI arguments. Both HM lanes verify the declared association; running T3 stays active during activation.
 
 - 2026-11-04: Bind qualified laptop launcher shutdown to its captured Electron
   child. Remove its broad process sweeps, preserve keep-old activation, and check

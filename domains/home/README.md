@@ -144,7 +144,7 @@ Credential utility windows float at monitor-relative dimensions. Bitwarden's pac
 The shared agent-harness fleet list uses hwc-home, hwc-work and hwc-laptop without changing session stores.
 Its project tracker records substantive decisions while agents continue down the roadmap within existing authorization when no new cards are needed.
 Versioned human review inputs separate demonstrated cause from repair or feature work, with full requests and dated evidence linked from each ticket.
-- `apps/t3code/` — launchers, a restricted DX2 handoff adapter, and an opt-in immutable Review native bundle with startup-only configuration; T3 supplies the result limit.
+- `apps/t3code/` — managed OS conversation links through the stable launcher, launchers, a restricted DX2 handoff adapter, and an opt-in immutable Review native bundle with startup-only configuration; T3 supplies the result limit.
 - `apps/hwc-dictation/` — owned desktop dictation package, settings and user service.
 - `apps/bitwarden/` — desktop client for the self-hosted Vaultwarden account.
 
@@ -178,6 +178,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-11-09: Bind T3 conversation URLs to the managed profile launcher and desktop entry, with URI arguments and matching defaults in both Home Manager lanes. Preserve active T3 processes.
 - 2026-11-09: `apps/agent-harness/` gains `tracker.discordCards` and the `tracker-post-cards` user timer: the tracker hub posts open decision cards to Discord and records presses forwarded by the HWC control bot. The values come from the system bot target in both activation lanes.
 - 2026-11-05: Preserve native context-menu positions by removing blanket floating-window centering; keep dialog centering and size limits.
 

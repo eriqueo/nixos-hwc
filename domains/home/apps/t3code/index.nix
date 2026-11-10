@@ -658,12 +658,16 @@ in
       name = "T3 Code";
       genericName = "Agent harness control plane";
       comment = "Drive Claude Code, Codex and OpenCode from one window";
-      exec = "t3code";
+      exec = "${config.home.profileDirectory}/bin/t3code %U";
       icon = "t3code";
       terminal = false;
       categories = [ "Development" ];
+      mimeType = [ "x-scheme-handler/t3code" ];
       startupNotify = true;
     };
+
+    xdg.mimeApps.defaultApplications."x-scheme-handler/t3code" =
+      lib.mkIf (cfg.desktop.enable && cfg.desktop.desktopEntry.enable) [ "t3code.desktop" ];
 
     # OUT-OF-STORE SYMLINK, not a copy. The icon lives in the fork's working
     # tree, which is outside this flake — a plain `source` would try to import
