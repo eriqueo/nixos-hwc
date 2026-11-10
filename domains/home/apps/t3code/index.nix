@@ -590,7 +590,11 @@ in
       Unit = {
         Description = "T3 Code (autostart)";
         PartOf = [ "graphical-session.target" ];
-        After = [ "graphical-session.target" ];
+        # Desktop safeStorage decrypts the connection catalog through
+        # org.freedesktop.secrets at startup. pass-secret-service is Type=dbus
+        # and shares this target, so order after it to wait for the bus name.
+        # Ordering only: a no-op on hosts without the secret service.
+        After = [ "graphical-session.target" "pass-secret-service.service" ];
         # T3 carries the agent running `hms`; switching this unit in place
         # severs that command. Apply unit changes on the next explicit restart.
         X-SwitchMethod = switchMethod;
