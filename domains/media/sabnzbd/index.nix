@@ -71,6 +71,12 @@ in
     _runtimeImage = lib.mkOption { type = lib.types.str; default = runtime.image; internal = true; readOnly = true; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "vpn"; description = "Network mode: 'media' for direct access, 'vpn' to route through gluetun"; };
     webPort = lib.mkOption { type = lib.types.port; default = (import ../../networking/ports.nix).sabnzbd.port; description = "Web UI port"; };
+    containerPort = lib.mkOption {
+      type = lib.types.port;
+      readOnly = true;
+      default = if cfg.network.mode == "vpn" then 8085 else cfg.webPort;
+      description = "Resolved application listener; the VPN namespace keeps its separate internal port";
+    };
     gpu.enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable GPU acceleration (not typically needed for SABnzbd)"; };
     # Both of these ship RELATIVE in a stock sabnzbd.ini ("Downloads/incomplete",
     # "Downloads/complete"), which SABnzbd resolves against its own home — i.e.

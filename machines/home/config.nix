@@ -807,7 +807,9 @@
     # publish their own.
     ports = [
       "127.0.0.1:${toString config.hwc.media.qbittorrent.webPort}:${toString config.hwc.media.qbittorrent.webPort}" # qBittorrent UI
-      "127.0.0.1:8081:8085" # SABnzbd (container uses 8085 internally)
+    ] ++ lib.optional (config.hwc.media.sabnzbd.network.mode == "vpn")
+      "127.0.0.1:${toString config.hwc.media.sabnzbd.webPort}:${toString config.hwc.media.sabnzbd.containerPort}" # SABnzbd keeps its VPN-internal port
+    ++ [
       "127.0.0.1:${toString config.hwc.media.mousehole.port}:${toString config.hwc.media.mousehole.port}" # Mousehole
     ];
 

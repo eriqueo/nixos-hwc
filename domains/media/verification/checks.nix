@@ -2267,7 +2267,7 @@ audiobook-copy-contract = pkgs.runCommand "audiobook-copy-contract" {
 
 media-configuration-contract = let
   base = self.nixosConfigurations.hwc-home;
-  changed = (base.extendModules { modules = [ {
+  variant = base.extendModules { modules = [ {
     hwc.paths.apps.root = lib.mkForce "/fixture-apps";
     hwc.media = {
       beets = { enable = lib.mkForce true; configDir = lib.mkForce "/fixture-beets"; };
@@ -2296,10 +2296,19 @@ media-configuration-contract = let
         audioExtensions = lib.mkForce [ "fixture" ];
       };
     };
+  } ]; };
+  changed = variant.config;
+  direct = (variant.extendModules { modules = [ {
+    hwc.media.sabnzbd.network.mode = lib.mkForce "media";
   } ]; }).config;
+  directSab = direct.virtualisation.oci-containers.containers.sabnzbd;
   fixture = pkgs.writeText "media-configuration-contract.json" (builtins.toJSON {
     routes = changed.hwc.networking.shared.effectiveRoutes;
     ports = lib.mapAttrs (_: value: value.ports) changed.virtualisation.oci-containers.containers;
+    networks = lib.mapAttrs (_: value: value.extraOptions) changed.virtualisation.oci-containers.containers;
+    directSab = { inherit (directSab) ports extraOptions; listener = directSab.environment.SABNZBD_PORT; };
+    directTunnelPorts = direct.virtualisation.oci-containers.containers.gluetun.ports;
+    sabListener = changed.virtualisation.oci-containers.containers.sabnzbd.environment.SABNZBD_PORT;
     beets = changed.systemd.services.podman-beets.preStart;
     arr = lib.genAttrs [ "sonarr" "radarr" "lidarr" "prowlarr" ] (name:
       lib.removePrefix "+" (lib.findFirst (command: lib.hasInfix "enforce-${name}-config" command)

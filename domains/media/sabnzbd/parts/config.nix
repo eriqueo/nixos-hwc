@@ -156,17 +156,12 @@ in
       environment = {
         SABNZBD_COMPLETE_DIR = "/downloads";
         SABNZBD_INCOMPLETE_DIR = "/config/incomplete";
-      } // lib.optionalAttrs (cfg.network.mode == "vpn") {
-        # When using VPN, SABnzbd runs on port 8085 inside container
-        # but gluetun exposes it as 8081 externally
-        SABNZBD_PORT = "8085";
-      } // lib.optionalAttrs (cfg.network.mode != "vpn") {
-        SABNZBD_PORT = toString cfg.webPort;
+        SABNZBD_PORT = toString cfg.containerPort;
       };
 
       # Port exposure - only when not using VPN (gluetun exposes ports)
       ports = lib.optionals (cfg.network.mode != "vpn") [
-        "127.0.0.1:${toString cfg.webPort}:${toString cfg.webPort}"
+        "127.0.0.1:${toString cfg.webPort}:${toString cfg.containerPort}"
       ];
 
       # Volume mounts - CRITICAL: events mount is required for automation pipeline

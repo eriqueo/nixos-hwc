@@ -12,6 +12,12 @@ photo management, and video surveillance services.
 
 ## Structure
 
+SABnzbd exposes one resolved containerPort. Its application environment and the
+Home tunnel binding consume it. In VPN mode Gluetun publishes webPort to internal
+port8085; direct mode publishes the listener on SABnzbd and omits the tunnel bind.
+The listener contract follows actual shared network namespaces instead of naming
+specific VPN clients in the test.
+
 arr-config.nix owns shared arr bootstrap/webhook policy. Radarr, Lidarr, Prowlarr and Readarr assemble their small service in index.nix. Networking's ports.nix shares host listener defaults with media routes. The shared audiobook copier owns copying, state and markers; hot-sweep delegates to it.
 
 Sonarr’s hardened image initializes omitted queue filters as empty sets in its
@@ -183,6 +189,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-09: Derive SABnzbd's tunnel binding from its configured host and resolved internal ports; exercise VPN and direct mode without duplicate publication.
 
 - 2026-11-09: Colocate small arr assemblies, remove empty migration parts, share configured listener facts and route audiobook copying through one owner. Keep qualified runtime recipes and active media state.
 

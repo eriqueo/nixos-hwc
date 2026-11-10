@@ -28,13 +28,39 @@ def check_ports(config):
         assert routes[name]["upstream"] == "http://127.0.0.1:" + str(port), name
         if name == "transcripts":
             continue
-        container = ("gluetun" if name in {"qbittorrent", "mousehole"}
-                     else "calibre" if name == "calibre-server" else name)
+        container = "calibre" if name == "calibre-server" else name
+        seen = set()
+        while True:
+            assert container not in seen, "container network namespace cycle"
+            seen.add(container)
+            shared = [value.removeprefix("--network=container:")
+                      for value in f["networks"][container]
+                      if value.startswith("--network=container:")]
+            if not shared:
+                break
+            assert len(shared) == 1, "ambiguous container network namespace"
+            container = shared[0]
         assert any(value.startswith("127.0.0.1:" + str(port) + ":")
                    for value in config[container]), name
 
 
 check_ports(f["ports"])
+assert "--network=container:gluetun" in f["networks"]["sabnzbd"]
+assert "127.0.0.1:19443:8085" in f["ports"]["gluetun"]
+assert f["sabListener"] == "8085"
+assert f["directSab"]["ports"] == ["127.0.0.1:19443:19443"]
+assert f["directSab"]["listener"] == "19443"
+assert not any(value.startswith("127.0.0.1:19443:") for value in f["directTunnelPorts"])
+assert not any(value.startswith("--network=container:") for value in f["directSab"]["extraOptions"])
+stale = copy.deepcopy(f["ports"])
+stale["gluetun"] = [value.replace("127.0.0.1:19443:8085", "127.0.0.1:8081:8085")
+                    for value in stale["gluetun"]]
+try:
+    check_ports(stale)
+except AssertionError as error:
+    assert str(error) == "sabnzbd", error
+else:
+    raise AssertionError("stale SABnzbd tunnel binding passed")
 broken = copy.deepcopy(f["ports"])
 broken["calibre"] = ["127.0.0.1:8083:8080", "127.0.0.1:8090:8090"]
 try:
