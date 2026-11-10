@@ -220,7 +220,7 @@ here; on hwc-server the `serve` shape of this module supersedes it.
 
 ## Changelog
 
-- 2026-11-09: Route `t3code://` through the managed desktop entry and stable profile launcher, preserving URI arguments. Both HM lanes verify the declared association; running T3 stays active during activation.
+- 2026-11-09: Route `t3code://` through the managed XDG user application entry and stable profile launcher, preserving URI arguments. Both HM lanes verify the declared association; running T3 stays active during activation.
 
 - 2026-11-04: Bind qualified laptop launcher shutdown to its captured Electron
   child. Remove its broad process sweeps, preserve keep-old activation, and check

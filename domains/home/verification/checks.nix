@@ -356,9 +356,9 @@ t3-switch-policy = let
   } // lib.optionalAttrs (target.unit == "t3code") {
     launcherFile = lib.getExe desktopLauncher;
     profileLauncher = "${home.home.profileDirectory}/bin/t3code";
-    desktopEntry = { inherit (home.xdg.desktopEntries.t3code) exec mimeType; };
+    desktopEntry = home.xdg.dataFile."applications/t3code.desktop".source;
     defaultHandler = home.xdg.mimeApps.defaultApplications."x-scheme-handler/t3code" or [];
-    standaloneEntry = { inherit (standalone.xdg.desktopEntries.t3code) exec mimeType; };
+    standaloneEntry = standalone.xdg.dataFile."applications/t3code.desktop".source;
     standaloneLauncher = "${standalone.home.profileDirectory}/bin/t3code";
     standaloneDefault = standalone.xdg.mimeApps.defaultApplications."x-scheme-handler/t3code" or [];
   }) targets;
@@ -388,14 +388,19 @@ pkgs.runCommand "t3-switch-policy" {
       text = pathlib.Path(item['file']).read_text()
       assert keeps_active(text), item
       if item['unit'] == 't3code':
+          def read_entry(path):
+              config = configparser.ConfigParser(interpolation=None)
+              config.read(path)
+              return dict(config['Desktop Entry'])
           def bound_handler(entry, default, launcher):
               return (shlex.split(entry['exec']) == [launcher, '%U']
-                  and 'x-scheme-handler/t3code' in (entry['mimeType'] or [])
+                  and 'x-scheme-handler/t3code' in entry.get("mimetype", "").split(";")
                   and default == ['t3code.desktop'])
-          assert bound_handler(item['desktopEntry'], item['defaultHandler'], item['profileLauncher']), 'OS handler bypasses T3 launcher or drops URI'
-          assert bound_handler(item['standaloneEntry'], item['standaloneDefault'], item['standaloneLauncher']), 'HM lanes disagree on T3 URL routing'
-          assert not bound_handler(dict(item['desktopEntry'], exec=item['profileLauncher']), item['defaultHandler'], item['profileLauncher']), 'missing URI seed escaped'
-          assert not bound_handler(item['desktopEntry'], ['bare-electron.desktop'], item['profileLauncher']), 'wrong OS default seed escaped'
+          entry = read_entry(item['desktopEntry'])
+          assert bound_handler(entry, item['defaultHandler'], item['profileLauncher']), 'OS handler bypasses T3 launcher or drops URI'
+          assert bound_handler(read_entry(item['standaloneEntry']), item['standaloneDefault'], item['standaloneLauncher']), 'HM lanes disagree on T3 URL routing'
+          assert not bound_handler(dict(entry, exec=item['profileLauncher']), item['defaultHandler'], item['profileLauncher']), 'missing URI seed escaped'
+          assert not bound_handler(entry, ['bare-electron.desktop'], item['profileLauncher']), 'wrong OS default seed escaped'
           def managed_shutdown(script):
               unit = configparser.RawConfigParser(strict=False)
               unit.optionxform = str

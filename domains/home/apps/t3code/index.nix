@@ -654,16 +654,20 @@ in
       Install.WantedBy = [ "default.target" ];
     };
 
-    xdg.desktopEntries.t3code = lib.mkIf (cfg.desktop.enable && cfg.desktop.desktopEntry.enable) {
-      name = "T3 Code";
+    # XDG_DATA_HOME wins over both NixOS and standalone HM profile entries.
+    xdg.dataFile."applications/t3code.desktop" = lib.mkIf (cfg.desktop.enable && cfg.desktop.desktopEntry.enable) {
+      source = "${pkgs.makeDesktopItem {
+      name = "t3code";
+      desktopName = "T3 Code";
       genericName = "Agent harness control plane";
       comment = "Drive Claude Code, Codex and OpenCode from one window";
       exec = "${config.home.profileDirectory}/bin/t3code %U";
       icon = "t3code";
       terminal = false;
       categories = [ "Development" ];
-      mimeType = [ "x-scheme-handler/t3code" ];
+      mimeTypes = [ "x-scheme-handler/t3code" ];
       startupNotify = true;
+      }}/share/applications/t3code.desktop";
     };
 
     xdg.mimeApps.defaultApplications."x-scheme-handler/t3code" =
