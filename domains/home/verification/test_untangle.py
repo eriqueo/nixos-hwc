@@ -134,7 +134,7 @@ def workspaces(data, root):
     assert run(["bash", str(script), "1"], env=env, check=False).returncode == 64
     log.write_text("")
     run(["bash", str(script), "--move", "4"], env=env)
-    assert log.read_text().splitlines() == ["dispatch hl.dsp.window.move({workspace='24'})"]
+    assert log.read_text().splitlines() == ["dispatch hl.dsp.window.move({workspace='24',follow=false})"]
 
 
 if __name__ == "__main__":

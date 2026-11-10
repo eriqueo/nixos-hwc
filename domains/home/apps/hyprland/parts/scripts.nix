@@ -211,7 +211,7 @@ with pkgs;
     TARGET=$SLOT
     if [[ ! "$FOCUSED" =~ ^(eDP|LVDS) ]]; then TARGET=$((SLOT + ${toString workspacePlan.externalOffset})); fi
     if [[ "$MOVE" == 1 ]]; then
-      ${hyprland}/bin/hyprctl dispatch "hl.dsp.window.move({workspace='$TARGET'})"
+      ${hyprland}/bin/hyprctl dispatch "hl.dsp.window.move({workspace='$TARGET',follow=false})"
       exit
     fi
     ${hyprland}/bin/hyprctl dispatch "hl.dsp.focus({workspace='$TARGET'})"

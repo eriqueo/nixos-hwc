@@ -33,7 +33,8 @@ in
         window_margin_width = 0;
         hide_window_decorations = true;
         confirm_os_window_close = -1;
-        remember_window_size = true;
+        # Let the compositor tile new windows instead of restoring maximized state.
+        remember_window_size = false;
         initial_window_width = 120;
         initial_window_height = 30;
 

@@ -8,8 +8,10 @@ Configures the Kitty terminal emulator via `programs.kitty`: font (from `hwc.hom
 - ❌ Does not manage: the palette itself (`domains/home/theme`), the shell (`domains/home/core/shell`), or which apps launch kitty (hyprland keybinds live in `domains/home/apps/hyprland`).
 
 ## Structure
+New windows use configured initial dimensions and leave tiling to the compositor.
 - `index.nix` — options + `programs.kitty` settings, keybindings, extraConfig, shell integration.
 - `parts/appearance.nix` — pure function: theme palette colors → kitty color settings (fg/bg/cursor/selection/url + ANSI 0-15), with fallbacks.
 
 ## Changelog
+- 2026-11-10: Start new windows without restoring saved maximized state.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
