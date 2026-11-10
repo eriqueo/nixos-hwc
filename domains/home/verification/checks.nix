@@ -644,4 +644,58 @@ pkgs.runCommand "home-untangle" {
   touch "$out"
 '';
 
+# The stale-lock decision against real GnuPG: a lock from an earlier boot whose
+# PID was reused must go; a lock a live keyboxd holds must stay even when its
+# mtime looks pre-boot (clock jump); a dead-PID lock goes only once 15 minutes old.
+gpg-stale-lock = let
+  home = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
+  helper = lib.getExe home.hwc.home.apps.gpg.staleLock.package;
+  unit = home.systemd.user.services.gpg-stale-lock;
+in assert lib.assertMsg (unit.Unit.Before == [ "basic.target" ] && !unit.Unit.DefaultDependencies
+  && unit.Install.WantedBy == [ "basic.target" ] && lib.hasSuffix "--apply" (lib.head (lib.toList unit.Service.ExecStart)))
+  "gpg-stale-lock: the oneshot must run --apply before basic.target";
+pkgs.runCommand "gpg-stale-lock" { nativeBuildInputs = [ pkgs.gnupg pkgs.coreutils ]; } ''
+  set -euo pipefail
+  export HOME="$TMPDIR"
+  boot=$(awk '/^btime/ { print $2 }' /proc/stat)
+  lockline() { printf '%10d\nfixture-host\n' "$1"; }
+
+  # (b) live keyboxd holds public-keys.d/pubring.db.lock; backdate it past boot.
+  GNUPGHOME=$(mktemp -d "$TMPDIR/g.XXXX"); export GNUPGHOME; chmod 700 "$GNUPGHOME"
+  echo use-keyboxd > "$GNUPGHOME/common.conf"
+  gpg --batch --list-keys >/dev/null 2>&1 || true
+  live="$GNUPGHOME/public-keys.d/pubring.db.lock"
+  test -f "$live"
+  touch -d "@$((boot - 60))" "$live"
+
+  # (a) pre-boot lock whose PID now belongs to an unrelated live process.
+  sleep 600 & reused=$!
+  lockline "$reused" > "$GNUPGHOME/trustdb.gpg.lock"; touch "$GNUPGHOME/trustdb.gpg"
+  touch -d "@$((boot - 60))" "$GNUPGHOME/trustdb.gpg.lock"
+
+  # (c) dead PID: old lock goes, fresh lock stays.
+  lockline 999999 > "$GNUPGHOME/old.kbx.lock"; touch -d "@$(( $(date +%s) - 1000 ))" "$GNUPGHOME/old.kbx.lock"
+  lockline 999999 > "$GNUPGHOME/fresh.kbx.lock"
+
+  set +e; ${helper} --check > check.out; checkRc=$?; set -e
+  cat check.out
+  test "$checkRc" = 1
+  grep -q "stale $GNUPGHOME/trustdb.gpg.lock reason=pre-boot" check.out
+  grep -q "stale $GNUPGHOME/old.kbx.lock reason=dead-pid" check.out
+  if grep -q -e pubring.db.lock -e fresh.kbx.lock check.out; then exit 1; fi
+  test -f "$GNUPGHOME/trustdb.gpg.lock"   # --check never removes
+
+  ${helper} --apply > apply.out; cat apply.out
+  test ! -e "$GNUPGHOME/trustdb.gpg.lock"
+  test ! -e "$GNUPGHOME/old.kbx.lock"
+  test -f "$GNUPGHOME/fresh.kbx.lock"
+  test -f "$live"
+  gpg --batch --list-keys >/dev/null   # the live keyboxd still serves
+
+  rm "$GNUPGHOME/fresh.kbx.lock"
+  ${helper} --check > clean.out
+  gpgconf --kill all; kill "$reused"
+  touch "$out"
+'';
+
 }
