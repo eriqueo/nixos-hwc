@@ -184,6 +184,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 - 2026-11-09: Consolidate shared home facts and rendered consumers; remove inactive Claude sync, empty app parts and unused keymap knobs; add consumer and dt export regressions.
 
 - 2026-11-09: Bind T3 conversation URLs to the managed profile launcher and XDG user application entry, with URI arguments and matching defaults in both Home Manager lanes. Check supported entry fields and each lane's launcher path. Preserve active T3 processes.
+- 2026-11-09: `apps/agent-harness/` `tracker.discordCards.summary`: the tracker hub keeps one standing top-five message in `#projects`, edited in place.
 - 2026-11-09: `apps/agent-harness/` gains `tracker.discordCards` and the `tracker-post-cards` user timer: the tracker hub posts open decision cards to Discord and records presses forwarded by the HWC control bot. The values come from the system bot target in both activation lanes.
 - 2026-11-05: Preserve native context-menu positions by removing blanket floating-window centering; keep dialog centering and size limits.
 

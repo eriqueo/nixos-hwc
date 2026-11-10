@@ -1,22 +1,20 @@
 #!/usr/bin/env node
 // domains/business/morning-briefing/gather-projects.mjs
 //
-// The project tracker's portfolio (hub /api/portfolio on hwc-work), reduced to
-// the four lines Eric acts on: projects past their review date, waits on him
-// older than the threshold, cards about to expire, and the live-product count
-// against the cap. The hub derives every number; this file only selects and
-// orders. Emits {} on any failure so the briefing degrades gracefully.
+// The project tracker, reduced to what Eric acts on. Two hub reads:
+// /api/attention is the one ranked list of what waits on him (the hub sets each
+// item's class and rank; this file only groups by them), and /api/portfolio
+// gives the review dates, the live-product cap and the groups. Emits {} on any
+// failure so the briefing degrades gracefully.
 //
 // TRACKER_URL      hub base (default http://127.0.0.1:8765)
-// WAIT_DAYS        a wait on Eric older than this is reported (default 7)
 
 import { pathToFileURL } from "node:url";
 
-export async function gatherProjects({ baseUrl, publicUrl, waitDays, fetch: fetchRequest, requestTimeoutMs, totalTimeoutMs }) {
+export async function gatherProjects({ baseUrl, publicUrl, fetch: fetchRequest, requestTimeoutMs, totalTimeoutMs }) {
   const BASE = baseUrl.replace(/\/$/, "");
   const PUBLIC = publicUrl.replace(/\/$/, "");
-  // The shell allows 30 seconds. At the total deadline, stop reading cards and
-  // retain the portfolio already gathered rather than losing the whole section.
+  // The shell allows 30 seconds; both reads share one total deadline.
   const budget = AbortSignal.timeout(totalTimeoutMs);
   async function readJson(path) {
     const signal = AbortSignal.any([budget, AbortSignal.timeout(requestTimeoutMs)]);
@@ -33,32 +31,19 @@ export async function gatherProjects({ baseUrl, publicUrl, waitDays, fetch: fetc
     .sort((a, b) => b.overdueDays - a.overdueDays)
     .map((p) => ({ id: p.id, title: p.title, days: p.overdueDays, reviewBy: p.reviewBy, kind: p.kind, url: url(p.id, "/roadmap") }));
 
-  const waits = [];
-  for (const p of live) {
-    for (const w of p.waits || []) {
-      if (w.on !== "eric" || w.days == null || w.days < waitDays) continue;
-      waits.push({ id: p.id, title: p.title, ask: w.ask, days: w.days, expired: !!w.expired, url: url(p.id, "/roadmap") });
-    }
-  }
-  waits.sort((a, b) => b.days - a.days);
-
-  // Cards: the hub exposes the open count and expiry per card on the project
-  // page; the portfolio carries only counts, so "expiring soon" is read per
-  // project with open cards. Bounded: one fetch per project with open cards.
-  const expiring = [];
-  const withCards = live.filter((p) => p.open > 0).slice(0, 20);
-  for (const p of withCards) {
-    if (budget.aborted) break;
-    try {
-      const page = await readJson(`/api/projects/${encodeURIComponent(p.id)}`);
-      for (const c of page.cards || []) {
-        if (c.status !== "open" || !c.expires) continue;
-        const left = Math.round((new Date(c.expires + "T12:00:00") - new Date(folio.today + "T12:00:00")) / 86400000);
-        if (left <= 3) expiring.push({ id: p.id, title: p.title, card: c.id, cardTitle: c.title, daysLeft: left, url: url(p.id, `/decisions?card=${encodeURIComponent(c.id)}`) });
-      }
-    } catch { /* one project's page failing must not drop the section */ }
-  }
-  expiring.sort((a, b) => a.daysLeft - b.daysLeft);
+  // What waits on Eric. The hub owns the list, the class and the order. If the
+  // read fails or passes the deadline, the portfolio above still makes a section.
+  let list = null;
+  try { list = (await readJson("/api/attention")).cards || []; } catch { /* reported as attention: false */ }
+  const days = (date) => (date ? Math.round((new Date(date + "T12:00:00") - new Date(folio.today + "T12:00:00")) / 86400000) : null);
+  const item = (c) => ({ key: c.key, id: c.project, title: c.projectTitle, card: c.kind === "wait" ? null : c.id, kind: c.kind, ask: c.title,
+    rank: c.rank, where: c.where ?? null, days: c.days ?? null, expired: !!c.expired, daysLeft: days(c.due), url: `${PUBLIC}${c.url}` });
+  const of = (name) => (list || []).filter((c) => c.class === name).map(item);
+  const decide = of("decide"), unsorted = of("unsorted"), agent = of("agent");
+  // Errands group by place so one trip clears every item at that place.
+  const inPerson = Object.entries(Object.groupBy(of("in-person"), (errand) => errand.where || "no place given"))
+    .map(([where, items]) => ({ where, items }));
+  const errands = inPerson.reduce((n, place) => n + place.items.length, 0);
 
   // Re-plan drift: a product re-planned three or more times with nothing
   // finished since is the premortem's "gaming the clock" signal.
@@ -71,17 +56,18 @@ export async function gatherProjects({ baseUrl, publicUrl, waitDays, fetch: fetc
     available: true,
     today: folio.today,
     cap: { products: c.products ?? 0, limit: folio.liveCap ?? 8, over: (c.products ?? 0) > (folio.liveCap ?? 8) },
-    counts: { live: c.live ?? 0, overdue: overdue.length, waits: waits.length, expiring: expiring.length, parked: c.parked ?? 0, stale: c.stale ?? 0 },
-    overdue, waits, expiring, churn,
+    attention: list !== null,
+    counts: { live: c.live ?? 0, overdue: overdue.length, decide: decide.length, inPerson: errands, unsorted: unsorted.length, agent: agent.length, parked: c.parked ?? 0, stale: c.stale ?? 0 },
+    overdue, decide, inPerson, unsorted, agent, churn,
     groups: (folio.groups || []).map((g) => ({ label: g.label, count: g.count, needYou: g.needYou, stale: g.stale, avgComplete: g.avgComplete })),
-    actionable: overdue.length + waits.length + expiring.length + (c.products > folio.liveCap ? 1 : 0) > 0,
+    actionable: overdue.length + decide.length + errands + unsorted.length + (c.products > folio.liveCap ? 1 : 0) > 0,
   };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   gatherProjects({ baseUrl: process.env.TRACKER_URL || "http://127.0.0.1:8765",
     publicUrl: process.env.TRACKER_PUBLIC_URL || "http://hwc-work:8765",
-    waitDays: Number(process.env.WAIT_DAYS || 7), fetch,
+    fetch,
     requestTimeoutMs: 10_000, totalTimeoutMs: 25_000,
   }).then((out) => process.stdout.write(JSON.stringify(out)))
     .catch(() => process.stdout.write("{}"));

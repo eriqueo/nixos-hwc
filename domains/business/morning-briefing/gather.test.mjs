@@ -22,7 +22,7 @@ function load(name, overrides) {
     "gather-live.mjs": () => gatherLive({ ...deps, gatewayUrl: "http://gateway/mcp", orgId: "test", grantKeyFile: "test-key", proposalsList: "Mail" }),
     "gather-research.mjs": () => gatherResearch({ ...deps, baseUrl: "http://research", publicUrl: "http://research/public", timeoutMs: 8000, staleIngestHours: 36 }),
     "gather-refinery.mjs": () => gatherRefinery({ ...deps, itemsDir: "/items", publicUrl: "http://refinery" }),
-    "gather-projects.mjs": () => gatherProjects({ ...deps, baseUrl: "http://tracker", publicUrl: "http://tracker/public", waitDays: 7, requestTimeoutMs: 10000, totalTimeoutMs: 25000 }),
+    "gather-projects.mjs": () => gatherProjects({ ...deps, baseUrl: "http://tracker", publicUrl: "http://tracker/public", requestTimeoutMs: 10000, totalTimeoutMs: 25000 }),
   };
   return gathers[name];
 }
@@ -124,29 +124,46 @@ test("refinery batches file reads and keeps file order with unreadable items", a
   assert.deepEqual(out.stages.hopper.slice(0, 3).map((c) => c.id), ["0", "2", "3"]);
 });
 
-test("projects reduces the hub portfolio to overdue, waits and the cap, and survives a failed page", async () => {
+test("projects groups the hub's ranked list by class and place, and survives a failed list", async () => {
   const today = "2026-11-04";
   const folio = { today, liveCap: 8, counts: { live: 3, products: 9, parked: 1, stale: 0 },
     groups: [{ label: "DataX", count: 3, needYou: 2, stale: 0, avgComplete: 0.5 }],
     projects: {
       a: { id: "a", title: "A", status: "active", kind: "product", overdue: true, overdueDays: 4, reviewBy: "2026-10-31", open: 0, replans: 3, progress: { terminalReached: false }, waits: [] },
       b: { id: "b", title: "B", status: "active", kind: "product", overdue: false, open: 1, replans: 0, progress: { terminalReached: false },
-           waits: [{ on: "eric", days: 12, expired: true, ask: "Measure" }, { on: "external", days: 30, ask: "vendor" }, { on: "eric", days: 2, ask: "fresh" }] },
+           waits: [{ on: "eric", days: 12, expired: true, ask: "Measure" }] },
       c: { id: "c", title: "C", status: "complete", kind: "task", overdue: true, overdueDays: 9, open: 0, waits: [] } } };
-  const page = { cards: [{ id: "C1", title: "Old", status: "open", expires: "2026-11-05" }, { id: "C2", status: "open", expires: "2026-12-01" }] };
-  const run = await load("gather-projects.mjs", { fetch: async (url) => response(url.endsWith("/api/portfolio") ? folio : page) });
+  const item = (rank, cls, extra) => ({ rank, class: cls, project: "b", projectTitle: "B", id: `i${rank}`, key: `k${rank}`, kind: "wait", title: `ask ${rank}`, url: `/p/b/roadmap`, ...extra });
+  const list = { cards: [
+    item(1, "decide", { kind: "decision", id: "C1", due: "2026-11-05", url: "/p/b/decisions?card=C1" }),
+    item(2, "in-person", { where: "Carrie's house", days: 12, expired: true, due: "2026-10-30" }),
+    item(3, "in-person", { where: "Lumber yard" }),
+    item(4, "in-person", { where: "Carrie's house" }),
+    item(5, "unsorted", { days: 2, where: null }),
+    item(6, "agent", { kind: "unactioned", id: "C0" }) ] };
+  const run = await load("gather-projects.mjs", { fetch: async (url) => response(url.endsWith("/api/portfolio") ? folio : list) });
   const out = await run();
   assert.equal(out.available, true);
+  assert.equal(out.attention, true);
   assert.deepEqual(out.overdue.map((o) => [o.id, o.days]), [["a", 4]]);
-  assert.deepEqual(out.waits.map((w) => [w.id, w.days, w.expired]), [["b", 12, true]]);
-  assert.deepEqual(out.expiring.map((c) => [c.card, c.daysLeft]), [["C1", 1]]);
+  assert.deepEqual(out.decide.map((d) => [d.card, d.daysLeft, d.url]), [["C1", 1, "http://tracker/public/p/b/decisions?card=C1"]]);
+  // One trip per place: the hub's order is kept inside a place and between places.
+  assert.deepEqual(out.inPerson.map((place) => [place.where, place.items.map((i) => i.rank)]), [["Carrie's house", [2, 4]], ["Lumber yard", [3]]]);
+  assert.deepEqual(out.inPerson[0].items[0], { key: "k2", id: "b", title: "B", card: null, kind: "wait", ask: "ask 2", rank: 2, where: "Carrie's house", days: 12, expired: true, daysLeft: -5, url: "http://tracker/public/p/b/roadmap" });
+  assert.deepEqual(out.unsorted.map((w) => [w.id, w.days]), [["b", 2]]);
+  assert.deepEqual(out.agent.map((w) => w.card), ["C0"]);
+  assert.deepEqual(out.counts, { live: 3, overdue: 1, decide: 1, inPerson: 3, unsorted: 1, agent: 1, parked: 1, stale: 0 });
   assert.deepEqual(out.churn.map((c) => c.id), ["a"]);
   assert.deepEqual(out.cap, { products: 9, limit: 8, over: true });
   assert.equal(out.actionable, true);
-  // A project page that fails must not drop the section: expiring stays bounded to the pages read.
-  const partial = await load("gather-projects.mjs", { fetch: async (url) => { if (url.endsWith("/api/portfolio")) return response(folio); throw new Error("page down"); } });
+  // This file must not sort or classify: an item the hub put in no known class is in no section.
+  const odd = await load("gather-projects.mjs", { fetch: async (url) => response(url.endsWith("/api/portfolio") ? folio : { cards: [item(1, "new-class", {})] }) });
+  assert.deepEqual((await odd()).counts.decide + (await odd()).counts.unsorted, 0);
+  // A failed list must not drop the section: the portfolio half stays, and says the list is missing.
+  const partial = await load("gather-projects.mjs", { fetch: async (url) => { if (url.endsWith("/api/portfolio")) return response(folio); throw new Error("list down"); } });
   const degraded = await partial();
-  assert.deepEqual(degraded.expiring, []);
+  assert.equal(degraded.attention, false);
+  assert.deepEqual([degraded.decide, degraded.inPerson, degraded.unsorted], [[], [], []]);
   assert.deepEqual(degraded.overdue.map((o) => o.id), ["a"]);
 });
 
@@ -258,33 +275,22 @@ test("Today board survives a failed delta and uses the shared session", async ()
   });
 });
 
-test("project page deadlines retain the portfolio and stop at the total budget", { timeout: 5000 }, async () => {
-  const projects = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [String(i), { id: String(i), status: "active", open: 1, waits: [] }]));
+test("a list that never answers keeps the portfolio and stops at the deadline", { timeout: 5000 }, async () => {
   // Real sockets keep Node alive while AbortSignal.timeout's unref'ed timer
   // fires, matching the fetch adapter rather than relying on other tests' I/O.
-  await withGateway((_body, request, res) => {
-    if (request.url === "/api/portfolio") reply(res, { projects: { 0: projects[0], 1: projects[1] }, today: "2026-11-04", counts: { live: 2 } });
-    else if (request.url === "/api/projects/1") reply(res, { cards: [{ id: "next", title: "Next", status: "open", expires: "2026-11-05" }] });
-    // The first project never responds; the next must remain reachable.
-  }, async (url) => {
-    const result = await gatherProjects({ baseUrl: url, publicUrl: "http://public", waitDays: 7,
-      requestTimeoutMs: 100, totalTimeoutMs: 2000, fetch });
-    assert.equal(result.counts.live, 2);
-    assert.deepEqual(result.expiring.map((card) => card.card), ["next"]);
-  });
-
-  let requests = 0;
-  await withGateway((_body, request, res) => {
-    if (request.url === "/api/portfolio") reply(res, { projects, today: "2026-11-04", counts: { live: 20 } });
-    else requests++;
-  }, async (url) => {
-    const result = await gatherProjects({ baseUrl: url, publicUrl: "http://public", waitDays: 7,
-      requestTimeoutMs: 1000, totalTimeoutMs: 250, fetch });
-    assert.equal(result.available, true);
-    assert.equal(result.counts.live, 20);
-    assert.deepEqual(result.expiring, []);
-    assert.ok(requests > 0 && requests < 20, requests);
-  });
+  for (const [requestTimeoutMs, totalTimeoutMs] of [[100, 2000], [1000, 250]]) {
+    await withGateway((_body, request, res) => {
+      if (request.url === "/api/portfolio") reply(res, { projects: {}, today: "2026-11-04", counts: { live: 2 } });
+      // /api/attention never responds.
+    }, async (url) => {
+      const started = Date.now();
+      const result = await gatherProjects({ baseUrl: url, publicUrl: "http://public", requestTimeoutMs, totalTimeoutMs, fetch });
+      assert.equal(result.available, true);
+      assert.equal(result.attention, false);
+      assert.equal(result.counts.live, 2);
+      assert.ok(Date.now() - started < 900, "returned at the shorter deadline");
+    });
+  }
 });
 
 

@@ -127,6 +127,9 @@ business/
 ## Changelog
 
 - 2026-11-09: Finish source/output migrations; centralize estimator contracts, geometry and PostgreSQL export; replace copied test implementations with production regressions.
+- 2026-11-09: The briefing no longer posts a projects digest to Discord. The tracker hub keeps one standing message in `#projects` current from the same list, so the digest was a second copy.
+
+- 2026-11-09: The Projects section reads the tracker hub's one ranked list (`/api/attention`) and groups it: decide now, in person by place, waits no agent sorted, owed by an agent. The briefing's own wait and card-expiry derivation is deleted.
 
 - 2026-11-09: Preserve static briefing module requests beside the same-origin MCP endpoint.
 

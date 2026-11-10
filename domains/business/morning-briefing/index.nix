@@ -98,9 +98,8 @@ in
         HWC_JT_ORG_ID = (import ../leads/parts/jt-mappings.nix).organizationId;
         HWC_JT_GRANT_KEY_FILE = config.age.secrets.jobtread-grant-key.path;
         # Projects section (gather-projects.mjs): the tracker hub runs as a user
-        # unit on this host; its digest goes out through the notify dispatcher.
+        # unit on this host.
         TRACKER_URL = cfg.trackerUrl;
-        HWC_NOTIFY_URL = "http://127.0.0.1:${toString config.hwc.notifications.notify.port}";
       } // lib.optionalAttrs (cfg.hostHealthFrom != null) {
         BRIEFING_HOST = config.hwc.networking.hosts.servers.${cfg.hostHealthFrom};
       };
