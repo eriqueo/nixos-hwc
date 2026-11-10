@@ -34,6 +34,97 @@ def run(coro):
     return asyncio.run(coro)
 
 
+class Fidelity(unittest.TestCase):
+    def test_sentence_layout_preserves_all_nonwhitespace(self):
+        for text in ['First sentence. Important final words without punctuation', 'What?! Yes... tail', '...!!!', 'No punctuation']:
+            self.assertEqual(''.join(''.join(T._split_by_sentences(text, 1)).split()), ''.join(text.split()))
+
+    def test_distinct_speech_and_semantic_fillers(self):
+        self.assertEqual(T.clean_transcript([T.Segment('Restart the server.', 0, 1), T.Segment('Restart the server.', 60, 1)]), 'Restart the server.\n\nRestart the server.')
+        self.assertEqual(T.clean_transcript([T.Segment('It should look', 0, 1), T.Segment('like this.', 1, 1)]), 'It should look like this.')
+
+class CaptionEvidence(unittest.TestCase):
+    def test_boundary_overlap_and_source(self):
+        cases = [
+            ('We need to verify the code', 'the code before we deploy the feature and announce the release.', 'We need to verify the code before we deploy the feature and announce the release.'),
+            ('Check the code,', 'THE code before release.', 'Check the code, before release.'),
+            ('we said the code', 'prefix we said the code suffix', 'we said the code prefix we said the code suffix'),
+            ('restart now', 'restart later', 'restart now restart later'),
+            ('go go', 'go go go', 'go go go'),
+        ]
+        for left, right, expected in cases:
+            original = [T.Segment(left, 0, 2), T.Segment(right, 1, 3)]
+            snapshot = [T.asdict(s) for s in original]
+            reconciled, changes = T.reconcile_captions(original, generated=True)
+            self.assertEqual(T.clean_transcript(reconciled), expected)
+            self.assertEqual([T.asdict(s) for s in original], snapshot)
+            unchanged, _ = T.reconcile_captions(original, generated=False)
+            self.assertEqual(T.raw_transcript(unchanged), left + ' ' + right)
+        original = [T.Segment('the code', 0, 1), T.Segment('the code', 60, 1)]
+        self.assertEqual(T.reconcile_captions(original, generated=True)[0], original)
+
+    def test_vtt_cues_preserve_repeats_entities_and_settings(self):
+        # Representative YouTube rolling-cue syntax, plus standard WebVTT blocks.
+        fixture = 'WEBVTT\n\nNOTE ignored\ncomment\n\nSTYLE\n::cue {color: white}\n\ncue-1\n00:01.000 --> 00:03.000 align:start position:0%\n<c>Fish &amp; chips</c>\n\n2\n00:00:02.000 --> 00:00:04.000\nFish &amp; chips\n\n3\n00:05.000 --> 00:06.000\n&lt;word&gt; &nbsp; tail\n'
+        segments = T._parse_vtt(fixture)
+        self.assertEqual([s.text for s in segments], ['Fish & chips', 'Fish & chips', '<word> \u00a0 tail'])
+        self.assertEqual([(s.start, s.duration) for s in segments], [(1, 2), (2, 2), (5, 1)])
+        for cue in ['00:61.000 --> 00:62.000', '00:02.000 --> 00:01.000', 'bad --> bad']:
+            with self.assertRaises(T.TranscriptError):
+                T._parse_vtt('WEBVTT\n\n' + cue + '\nx')
+
+    def test_real_masterclass_caption_windows(self):
+        # Captured 2026-11-10 from kGXnNfmvhv4 auto-generated English captions.
+        # Distant repeated presentation windows must not be globally deleted.
+        windows = [[{'duration': 5.12, 'start': 8051.16, 'text': '>> Uh continue.'},
+          {'duration': 5.24, 'start': 8053.2, 'text': '>> Yeah, so evals are a way to unit test'},
+          {'duration': 4.76, 'start': 8056.28, 'text': 'your skills, basically.'},
+          {'duration': 4.44, 'start': 8058.44, 'text': 'And actually in P stack, we ship uh'}],
+         [{'duration': 6.24, 'start': 11332.64, 'text': '>> You got it. Perfect. Continue.'},
+          {'duration': 5.08, 'start': 11335.96, 'text': '>> Yeah, so evals are a way to unit test'},
+          {'duration': 4.64, 'start': 11338.88, 'text': 'your skills, basically.'},
+          {'duration': 4.28, 'start': 11341.04, 'text': 'And actually, in P Stack, we ship uh'}],
+         [{'duration': 3.64, 'start': 826.16, 'text': 'to build P Stack. Uh it just started'},
+          {'duration': 3.84, 'start': 828.08, 'text': 'with a bunch of skills, right? Like I'},
+          {'duration': 3.52, 'start': 829.8, 'text': 'started with that control glass skill,'},
+          {'duration': 4.28, 'start': 831.92, 'text': 'and then I started with another skill'}],
+         [{'duration': 3.8, 'start': 7806.76, 'text': 'to build Pystack. Uh it just started'},
+          {'duration': 4.0, 'start': 7808.72, 'text': 'with a bunch of skills. Right like I'},
+          {'duration': 3.64, 'start': 7810.56, 'text': 'started with that control glass skill'},
+          {'duration': 4.48, 'start': 7812.72, 'text': 'and then I started with another skill'}]]
+        original = [T.Segment(**s) for window in windows for s in window]
+        reconciled, changes = T.reconcile_captions(original, generated=True)
+        self.assertEqual(reconciled, original)
+        self.assertEqual(changes, [])
+
+    def test_selection_manual_first_no_unrequested_language(self):
+        tracks = [{'language': 'en', 'generated': True}, {'language': 'en-GB', 'generated': False}, {'language': 'de', 'generated': False}]
+        self.assertIs(T.select_track(tracks, ['en', 'en-GB']), tracks[1])
+        self.assertIsNone(T.select_track(tracks, ['fr']))
+
+    def test_caption_deadline_is_controlled(self):
+        with mock.patch.object(T, '_run', new=mock.AsyncMock(side_effect=TimeoutError)) as worker:
+            with self.assertRaises(T.TranscriptError) as cm:
+                run(T._fetch_yta('vid', ['en']))
+        self.assertEqual(cm.exception.reason, 'timeout')
+        self.assertEqual(worker.call_args.kwargs['timeout'], 25)
+
+    def test_stalled_subprocess_is_reaped(self):
+        import sys
+        async def exercise():
+            create = asyncio.create_subprocess_exec
+            processes = []
+            async def capture(*args, **kwargs):
+                proc = await create(*args, **kwargs)
+                processes.append(proc)
+                return proc
+            with mock.patch.object(T.asyncio, 'create_subprocess_exec', side_effect=capture):
+                with self.assertRaises(TimeoutError):
+                    await T._run([sys.executable, '-c', 'import time; time.sleep(60)'], timeout=.05)
+            self.assertIsNotNone(processes[0].returncode)
+        run(exercise())
+
+
 class ClassifyYtdlp(unittest.TestCase):
     def test_429_is_rate_limited(self):
         e = T.classify_ytdlp_error(YTDLP_429)
@@ -206,13 +297,13 @@ class FetchCaptions(unittest.TestCase):
 
     def test_block_then_success_retries_youtube_transcript_api(self):
         good = T.Transcript([T.Segment("hi", 0, 1)], "YouTube captions (manual, en)", "captions")
-        yta = mock.Mock(side_effect=[T.TranscriptError("rate_limited"), good])
-        with mock.patch.object(T, "_fetch_yta_sync", yta):
+        yta = mock.AsyncMock(side_effect=[T.TranscriptError("rate_limited"), good])
+        with mock.patch.object(T, "_fetch_yta", yta):
             self.assertIs(run(T.fetch_captions("vid", ["en"])), good)
         self.assertEqual(yta.call_count, 2)
 
     def test_both_sources_fail_reports_block_and_sets_cooldown(self):
-        with mock.patch.object(T, "_fetch_yta_sync", side_effect=T.TranscriptError("no_captions")), \
+        with mock.patch.object(T, "_fetch_yta", new=mock.AsyncMock(side_effect=T.TranscriptError("no_captions"))), \
              mock.patch.object(T, "_try_ytdlp_subs", new=mock.AsyncMock(side_effect=T.classify_ytdlp_error(YTDLP_429))):
             with self.assertRaises(T.TranscriptError) as cm:
                 run(T.fetch_captions("vid", ["en"]))
@@ -221,7 +312,7 @@ class FetchCaptions(unittest.TestCase):
 
     def test_unavailable_skips_ytdlp(self):
         ytdlp = mock.AsyncMock()
-        with mock.patch.object(T, "_fetch_yta_sync", side_effect=T.TranscriptError("unavailable")), \
+        with mock.patch.object(T, "_fetch_yta", new=mock.AsyncMock(side_effect=T.TranscriptError("unavailable"))), \
              mock.patch.object(T, "_try_ytdlp_subs", new=ytdlp):
             with self.assertRaises(T.TranscriptError):
                 run(T.fetch_captions("vid", ["en"]))
@@ -258,6 +349,19 @@ class ExtractWiring(unittest.TestCase):
         self.assertEqual(result["source"], "deepgram")
         self.assertEqual(result["transcription_request_ids"], ["request-1"])
         self.assertIn("**Source:** Deepgram", Path(result["filename"]).read_text())
+
+    def test_cleanup_and_evidence_at_production_caller(self):
+        original = [T.Segment('We verify the code', 0, 2), T.Segment('the code before release. Final words', 1, 3)]
+        captions = T.Transcript(original, 'YouTube auto', 'captions', language='en', track='test:en:auto', generated=True)
+        with mock.patch.object(api, 'fetch_metadata', new=mock.AsyncMock(return_value=self.meta)), mock.patch.object(api, 'fetch_captions', new=mock.AsyncMock(return_value=captions)):
+            result = run(api._extract(self.meta.url, 'clean', self.out))
+        self.assertEqual(result['transcript'], 'We verify the code before release. Final words')
+        evidence = json.loads(Path(result['evidence_filename']).read_text())
+        self.assertEqual(evidence['segments'], [T.asdict(s) for s in original])
+        self.assertEqual(evidence['cleanup']['overlaps_removed'], 1)
+        self.assertEqual(evidence['track'], 'test:en:auto')
+        self.assertEqual(evidence['cleaned_output'], result['transcript'])
+        self.assertIn(result['transcript'], Path(result['filename']).read_text())
 
     def test_rate_limited_falls_back_to_deepgram(self):
         result, _ = self._extract(T.TranscriptError("rate_limited"))
