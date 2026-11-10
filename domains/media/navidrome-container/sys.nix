@@ -14,7 +14,7 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = "UTC";   # Static default - timezone detection deferred
-      ports = [ "127.0.0.1:4533:4533" ];
+      ports = [ "127.0.0.1:${toString cfg.port}:4533" ];
       volumes = [
         "${cfg.dataDir}:/data"
         "${config.hwc.paths.media.root}/music:/music:ro"  # Music library for streaming

@@ -10,6 +10,8 @@ Gaming services including retro emulation (RetroArch) and WebDAV-based save sync
 - **Does NOT manage**: GPU drivers (→ `domains/system/`), ROMs/content files (user-managed), firewall (→ machine config)
 
 ## Structure
+
+The legacy `retroarch.cores.pcsx2/dolphin` options do not select libretro cores; standalone games come from the Sunshine catalog. WebDAV `syncSaves/syncStates` are compatibility inputs: the server exposes the complete configured data directory. Existing behavior stays unchanged.
 Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
 
 `retroarch/stream-session.py` discovers only exact Sunshine virtual-device names and vendor/product IDs. Both legacy passthrough and current libvirtualhid identities map to keyboard/relative mouse roles; duplicates fail and physical/absolute devices stay excluded.
@@ -149,6 +151,8 @@ hwc.gaming.webdav = {
 ```
 
 ## Changelog
+
+- 2026-11-09: Document legacy no-op inputs without adding new game or file effects.
 - 2026-11-04: Keep streaming workspace 99 Eden-only and reapply the off-screen `HWC-GAME` position after Hyprland reloads; a reload had placed it beside the laptop screen, where app windows became unreachable.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.
 

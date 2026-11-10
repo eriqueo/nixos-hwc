@@ -9,7 +9,7 @@
 # Replaces the former slack-webhook.nix (webhookSender + these three).
 # The script *names* (hwc-smartd-notify / hwc-service-failure-notify /
 # hwc-backup-notify) are unchanged so their callers in
-# domains/monitoring/alerts and domains/data/backup need no edits.
+# domains/monitoring/alerts and operator backup hooks retain their CLI.
 
 { pkgs, lib, config }:
 

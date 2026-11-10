@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+arr-config.nix owns shared arr bootstrap/webhook policy. Radarr, Lidarr, Prowlarr and Readarr assemble their small service in index.nix. Networking's ports.nix shares host listener defaults with media routes. The shared audiobook copier owns copying, state and markers; hot-sweep delegates to it.
+
 Sonarr’s hardened image initializes omitted queue filters as empty sets in its
 hash-bound API assembly. Explicit filters retain their existing behavior.
 
@@ -131,12 +133,11 @@ Its offline runtime context patches form-data/proxy-addr and isolates form-data'
 ```
 media/
 ├── index.nix                # Domain aggregator
+├── arr-config.nix           # Shared arr bootstrap and webhook policy
 ├── README.md                # This file
 │
-├── jellyfin-container/      # Jellyfin media server (container)
 ├── jellyfin-native/         # Native Jellyfin; home GPU and XPS local libraries
 ├── navidrome-container/     # Navidrome music server (container)
-├── navidrome-native/        # Navidrome music server (native NixOS)
 ├── audiobookshelf/          # Pinned app/supported Node recipe, config path and Borg recovery registration
 ├── jellyseerr/              # Media requests; frozen dependency/client build, app backports and private config
 │
@@ -153,7 +154,6 @@ media/
 ├── mousehole/               # MAM IP updater
 ├── pinchflat/               # YouTube subscription manager
 ├── beets-container/         # Music organizer (container)
-├── beets-native/            # Music organizer (native)
 ├── recyclarr/               # *arr quality profile sync; preserves Radarr executable rejection
 ├── slskd/                   # Soulseek client
 ├── soularr/                 # Soulseek-Lidarr integration
@@ -161,7 +161,6 @@ media/
 ├── books/                   # Retained app/release marker, guarded native/read-only Calibre inputs, HTTP adapters; private parent in directories.nix
 │
 ├── immich-container/        # Photo management, pinned runtime/library contexts
-├── immich-native/           # Photo management (native NixOS)
 ├── frigate/                 # NVR, model-derived labels and native camera metrics
 ├── youtube/                 # YouTube services
 │
@@ -184,6 +183,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-09: Colocate small arr assemblies, remove empty migration parts, share configured listener facts and route audiobook copying through one owner. Keep qualified runtime recipes and active media state.
 
 - 2026-11-07: Guard Sonarr’s four nullable queue filters before enumeration. Bind the patched assembly into the hardened image and reject input drift and repeated patching.
 

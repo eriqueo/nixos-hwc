@@ -396,4 +396,18 @@ in pkgs.runCommand "briefing-mcp-routing" {
   touch "$out"
 '';
 
+gluetun-client-contract = let
+  c = self.nixosConfigurations.hwc-home.config;
+  fixture = pkgs.writeText "gluetun-client-contract.json" (builtins.toJSON {
+    stateRoot = c.hwc.networking.gluetun.stateRoot;
+    qbittorrent = pkgs.writeText "qbittorrent-port-sync.sh" c.systemd.services.gluetun-port-sync.script;
+    slskd = pkgs.writeText "slskd-port-sync.sh" c.systemd.services.gluetun-slskd-port-sync.script;
+  });
+in pkgs.runCommand "gluetun-client-contract" {
+  nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.jq pkgs.gawk pkgs.coreutils ];
+} ''
+  export PYTHONDONTWRITEBYTECODE=1
+  python3 ${./gluetun-clients.py} ${fixture}
+  touch "$out"
+'';
 }

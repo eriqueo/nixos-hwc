@@ -11,13 +11,11 @@ Three-layer architecture:
 
 Output: domains/business/estimator/src/data/
 """
+import argparse
 import subprocess
 import json
+import tempfile
 from pathlib import Path
-
-DB = "hwc"
-SCRIPT_DIR = Path(__file__).parent
-OUTPUT_DIR = SCRIPT_DIR.parent / "estimator" / "src" / "data"
 
 # Unit abbreviation map
 UNIT_ABBR = {
@@ -35,11 +33,11 @@ UNIT_ABBR = {
 }
 
 
-def psql_json(sql: str) -> list[dict]:
+def psql_json(sql: str, *, database: str, run) -> list[dict]:
     """Run SQL and return parsed JSON rows."""
-    cmd = ["sudo", "-u", "postgres", "psql", "-d", DB, "-t", "-A",
+    cmd = ["sudo", "-u", "postgres", "psql", "-d", database, "-t", "-A",
            "-c", f"SELECT json_agg(t) FROM ({sql}) t;"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode != 0:
         raise RuntimeError(f"psql error: {result.stderr}")
     raw = result.stdout.strip()
@@ -48,9 +46,9 @@ def psql_json(sql: str) -> list[dict]:
     return json.loads(raw)
 
 
-def export_trade_rates():
+def export_trade_rates(query):
     """Export trade_rates table -> tradeRates.json format."""
-    rows = psql_json("""
+    rows = query("""
         SELECT trade, base_wage as wage, burden_factor as burden,
                markup_factor as markup
         FROM trade_rates ORDER BY trade
@@ -63,18 +61,14 @@ def export_trade_rates():
             "markup": float(r["markup"]),
         }
 
-    path = OUTPUT_DIR / "tradeRates.json"
-    with open(path, "w") as f:
-        json.dump(mapped, f, indent=2)
-    print(f"  tradeRates.json — {len(mapped)} trades")
     return mapped
 
 
-def export_jt_mappings():
+def export_jt_mappings(query):
     """Export JT reference tables -> jtMappings.json."""
-    codes = psql_json("SELECT id, code FROM jt_cost_codes")
-    types = psql_json("SELECT id, name FROM jt_cost_types")
-    units = psql_json("SELECT id, name FROM jt_units")
+    codes = query("SELECT id, code FROM jt_cost_codes")
+    types = query("SELECT id, name FROM jt_cost_types")
+    units = query("SELECT id, name FROM jt_units")
 
     mappings = {
         "codes": {r["code"]: r["id"] for r in codes},
@@ -82,20 +76,16 @@ def export_jt_mappings():
         "units": {r["name"]: r["id"] for r in units},
     }
 
-    path = OUTPUT_DIR / "jtMappings.json"
-    with open(path, "w") as f:
-        json.dump(mappings, f, indent=2)
-    print(f"  jtMappings.json — {len(codes)} codes, {len(types)} types, {len(units)} units")
     return mappings
 
 
-def export_catalog_items():
+def export_catalog_items(query):
     """Export assembly_rules joined to catalog_items -> catalog.json (assembler format).
 
     Also exports pricebook.json (catalog items only) and catalog_export.json (raw).
     """
     # ── Assembler catalog: rules joined to items ──────────────────────────
-    rows = psql_json("""
+    rows = query("""
         SELECT
             ar.id AS rule_id,
             ci.id AS catalog_item_id,
@@ -163,19 +153,7 @@ def export_catalog_items():
             "notes": r.get("description") or "",
         })
 
-    cat_path = OUTPUT_DIR / "catalog.json"
-    with open(cat_path, "w") as f:
-        json.dump(catalog, f, indent=2)
-
-    by_type: dict[str, int] = {}
-    for r in rows:
-        t = r.get("project_type", "unknown")
-        by_type[t] = by_type.get(t, 0) + 1
-    parts = ", ".join(f"{t}: {n}" for t, n in sorted(by_type.items()))
-    print(f"  catalog.json — {len(catalog)} assembly rules ({parts})")
-
-    # ── Price book: all catalog items (for UI catalog browser) ────────────
-    pricebook_rows = psql_json("""
+    pricebook_rows = query("""
         SELECT
             ci.id,
             ci.canonical_name,
@@ -221,47 +199,60 @@ def export_catalog_items():
             "notes": r.get("description") or "",
         })
 
-    pb_path = OUTPUT_DIR / "pricebook.json"
-    with open(pb_path, "w") as f:
-        json.dump(pricebook, f, indent=2)
-    print(f"  pricebook.json — {len(pricebook)} catalog items")
-
-    # ── Raw export (for debugging) ────────────────────────────────────────
-    raw_path = OUTPUT_DIR / "catalog_export.json"
-    with open(raw_path, "w") as f:
-        json.dump(rows, f, indent=2)
-    print(f"  catalog_export.json — {len(rows)} rows (raw)")
-
-    return rows
+    return catalog, pricebook, rows
 
 
-def export_templates():
+def export_templates(query):
     """Export estimate_templates -> templates.json."""
-    rows = psql_json("""
+    rows = query("""
         SELECT id, name, project_type, description, state,
                created_at::text, updated_at::text
         FROM estimate_templates
         WHERE is_active = true
         ORDER BY project_type, name
     """)
-    path = OUTPUT_DIR / "templates.json"
-    with open(path, "w") as f:
-        json.dump(rows or [], f, indent=2)
-    print(f"  templates.json — {len(rows or [])} templates")
     return rows
 
 
-if __name__ == "__main__":
-    print(f"Exporting estimator data from {DB} -> {OUTPUT_DIR}")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    export_trade_rates()
-    export_jt_mappings()
-    export_catalog_items()
-    try:
-        export_templates()
-    except Exception as e:
-        print(f"  templates: skipped ({e})")
-        with open(OUTPUT_DIR / "templates.json", "w") as f:
-            json.dump([], f)
-        print("  templates.json — 0 (table missing)")
+def export_data(query):
+    # Finish every read before replacing any REPLACEABLE export. A database or
+    # schema failure must preserve the previous set, especially templates.
+    rates = export_trade_rates(query)
+    mappings = export_jt_mappings(query)
+    catalog, pricebook, raw = export_catalog_items(query)
+    templates = export_templates(query)
+    return {
+        "tradeRates.json": rates, "jtMappings.json": mappings,
+        "catalog.json": catalog, "pricebook.json": pricebook,
+        "catalog_export.json": raw, "templates.json": templates,
+    }
+
+
+def main(argv=None, *, run=subprocess.run):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--database", default="hwc")
+    parser.add_argument("--output-dir", type=Path,
+                        default=Path(__file__).resolve().parent.parent / "estimator" / "src" / "data")
+    args = parser.parse_args(argv)
+    query = lambda sql: psql_json(sql, database=args.database, run=run)
+    exports = export_data(query)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for name, data in exports.items():
+        path = args.output_dir / name
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", dir=args.output_dir,
+                                             prefix=name + ".", suffix=".tmp", delete=False) as stream:
+                temporary = Path(stream.name)
+                json.dump(data, stream, indent=2)
+            temporary.chmod(path.stat().st_mode & 0o777 if path.exists() else 0o644)
+            temporary.replace(path)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+        print(f"  {name} — {len(data)} entries")
     print("Done.")
+
+
+if __name__ == "__main__":
+    main()

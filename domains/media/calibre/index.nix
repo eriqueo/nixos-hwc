@@ -2034,8 +2034,8 @@ in
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; description = "Network mode"; };
     gpu.enable = lib.mkOption { type = lib.types.bool; default = false; description = "Enable GPU support for Calibre"; };
     ports = {
-      desktop = lib.mkOption { type = lib.types.int; default = 8083; description = "Port for Calibre desktop interface (KasmVNC)"; };
-      webserver = lib.mkOption { type = lib.types.int; default = 8181; description = "Port for Calibre content server"; };
+      desktop = lib.mkOption { type = lib.types.int; default = (import ../../networking/ports.nix).calibre.port; description = "Port for Calibre desktop interface (KasmVNC)"; };
+      webserver = lib.mkOption { type = lib.types.port; default = (import ../../networking/ports.nix).calibre-server.port; description = "Port for Calibre content server"; };
     };
     library = lib.mkOption { type = lib.types.path; default = "${paths.media.books}/ebooks"; description = "Path to ebooks library"; };
   };

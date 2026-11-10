@@ -125,33 +125,13 @@ let
 
 
     def sweep_books():
-        """Copy new audiobooks to cold storage. Never deletes (MAM seeding)."""
-        books = os.path.join(HOT, "books")
-        if not os.path.isdir(books):
-            return
-        audio_exts = (".mp3", ".m4a", ".m4b", ".flac", ".opus", ".ogg", ".wav", ".aac")
-        for name in os.listdir(books):
-            src = os.path.join(books, name)
-            marker = os.path.join(src, ".abs-copied")
-            if not os.path.isdir(src) or os.path.exists(marker):
-                continue
-            has_audio = any(
-                f.endswith(audio_exts)
-                for _, _, files in os.walk(src) for f in files
-            )
-            if not has_audio:
-                continue
-            dst = os.path.join(COLD_AUDIOBOOKS, name)
-            os.makedirs(dst, exist_ok=True)
-            result = subprocess.run(
-                ["${pkgs.rsync}/bin/rsync", "-a", "--ignore-existing", src + "/", dst + "/"],
-                capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                open(marker, "w").close()
-                print(f"COPIED books/{name} -> audiobooks")
-            else:
-                print(f"ERROR rsync books/{name}: {result.stderr.strip()}")
+        result = subprocess.run(
+            ["${pkgs.python3}/bin/python3", "${config.system.build.audiobookCopierWrapper}",
+             "--scan-all", "--no-library-scan", "--include-hidden"],
+            timeout=3600,
+        )
+        if result.returncode:
+            print(f"ERROR audiobook copier exited {result.returncode}")
 
 
     def log_strays():

@@ -13,6 +13,28 @@
 { lib }:
 
 rec {
+  nixosPaths = { osConfig, home }: let
+    nixos = lib.attrByPath [ "hwc" "paths" "nixos" ] "${home}/.nixos" osConfig;
+  in { inherit nixos; workspace = "${nixos}/workspace"; };
+
+  # Hybrid Wayland browsers render on Intel; inherited NVIDIA VAAPI selection
+  # otherwise falls back to CPU decoding. Keep the inherited value on hosts
+  # without an Intel render node or the iHD driver.
+  intelVaapiEnvironment = ''
+    intel_present=0
+    for n in /dev/dri/renderD*; do
+      v=$(cat "/sys/class/drm/$(basename "$n")/device/vendor" 2>/dev/null || true)
+      if [ "$v" = "0x8086" ]; then
+        intel_present=1
+        break
+      fi
+    done
+    if [ "$intel_present" = "1" ] && \
+       [ -r /run/opengl-driver/lib/dri/iHD_drv_video.so ]; then
+      export LIBVA_DRIVER_NAME=iHD
+    fi
+  '';
+
   # Runtime htpasswd selection shared by todui and the CalDAV/CardDAV clients.
   # Return argv: callers serialize as shell arguments or vdirsyncer JSON.
   # Read only the configured user's entry and preserve colons in the password.

@@ -12,6 +12,22 @@ let
     options = {
       enable = mkEnableOption "gluetun tunnel instance '${name}'";
 
+      stateDirectory = mkOption {
+        type = types.str; readOnly = true;
+        default = "${cfg.stateRoot}/${name}";
+        description = "Bounded runtime state directory for this tunnel";
+      };
+      forwardedPortFile = mkOption {
+        type = types.str; readOnly = true;
+        default = "${cfg.instances.${name}.stateDirectory}/forwarded-port";
+        description = "Authoritative NAT-PMP port published before client synchronization";
+      };
+      statusFile = mkOption {
+        type = types.str; readOnly = true;
+        default = "${cfg.instances.${name}.stateDirectory}/status.json";
+        description = "Atomic tunnel health projection";
+      };
+
       image = mkOption {
         type = types.str;
         default = "qmcgaw/gluetun:latest";
@@ -115,13 +131,11 @@ let
         enable = mkEnableOption "NAT-PMP port forwarding on this tunnel";
 
         syncTo = mkOption {
-          type = types.nullOr (types.enum [ "qbittorrent" "slskd" ]);
+          type = types.nullOr (types.strMatching "[a-z][a-z0-9-]*");
           default = null;
           description = ''
-            Which client's listen port follows this tunnel's forwarded port.
-            Closed vocabulary: every value has a sync implementation in
-            parts/config.nix, so adding a client forces adding its mechanism
-            instead of silently doing nothing.
+            Registered client whose listen port follows this tunnel's forwarded
+            port. The application owns its sync and consistency commands.
           '';
         };
 
@@ -190,6 +204,19 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.networking.gluetun = {
+    portForwardingClients = mkOption {
+      default = {};
+      description = "Application-owned forwarded-port consumers. Commands receive FORWARDED_PORT for sync and PORT for health; nonzero status is failure.";
+      type = types.attrsOf (types.submodule {
+        options = {
+          unit = mkOption { type = types.str; description = "Client unit to order the follower after"; };
+          sync = mkOption { type = types.lines; description = "Apply FORWARDED_PORT; fail when not applied so the follower retries"; };
+          check = mkOption { type = types.lines; default = ""; description = "Read-only consistency probe for PORT"; };
+          failureReason = mkOption { type = types.str; default = "client listen port does not match forwarded port"; };
+        };
+      });
+    };
+
     stateRoot = mkOption {
       type = types.str;
       default = "/var/lib/hwc/gluetun";
@@ -215,8 +242,6 @@ in
     ./sys.nix
     ./parts/config.nix
     ./parts/scripts.nix
-    ./parts/pkgs.nix
-    ./parts/lib.nix
   ];
 
   #==========================================================================
@@ -254,6 +279,10 @@ in
     ++ lib.mapAttrsToList (name: i: {
       assertion = config.age.secrets ? ${i.privateKeySecret};
       message = "gluetun instance '${name}' needs agenix secret '${i.privateKeySecret}' (declared in domains/secrets/declarations/infrastructure.nix)";
+    }) enabledInstances
+    ++ lib.mapAttrsToList (name: i: {
+      assertion = i.portForwarding.syncTo == null || builtins.hasAttr i.portForwarding.syncTo cfg.portForwardingClients;
+      message = "gluetun instance '${name}' needs a registered portForwardingClients consumer for syncTo";
     }) enabledInstances
     ++ lib.mapAttrsToList (name: i: {
       assertion = !i.portForwarding.enable || i.wireguard.endpointIp != "";

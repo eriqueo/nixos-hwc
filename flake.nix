@@ -316,13 +316,6 @@
             ];
           };
 
-    # Server-specific overlay for CUDA support
-    # Uses cache.nixos-cuda.org for pre-built binaries (avoid 8+ hour local builds)
-    serverOverlay = final: prev: {
-      # Let nixpkgs.config.cudaSupport handle CUDA globally
-      # No per-package overrides needed with binary cache
-    };
-
     # Stable hosts backport the CLI from the existing unstable channel.
     claudeCodeOverlay = import ./overlays/claude-code.nix { nixpkgs-unstable = nixpkgs; };
 
@@ -398,13 +391,13 @@
 
     # CHARTER v9.0: Use unstable for laptop (latest features), stable for server (production stability)
     pkgs = mkPkgs system nixpkgs [];
-    pkgs-laptop = mkPkgs system nixpkgs [ ];
+    pkgs-laptop = pkgs;
 
     # Stable hosts use the current CLI without a separate nixpkgs pin.
     pkgs-stable = mkPkgs system nixpkgs-stable [ ghidraOverlay claudeCodeOverlay ];
 
     # pkgs-stable with CUDA overlay for server (Immich ML GPU acceleration)
-    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ serverOverlay ghidraOverlay ];
+    pkgs-stable-cuda = mkPkgsWithOverlays system nixpkgs-stable [ ghidraOverlay ];
 
     checkRuntimeScope = mkNodeRuntimeScope pkgs;
     laptopRuntimeScope = mkNodeRuntimeScope pkgs-laptop;
@@ -681,6 +674,9 @@
     };
   in {
     lib.verification = verification.inventory;
+    lib.fleet = lib.mapAttrs' (name: machine:
+      lib.nameValuePair "hwc-${name}" { inherit (machine) channel roles; }
+    ) machines;
     # Apps - CLI utilities
     apps.${system} = {
       keymap-docs = { type = "app"; program = "${keymapDocsApp}/bin/keymap-docs"; };

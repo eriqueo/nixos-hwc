@@ -1,4 +1,4 @@
-#\!/bin/bash
+#!/bin/bash
 # migrate-media-stack.sh
 # Migration script for boring-reliable media stack with deterministic Forms auth
 
@@ -50,7 +50,7 @@ update_arr_configs() {
             log "Updating $app configuration: $config_file"
             
             # Install xmlstarlet if not available
-            if \! command -v xmlstarlet >/dev/null 2>&1; then
+            if ! command -v xmlstarlet >/dev/null 2>&1; then
                 warn "xmlstarlet not found, attempting to install"
                 if command -v nix-env >/dev/null 2>&1; then
                     nix-env -iA nixpkgs.xmlstarlet
@@ -125,8 +125,8 @@ apply_nixos_config() {
     log "Applying new NixOS media stack configuration..."
     
     # Test configuration first
-    if \! nixos-rebuild test --flake .#hwc-home; then
-        error "NixOS configuration test failed\!"
+    if ! nixos-rebuild test --flake .#hwc-home; then
+        error "NixOS configuration test failed!"
         error "Check configuration syntax and try again"
         return 1
     fi
@@ -187,7 +187,7 @@ health_checks() {
     log "Waiting 30 seconds for services to initialize..."
     sleep 30
     
-    for service in "${\!services[@]}"; do
+    for service in "${!services[@]}"; do
         local port="${services[$service]}"
         local url="https://hwc-home.ocelot-wahoo.ts.net/${service}/"
         
@@ -203,7 +203,7 @@ health_checks() {
     
     # Summary
     if [[ ${#failed_services[@]} -eq 0 ]]; then
-        log "🎉 All services passed health checks\!"
+        log "🎉 All services passed health checks!"
         log "Media stack migration completed successfully"
         log "Access your services at: https://hwc-home.ocelot-wahoo.ts.net/SERVICE/"
     else
@@ -224,7 +224,7 @@ main() {
     # Confirmation prompt
     read -p "Continue with migration? (y/N): " -n 1 -r
     echo
-    if [[ \! $REPLY =~ ^[Yy]$ ]]; then
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         log "Migration cancelled"
         exit 0
     fi
@@ -243,7 +243,7 @@ main() {
     start_services
     health_checks
     
-    log "Migration completed\!"
+    log "Migration completed!"
     log "Backup stored at: $BACKUP_DIR"
 }
 

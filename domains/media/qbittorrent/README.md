@@ -20,10 +20,11 @@ the VPN, never the host's real IP.
 
 ## Structure
 
+parts/config.nix also registers the client-owned forwarded-port API command with Gluetun. Authentication or preference-update failure remains a failed synchronization; the next follower start retries it.
+
 ```
 qbittorrent/
 ├── index.nix          # Options (enable, image, network.mode, webPort, privacy, categories)
-├── sys.nix            # System wiring
 ├── parts/
 │   └── config.nix     # Container def + ExecStartPre enforce scripts
 └── README.md
@@ -115,6 +116,8 @@ journalctl -u podman-qbittorrent -f
 ---
 
 ## Changelog
+
+- 2026-11-09: Move VPN client actions into media and remove the empty sys.nix scaffold.
 
 - **2026-08-01**: Split `privacy.enable` into per-protocol toggles
   (`anonymousMode`/`dht`/`pex`/`lsd`) and turned **DHT + PeX back on** by

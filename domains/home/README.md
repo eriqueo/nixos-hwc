@@ -27,6 +27,8 @@ Owned instances select checked Python interpreters and package environments
 without rebuilding their native dependencies. Workbench TUI and Mail helpers
 consume the same runtime package catalog in both Home Manager lanes.
 
+Shared home consumers use one checkout-path helper, one browser Intel VAAPI environment and one workspace-slot plan. Neomutt receives its selected primary account explicitly. The palette files share stable cursor and alpha facts; keymap chords remain in the grammar. `home-untangle` exercises rendered consumers with isolated command fixtures.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 REA's package wrapper supplies the Nix firmware resource limiter and checks Binwalk against a generated gzip fixture.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
@@ -178,6 +180,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-11-09: Consolidate shared home facts and rendered consumers; remove inactive Claude sync, empty app parts and unused keymap knobs; add consumer and dt export regressions.
 
 - 2026-11-09: Bind T3 conversation URLs to the managed profile launcher and desktop entry, with URI arguments and matching defaults in both Home Manager lanes. Check supported entry fields and each lane's launcher path. Preserve active T3 processes.
 - 2026-11-09: `apps/agent-harness/` gains `tracker.discordCards` and the `tracker-post-cards` user timer: the tracker hub posts open decision cards to Discord and records presses forwarded by the HWC control bot. The values come from the system bot target in both activation lanes.

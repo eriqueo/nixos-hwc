@@ -46,6 +46,14 @@ header counts them. `translate.enable` (default: on wherever
 
 ## Structure
 
+The in-memory job API adds `schema_version = 1` and a derived `terminal` flag.
+Active jobs retain their status until they finish; capacity rejects new work
+with HTTP429 after completed history has been evicted. An item remains reserved
+while pacing and extracting. Preparation failures and cancellation reach a
+visible terminal state, and the browser stops polling and allows another request.
+
+The transcript listener default is shared with its route through networking/ports.nix. The existing transcript check includes Node22 for the served JavaScript VM regression.
+
 ```
 domains/media/youtube/
 ├── README.md                 # This file
@@ -101,6 +109,10 @@ Tests (run on hwc-home with the service interpreter):
 | `transcripts` | 8100 | Transcript API + web UI |
 
 ## Changelog
+
+- 2026-11-09: Bound active job admission, reserve items before pacing, expose terminal failure/cancellation and test the served browser polling path.
+
+- 2026-11-09: Share the configured transcript listener with routing and include the served-script VM runtime in verification.
 - 2026-10-23: Replace the transcript audio fallback with Deepgram Nova-3, generated secret wiring, bounded cancellable uploads, request IDs and an audio capacity limit. Preserve captions-first jobs, the synchronous captions endpoint, saved-file readers and X capture. The flake check exercises the adapter, extraction path and generated service wiring.
 - 2026-10-12: English translation of X posts. Posts carry X's `lang` tag; `xpost.translate_posts` sends every non-English text (and quoted text) to DX2 through `xpost.dx2_translator` (OpenAI-compatible, thinking off, key read per request from `hwc.server.ai.dx2.apiKeyFile`) and replaces it with English before the file is written. Fail-open per request; the new `**Translated:**` header line records languages, count and failures. New option `translate.enable`, asserted to need the dx2 module. The translator lives in `xpost.py`, not a new file: it acts only on the X post shape, and `transcript.py` is the YouTube side.
 - 2026-10-12: X capture stop rule. A capture ends only on X's bottom `TimelineTerminateTimeline` (`Conversation.ended`), not on a page without a Bottom cursor; while X has not ended the timeline it waits up to 12 stale scrolls (was 4). Measured live: X sends a page every 3-7 s, and the old rule saved 60 of ~400 replies as if complete.

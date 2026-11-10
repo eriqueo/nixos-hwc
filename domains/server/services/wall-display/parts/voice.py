@@ -41,6 +41,7 @@ import uuid
 import wave
 
 import screens
+from mcp_client import McpSession
 from screens import CONFIG, TZ
 
 import re as _compiled_re
@@ -203,52 +204,9 @@ TOOL_SCHEMAS = [schema for _, _, schema in TOOLS.values()]
 
 # ── gateway (Streamable HTTP MCP, one session per voice request) ────────────
 
-class Gateway:
+class Gateway(McpSession):
     def __init__(self, url):
-        self.url, self.sid, self.seq = url, None, 0
-        self.rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
-                                "clientInfo": {"name": "wall-display-voice", "version": "1"}})
-        self.rpc("notifications/initialized", {})
-
-    def rpc(self, method, params):
-        body = {"jsonrpc": "2.0", "method": method, "params": params}
-        note = method.startswith("notifications/")
-        if not note:
-            self.seq += 1
-            body["id"] = self.seq
-        headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
-                   "mcp-protocol-version": "2025-06-18"}
-        if self.sid:
-            headers["mcp-session-id"] = self.sid
-        req = urllib.request.Request(self.url, data=json.dumps(body).encode(), headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=MCP_TIMEOUT) as r:
-            self.sid = r.headers.get("mcp-session-id") or self.sid
-            text = r.read().decode()
-        if note:
-            return None
-        msg = None
-        for line in text.splitlines():
-            if line.startswith("data:"):
-                try:
-                    j = json.loads(line[5:].strip())
-                except ValueError:
-                    continue
-                if j.get("id") == body["id"]:
-                    msg = j
-        if msg is None:
-            msg = json.loads(text)
-        if msg.get("error"):
-            raise RuntimeError(f"gateway {method}: {msg['error'].get('message')}")
-        return msg["result"]
-
-    def close(self):
-        """End the session now rather than leave it to the gateway's 30-min reaper."""
-        if self.sid:
-            try:
-                req = urllib.request.Request(self.url, method="DELETE", headers={"mcp-session-id": self.sid})
-                urllib.request.urlopen(req, timeout=5).close()
-            except Exception:
-                pass
+        super().__init__(url, timeout=MCP_TIMEOUT, client="wall-display-voice")
 
     def call(self, name, args):
         """The tool's JSON payload (its `data` when it has one)."""

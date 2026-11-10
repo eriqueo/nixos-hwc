@@ -11,6 +11,8 @@ Edit, build and publish iheartwoodcraft.com on hwc-work. Cloudflare provides pub
 
 ## Structure
 
+The obsolete `site_files.pre-eviction-leftovers` publish tree and local calculator dist copy are removed. Images/fonts remain in the website owner, and all legacy page redirects remain in Caddy. `site_files` remains the documented permanent operator compatibility link.
+
 Website HSTS uses a one-year lifetime after public journey verification, with no preload or subdomain extension.
 
 Customer report pages override public caching with no-store, suppress referrers and disallow indexing. Calculator build dependencies use patched Vite 6 and the existing React plugin.
@@ -33,6 +35,8 @@ Publishing builds the calculator then the 11ty site. Preview builds do not chang
 The CMS deploy action performs local publication. The API remains at loopback port 8095 behind its existing private route. Caddy's public origin binds only 127.0.0.1:8096; no public inbound firewall port is added. The tunnel serves `iheartwoodcraft.com` and `www.iheartwoodcraft.com` from this origin.
 
 ## Changelog
+
+- 2026-11-09: Remove unused generated publish copies; preserve source assets, Caddy redirects and the compatibility link.
 
 - 2026-11-04: Extend website HSTS to one year after customer-flow tests; preserve subdomain scope.
 

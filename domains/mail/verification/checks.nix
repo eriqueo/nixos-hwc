@@ -1349,4 +1349,39 @@ pkgs.runCommand "mail-workflow-v2" {} ''
   PY
   touch "$out"
 '';
+
+# The domain owns common role policy; clients consume the same resolved root.
+mail-notmuch-policy = let
+  work = self.nixosConfigurations.hwc-work;
+  home = work.config.home-manager.users.eric;
+  standalone = self.homeConfigurations."eric@hwc-work".config;
+  override = (work.extendModules { modules = [{
+    home-manager.users.eric.hwc.mail.notmuch = {
+      maildirRoot = lib.mkForce "/tmp/mail policy fixture";
+      userName = lib.mkForce "Fixture User";
+      excludeFolders = lib.mkForce [ "Ignored" ];
+      savedSearches = lib.mkForce { fixture = "tag:fixture"; };
+    };
+  }]; }).config.home-manager.users.eric;
+  settings = c: if c.programs.notmuch ? settings
+    then c.programs.notmuch.settings else c.programs.notmuch.extraConfig;
+  original = settings home;
+  custom = settings override;
+in
+assert original == settings standalone;
+assert original.database.path == home.hwc.mail.notmuch.maildirRoot;
+assert original.user.name == "Eric O'Keefe";
+assert home.hwc.mail.notmuch.excludeFolders == [ "trash" "spam" "[Gmail]/All Mail" ];
+assert home.hwc.mail.notmuch.savedSearches.work == "from:*@iheartwoodcraft.com or from:*heartwoodcraftmt@gmail.com";
+assert custom.database.path == "/tmp/mail policy fixture" && custom.user.name == "Fixture User";
+assert lib.hasInfix "/tmp/mail policy fixture" override.home.file.".mbsyncrc".text;
+assert lib.hasInfix "/tmp/mail policy fixture" override.xdg.configFile."afew/config".text;
+assert lib.hasInfix "fixture=tag:fixture" override.xdg.configFile."notmuch/searches".text;
+pkgs.runCommand "mail-notmuch-policy" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+  python3 - ${override.hwc.mail.aerc.launchInfo.accountsConf} <<'PY'
+  import pathlib, sys
+  assert 'notmuch:///tmp/mail policy fixture' in pathlib.Path(sys.argv[1]).read_text()
+  PY
+  touch "$out"
+'';
 }

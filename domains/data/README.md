@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Consolidates all data infrastructure: databases (PostgreSQL), backup (rsync/borg),
+Consolidates all data infrastructure: databases (PostgreSQL), backup (Borg),
 storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSync).
 
 ## Boundaries
@@ -11,6 +11,8 @@ storage (mount management), Syncthing (file sync), and CouchDB (Obsidian LiveSyn
 - Does NOT own: application-level data (that belongs to the apps using these services)
 
 ## Structure
+
+Borg is the active backup owner. The disabled rsync/rclone backup tree and its option setters were removed; existing archives and credentials were retained.
 
 `borg/` owns optional local mount/free-space admission and native repository initialization quotas. Laptop critical-state policy selects those options from its machine instance.
 
@@ -33,7 +35,6 @@ data/
 ├── index.nix       # Domain aggregator
 ├── README.md       # This file
 ├── databases/      # PostgreSQL / Redis, peer/SCRAM and bounded credential/owner reconciliation
-├── backup/         # Rsync backup automation (retired on server; borg is primary)
 ├── borg/           # Borg jobs, independent SSH destinations, private credentials, per-target deadlines/rate limits and serialized snapshots (hwc.data.borg.*)
 ├── storage/        # Storage mount management
 ├── syncthing/      # Bidirectional file sync over Tailscale
@@ -41,6 +42,8 @@ data/
 ```
 
 ## Changelog
+
+- 2026-11-09: Remove the disabled legacy backup implementation; keep active Borg policy and recovery unchanged.
 
 - 2026-11-04: Check Work, Home and laptop peer/SCRAM authentication together; laptop selects the existing mode after private current-data and native-client qualification.
 

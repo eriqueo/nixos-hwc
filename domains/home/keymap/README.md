@@ -13,13 +13,15 @@ Plain-language design + rationale: `docs/UNIFIED-KEYMAP-SPEC.md`.
 
 ## Structure
 
+The grammar owns leader and meta-leader values. The module exposes the grammar without duplicate override options that its consumers never read.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 Aerc's `Space g k` opens DONT KNOW and `Space g b` opens Bulk. The State choice
 key `k` corrects a thread to DONT KNOW; mail-contract data supplies its display.
 
 ```
-index.nix              Options hwc.home.keymap.{enable,leader,metaLeader,grammar};
+index.nix              Options hwc.home.keymap.{enable,grammar};
                        materializes grammar.nix as the read-only token set.
 grammar.nix            THE file you edit. Groups, shared Space bindings, per-app
                        grouped apps rows, mail realizations, grouped bare aliases, nav, meta map.
@@ -37,67 +39,14 @@ parts/
 
 ## The two layers
 
-- **`Space`** (intra-app): act inside the focused app. Same grammar everywhere.
-  Group meanings and per-app chords are generated in KEYMAP.md.
-- **`Alt+Space`** (inter-app): jump between panes. Lives ONLY in zellij. Audited
-  clear of Hyprland (all SUPER; only Super+Space=wofi) and every TUI (only
-  nvim-cmp uses Ctrl+Space). One Nix variable — swap in `grammar.nix`.
+- `Space` acts inside the focused app. The grammar supplies shared groups and per-app chords.
+- `Ctrl+Space` opens the Zellij meta layer. The grammar supplies the prefix; the Workbench registry supplies hub destinations.
 
-## Activation status
+## Consumers
 
-The module + its safe, high-value wirings are **already applied and git-staged**
-on `feat/workbench-zellij` (one `hms` away — run it on the LAPTOP; desktop
-profile, needs a real zellij session for QA). Every wiring is **guarded** by
-`km ? <field>`, so each is a no-op if the grammar is somehow absent.
+The desktop role imports the module. Zellij, Neovim, Yazi, khalt, todui and Workbench render their bindings through the adapters above. Aerc reads the grammar through the mail module, including hosts without the desktop keymap option. Dynamic State, Domain and fact choices come from the mail contract and tag data.
 
-WIRED (staged):
-1. **Module imported** — `profiles/desktop/home.nix`:
-   `../../domains/home/keymap/index.nix` (note: the file, not the dir — Nix
-   imports `default.nix` from a dir, and this module is `index.nix`).
-2. **zellij meta layer** (`apps/zellij/index.nix`) — `${metaKeybinds}` from
-   `to-zellij` injected into `config.kdl`. THE centerpiece: `Alt+Space` → jump
-   map; `clear-defaults=true` stops zellij eating aerc/yazi's Ctrl keys.
-3. **khalt** (`apps/khalt/index.nix`) — `to-khalt`'s `keybindingsBlock` appended
-   to `configText` (gives khalt the shared list verbs a/e/d/Enter).
-4. **todui & workbench** — `to-todui` JSON remains staged; Workbench now reads
-   its versioned `~/.config/workbench/keymap.json` and merges explicit
-   `cmd.workbench` bindings with the active hub actions.
-
-5. **Yazi** consumes `shared` and `apps.yazi` through `to-yazi`; runtime media
-   paths bind in the adapter. Native manager keys remain in the app module.
-
-DEFERRED (requires runtime QA):
-   - **nvim** — source `to-nvim`'s `lua` after `mapleader`; add the `which-key`
-     plugin (today absent) so the popup renders (incl. baked-in keymaps).
-Aerc now consumes `grammar.aerc` through the mail module, including on hosts
-without the desktop keymap option. `to-aerc` generates context bindings, group
-labels and installed help. `to-docs` produces the Markdown reference.
-Dynamic State/Domain/fact choices still come from the mail contract and tag data.
-
-## App-side prerequisites (separate repos under ~/600_apps, staged not done)
-
-These three apps need code before they are *driven* by the grammar (until then
-they keep current keys; exporting the env is harmless but the app MUST log when
-the var is present-but-unread, so drift can't hide — spec premortem #6):
-
-- **todui** — read `TODUI_KEYMAP` via its env→toml→default precedence
-  (`src/todui/config.py`); render `BINDINGS` + leader menu from it instead of
-  hard-coded Python. *Largest change.*
-- **khalt** — teach `khalt_leader.build_keymap()` to read `KHALT_LEADER_TREE`
-  (the json from `to-khalt`) so the menu GROUPS come from data, not Python. Until
-  then khalt drives only leaf keys (a/e/d via `[keybindings]`) — a documented
-  subset.
-
-## Verify before trusting (real-world checks, not eval)
-
-- `Ctrl+b` enters the meta (tmux) mode reliably in kitty→zellij. (We tried
-  `Alt+Space` first; kitty did NOT deliver it to zellij — it leaked through to
-  the focused pane, whose Space-leader then mis-fired. Ctrl-chords are encoded
-  reliably; that's why the meta leader is a Ctrl-chord, like tmux/screen.)
-- `zellij setup --check` reports "Config file: Well defined" — the meta block,
-  GoToTab jumps, and scroll mode all parse (a runtime check `nix build` can't do).
-- kitty keyboard protocol on, so `Ctrl+j` ≠ Enter (two-column nav, spec §3.1b).
-- todui/khalt/workbench log a missing/unread `*_KEYMAP` rather than failing silent.
+The checks below validate generated contracts. They do not prove terminal key delivery or app interaction; those need a real terminal session.
 
 The `keymap-grammar` check rejects unknown groups, duplicate chords and strict
 prefixes within each app (and each Aerc context). The existing Aerc `Space ?`
@@ -107,6 +56,8 @@ chords within each section, compares its Space rows with the grammar, and
 requires each configured native manager command to have a Space path.
 
 ## Changelog
+
+- 2026-11-09: Remove unused leader and metaLeader options; preserve the grammar and generated chords.
 
 - 2026-11-04: Move existing flake checks beside their capability, preserving public check names and test bodies.
 - 2026-10-12: Generate KEYMAP.md from grammar; add drift check and docs app with bounded brain marker replacement; remove the unused aerc Markdown export.

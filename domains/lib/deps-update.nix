@@ -12,7 +12,7 @@
 #   npm install <pkg>
 #   <serviceName>-deps-update    # this CLI: prefetch + patch index.nix + git add
 #   git -C ~/.nixos diff --cached # review
-#   sudo nixos-rebuild switch --flake ~/.nixos#hwc-home
+#   commit the reviewed change, then run snix
 #
 # Anchored on `config.hwc.paths.nixos` (Charter Law 3 — no hardcoded paths
 # outside domains/paths/).
@@ -77,7 +77,8 @@ pkgs.writeShellApplication {
 
 Next:
   git -C "$nixos_root" diff --cached
-  sudo nixos-rebuild switch --flake "$nixos_root#hwc-home"
+  # Commit the reviewed change before activation.
+  snix
 MSG
   '';
 }

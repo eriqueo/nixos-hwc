@@ -4,6 +4,9 @@ let
   # route on hosts that declare and enable that capability.
   mcpCfg = config.hwc.ai.mcp or { reverseProxy.enable = false; };
   nixosDir = config.hwc.paths.nixos;
+  listeners = import ./ports.nix;
+  listener = name: let spec = listeners.${name};
+    in toString (lib.attrByPath spec.option spec.port config);
 in
 {
   # Routing standard: `mode = "vhost"` is the default for any new route —
@@ -91,7 +94,7 @@ in
     {
       name = "jellyseerr";
       mode = "vhost";
-      upstream = "http://127.0.0.1:5055";
+      upstream = "http://127.0.0.1:${listener "jellyseerr"}";
     }
 
     # Jellyseerr - convenience subpath (strips prefix for client assets)
@@ -99,7 +102,7 @@ in
       name = "jellyseerr-subpath";
       mode = "subpath";
       path = "/jellyseerr";
-      upstream = "http://127.0.0.1:5055";
+      upstream = "http://127.0.0.1:${listener "jellyseerr"}";
       needsUrlBase = false;
       headers = { "X-Forwarded-Prefix" = "/jellyseerr"; };
     }
@@ -110,7 +113,7 @@ in
     {
       name = "navidrome";
       mode = "vhost";
-      upstream = "http://127.0.0.1:4533";
+      upstream = "http://127.0.0.1:${listener "navidrome"}";
     }
 
     # Immich - name-based vhost (subpath-hostile; host derived from request)
@@ -124,7 +127,7 @@ in
     {
       name = "frigate";
       mode = "vhost";
-      upstream = "http://127.0.0.1:5000";  # GPU-accelerated with CUDA/TensorRT support
+      upstream = "http://127.0.0.1:${listener "frigate"}";  # GPU-accelerated with CUDA/TensorRT support
     }
 
     # Grafana - name-based vhost (root_url updated in grafana module)
@@ -141,7 +144,7 @@ in
     {
       name = "sabnzbd";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8081";
+      upstream = "http://127.0.0.1:${listener "sabnzbd"}";
     }
 
     # qBittorrent - name-based vhost. No app-side change was needed: it already
@@ -151,7 +154,7 @@ in
     {
       name = "qbittorrent";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8080";
+      upstream = "http://127.0.0.1:${listener "qbittorrent"}";
     }
 
     # slskd - name-based vhost
@@ -167,31 +170,31 @@ in
     {
       name = "sonarr";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8989";
+      upstream = "http://127.0.0.1:${listener "sonarr"}";
     }
 
     {
       name = "radarr";
       mode = "vhost";
-      upstream = "http://127.0.0.1:7878";
+      upstream = "http://127.0.0.1:${listener "radarr"}";
     }
 
     {
       name = "lidarr";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8686";
+      upstream = "http://127.0.0.1:${listener "lidarr"}";
     }
 
     {
       name = "readarr";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8787";
+      upstream = "http://127.0.0.1:${listener "readarr"}";
     }
 
     {
       name = "prowlarr";
       mode = "vhost";
-      upstream = "http://127.0.0.1:9696";
+      upstream = "http://127.0.0.1:${listener "prowlarr"}";
     }
 
     # LazyLibrarian (books) - name-based vhost. `hwc.media.books.httpRoot` is
@@ -201,7 +204,7 @@ in
     {
       name = "books";
       mode = "vhost";
-      upstream = "http://127.0.0.1:5299";
+      upstream = "http://127.0.0.1:${listener "books"}";
     }
 
     # Audiobookshelf - name-based vhost. The old `needsUrlBase = true` claimed a
@@ -213,21 +216,21 @@ in
     {
       name = "audiobookshelf";
       mode = "vhost";
-      upstream = "http://127.0.0.1:13378";
+      upstream = "http://127.0.0.1:${listener "audiobookshelf"}";
     }
 
     # Mousehole - MAM seedbox IP updater (runs through Gluetun VPN)
     {
       name = "mousehole";
       mode = "vhost";
-      upstream = "http://127.0.0.1:5010";
+      upstream = "http://127.0.0.1:${listener "mousehole"}";
     }
 
     # Calibre - name-based vhost (desktop interface, KasmVNC)
     {
       name = "calibre";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8083";
+      upstream = "http://127.0.0.1:${listener "calibre"}";
     }
 
     # Calibre content server - name-based vhost. No app-side change: the old
@@ -237,7 +240,7 @@ in
     {
       name = "calibre-server";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8090";
+      upstream = "http://127.0.0.1:${listener "calibre-server"}";
     }
 
     # CouchDB (Obsidian LiveSync) - strip /sync prefix
@@ -268,21 +271,21 @@ in
     {
       name = "tdarr";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8265";
+      upstream = "http://127.0.0.1:${listener "tdarr"}";
     }
 
     # Organizr - name-based vhost (root dashboard)
     {
       name = "organizr";
       mode = "vhost";
-      upstream = "http://127.0.0.1:9983";
+      upstream = "http://127.0.0.1:${listener "organizr"}";
     }
 
     # Pinchflat - YouTube subscription manager (subpath-hostile)
     {
       name = "pinchflat";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8945";
+      upstream = "http://127.0.0.1:${listener "pinchflat"}";
     }
 
     # YouTube Transcripts API - FastAPI transcript extraction service. Stays
@@ -290,7 +293,7 @@ in
     {
       name = "transcripts";
       mode = "vhost";
-      upstream = "http://127.0.0.1:8100";
+      upstream = "http://127.0.0.1:${listener "transcripts"}";
     }
 
     # n8n - Workflow automation platform — HELD on port mode: the editor and
@@ -537,7 +540,7 @@ in
       mode = "vhost";
       upstream = "http://127.0.0.1:${toString config.hwc.secrets.vaultwarden.port}";
     }
-  ] ++ lib.optionals mcpCfg.reverseProxy.enable [
+  ] ++ lib.optionals (mcpCfg.reverseProxy.active or false) [
     # MCP (Model Context Protocol) - AI filesystem access via HTTP proxy
     # Enabled when hwc.ai.mcp.reverseProxy.enable = true
     # Provides LLM access to ~/.nixos directory via Caddy reverse proxy

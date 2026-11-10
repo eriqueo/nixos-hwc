@@ -5,17 +5,7 @@ let
   hmLib = import ../../../lib/hm.nix { inherit lib; };
   isNixOSHost = hmLib.isNixOSHost osConfig;
 
-  scriptPkgs = with pkgs; [
-    coreutils gnugrep gawk gnused procps util-linux
-    kitty wofi jq curl
-    networkmanager iw ethtool
-    libnotify mesa-demos nvtopPackages.full lm_sensors acpi powertop
-    speedtest-cli hyprland
-    baobab btop brightnessctl
-    power-profiles-daemon
-  ];
-
-  scriptPathBin = lib.makeBinPath scriptPkgs;
+  scriptPathBin = lib.makeBinPath packages.runtime;
 
   behavior  = import ./parts/behavior.nix  { inherit config lib pkgs osConfig; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
@@ -37,7 +27,7 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     # Include waybar packages, script dependencies, and generated script bins.
-    home.packages = packages ++ scriptPkgs ++ (lib.attrValues scripts);
+    home.packages = lib.unique (packages.runtime ++ packages.interactive) ++ lib.attrValues scripts;
 
     programs.waybar = {
       enable = true;

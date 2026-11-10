@@ -8,11 +8,12 @@ Configures the NeoMutt TUI email client over the shared `hwc.mail.accounts` regi
 - ❌ Does not manage: account definitions (`hwc.mail.accounts`, mail domain), msmtp/mbsync config and sync timers, or SMTP/IMAP credentials.
 
 ## Structure
+The index owns package installation and account selection. Appearance and behavior receive the selected accounts explicitly; theme tokens are terminal color names.
 - `index.nix` — options, account resolution (primary pick), warning path when no accounts, wires part outputs into packages/files.
 - `parts/appearance.nix` — neomuttrc (mailboxes, sidebar, pager, msmtp, mailcap wiring), theme.muttrc from theme tokens, `.mailcap` handlers.
 - `parts/behavior.nix` — behavior.muttrc: vim-like binds, `,`-leader macro system, generated `,gN` per-account inbox jumps.
-- `parts/session.nix` — package list only (no services/env).
-- `parts/theme.nix` — adapter: palette → NeoMutt color tokens consumed by appearance.
+- `parts/theme.nix` — terminal color roles consumed by appearance.
 
 ## Changelog
+- 2026-11-09: Resolve primary/account inputs once, pass them to renderers, and remove the unused global argument and palette import.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

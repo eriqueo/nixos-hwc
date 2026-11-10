@@ -11,6 +11,7 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - ❌ Does not provide gpu-toggle/gpu-launch (infrastructure GPU module) or the acpid lid handler (`machines/laptop/config.nix`); requires swaync enabled (asserted)
 
 ## Structure
+`parts/packages.nix` owns script runtime packages and additional interactive tools. Workspace IDs and labels derive from Hyprland’s workspace plan.
 Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
 Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Workspace selection and window moves share the monitor-aware helper; streaming creates its configured workspace before focusing it.
@@ -21,11 +22,12 @@ Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Works
 - `parts/scripts.nix` includes a Bitwarden recovery command (`waybar-bitwarden-open`) for a headless Electron process.
 - `parts/appearance.nix` — HWC-branded CSS mapped onto shared theme tokens
 - The laptop power hub uses paired home/system flags; dictation remains driven by the daemon.
-- `parts/packages.nix` — module dependency packages (waybar itself is `programs.waybar.package`)
+- `parts/packages.nix` — runtime and interactive package catalog (Waybar itself is `programs.waybar.package`)
 - `parts/scripts.nix` — writeShellScriptBin helpers including `waybar-launch` and the structured `hwc-power-status` telemetry producer
 - `patches/bluetooth-null-manager.patch` — bluetooth module throws (module dropped, bar survives) when the org.bluez manager is unavailable
 
 ## Changelog
+- 2026-11-09: Share workspace identities with Hyprland and derive installed packages and script PATH from one dependency catalog.
 - 2026-11-04: Repair declarative desktop cursor, mouse bindings, physical-output selection and Waybar reload supervision; extend generated desktop checks.
 - 2026-11-04: Fix built-in Waybar workspace switching under Lua and escape calendar markup.
 - 2026-11-04: Migrate desktop helper and laptop streaming calls to Lua IPC, including startup on a fresh workspace.

@@ -11,6 +11,8 @@ token sets, GTK/Qt theming, fonts, and pointer cursor.
   token set themselves (see canonical accessor below).
 
 ## Structure
+`palettes/common.nix` owns identical cursor and alpha facts. Each palette owns its color vocabulary and derives semantic aliases from its own tokens. The selectable palette names come from the palette table.
+
 The palette supplies both XCursor and native Hyprcursor tokens. Hyprland links native assets from the installed cursor package.
 ```
 theme/
@@ -37,6 +39,8 @@ There is no separate "adapters" layer — that design was never built; the
 former README describing it was aspirational.
 
 ## Changelog
+
+- 2026-11-09: Share identical palette facts and derive semantic aliases without changing token values.
 - 2026-11-04: Repair declarative desktop cursor, mouse bindings, physical-output selection and Waybar reload supervision; extend generated desktop checks.
 - 2026-09-24: Default dconf activation to `theme.graphical`, preserving file-based GTK settings while avoiding desktop D-Bus writes on headless hosts. Fixes first activation of `hwc-work` without a dconf service.
 - 2026-09-02: Explicitly enable `home.pointerCursor` on graphical hosts,

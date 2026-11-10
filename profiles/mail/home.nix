@@ -47,18 +47,6 @@
       freshnessHours = 12;
     };
 
-    notmuch = {
-      maildirRoot = "/home/eric/400_mail/Maildir";
-      userName = "Eric O'Keefe";
-      excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
 
-      savedSearches = {
-        inbox = "tag:inbox and not tag:archived";
-        unread = "tag:unread";
-        work = "from:*@iheartwoodcraft.com or from:*heartwoodcraftmt@gmail.com";
-        personal = "from:*@proton.me or from:*eriqueokeefe@gmail.com";
-        urgent = "tag:urgent or tag:important";
-      };
-    };
   };
 }

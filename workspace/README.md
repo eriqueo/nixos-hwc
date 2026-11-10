@@ -24,14 +24,11 @@ workspace/
 │                    #   graph/ (referenced by flake.nix hwc-graph), audits, lints,
 │                    #   tests/ (executable regression suites for the tools here)
 ├── plans/           # Dated architecture proposals (CHARTER §6) + audit reports
-├── projects/        # Standalone app code parked here — Phase-2 eviction candidates
-│                    #   (each wants its own repo; see 2026-07-05 audit)
 ├── system/          # secret-manager.sh (`secret`; recipients from secrets.nix), secrets-parity,
 │                    #   couchdb/zfs utilities, diagnostics/, setup/
 │                    #   diagnostics/network/network/wifibrute.sh (scan + saved-report guidance), tests/
 ├── tools/           # readme-freshness.sh (Law-12 drift detector), web-speed.sh
-└── utilities/       # lints/ (charter lints incl. permission-lint.sh — CHARTER §3.1),
-                     #   audit/ (drift.py), setup-uptime-kuma.py
+└── utilities/       # permanent compatibility links to nixos-dev/{lints,audit}
 ```
 
 Load-bearing paths (verified 2026-07-05 — do not move without updating the
@@ -69,7 +66,7 @@ result labels and DNS answer validation. It does not initiate probes.
 `test-output.py` replays the nine scripts with fake commands, including empty
 DNS answers, scan timeouts and security discovery. Run it with Python 3.
 Saved capture and audit reports retain their existing locations and raw data.
-The legacy `network-utils/network/wifibrute.sh` forwards to the active implementation; other old copies remain outside this picker.
+The legacy `network-utils/network/` directory is a permanent compatibility link to the active implementation, including its shared report helper and tests.
 
 `wifibrute.sh` fingerprints each host's recorded open TCP ports. Read
 `tcp-inventory.tsv` for port ownership, coverage and source, and
@@ -145,6 +142,8 @@ Counts use retained database segments and event metadata; they do not prove
 that a person walking every approach gets detected or notified.
 
 ## Changelog
+
+- 2026-11-09: Consolidate duplicate translator/audit/lint/network tool trees through permanent compatibility links. README generation shares the current release checker’s scope and headings. Transcript jobs retain active status at capacity, reserve items during pacing, and expose failure/cancellation as terminal results. Repair malformed retained manual-script source without running its effects.
 
 - 2026-10-08: Replace wifibrute raw excerpts and keyword alarms with ranked XML
   findings, deduplication, guidance, coverage gaps and bounded device summaries.

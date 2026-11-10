@@ -38,22 +38,6 @@ in
       '';
     };
 
-    leader = lib.mkOption {
-      type = lib.types.str;
-      default = grammar.leader;
-      description = "Intra-app leader key (Space). Single source of truth.";
-    };
-
-    metaLeader = lib.mkOption {
-      type = lib.types.str;
-      default = grammar.metaLeader;
-      description = ''
-        Inter-app meta leader (Alt+Space), intercepted only by zellij. Swap here
-        in one edit; to-zellij.nix re-binds. Audited clear of Hyprland (SUPER-
-        only; Super+Space=wofi) and every TUI (only nvim-cmp uses Ctrl+Space).
-      '';
-    };
-
     grammar = lib.mkOption {
       type = lib.types.attrs;
       default = {};

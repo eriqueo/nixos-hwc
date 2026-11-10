@@ -1,21 +1,8 @@
 # domains/home/apps/neomutt/parts/theme.nix
 # Adapter: palette → NeoMutt color tokens (names only; fixed style)
-{ config, lib, osConfig ? {}, ... }:
+{}:
 
 let
-  cfg = config.hwc.home.apps.neomutt or {};
-
-  # Resolve palette: per-app override > global theme
-  paletteName =
-    if (cfg ? theme && cfg.theme ? palette && cfg.theme.palette != null)
-    then cfg.theme.palette
-    else ((config.hwc.home.theme or {}).palette or "hwc");
-
-  palettesBase = ../../.. + "/theme/palettes";
-  palettePath  = palettesBase + ("/" + paletteName + ".nix");
-  P            = import palettePath {};
-
-  # We emit NeoMutt's named colors; the terminal theme does hex.
   roleToName = {
     red="red"; brightRed="brightred"; green="green"; brightGreen="brightgreen";
     yellow="yellow"; brightYellow="brightyellow"; blue="blue"; brightBlue="brightblue";

@@ -301,6 +301,7 @@ in
         HWC_MCP_ALLOWED_ACTIONS = lib.concatStringsSep "," cfg.mutations.allowedActions;
         HWC_MCP_WORKSPACE = "${paths.nixos}/workspace";
         HWC_HOSTNAME = config.networking.hostName;
+        HWC_MCP_FLEET = builtins.toJSON inputs.self.lib.fleet;
 
         # CMS app path for hwc_cms_* tools
         HWC_CMS_APP_PATH = cmsAppPath;

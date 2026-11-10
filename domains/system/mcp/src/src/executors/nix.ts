@@ -1,9 +1,4 @@
-/**
- * Nix evaluation executor — wraps nix eval and nix flake commands with caching.
- *
- * IMPORTANT: nix eval evaluates from the git store, not the working tree.
- * Uncommitted changes won't be reflected. The tools note this in results.
- */
+/** Nix queries are cached by source path and full attribute identity. */
 
 import { safeExec } from "./shell.js";
 import { TtlCache } from "../cache.js";
@@ -21,7 +16,7 @@ export async function nixEval(
   attrPath: string,
   ttlSeconds: number = 300
 ): Promise<unknown> {
-  const cacheKey = `nix-eval:${host}:${attrPath}`;
+  const cacheKey = JSON.stringify(["nix-eval", flakePath, host, attrPath]);
 
   return cache.getOrCompute(cacheKey, ttlSeconds, async () => {
     // Use explicit path: reference so nix eval works regardless of CWD
@@ -52,7 +47,7 @@ export async function flakeMetadata(
   flakePath: string,
   ttlSeconds: number = 300
 ): Promise<Record<string, unknown>> {
-  const cacheKey = "flake-metadata";
+  const cacheKey = JSON.stringify(["flake-metadata", flakePath]);
 
   return cache.getOrCompute(cacheKey, ttlSeconds, async () => {
     // Use explicit path: reference so command works regardless of CWD

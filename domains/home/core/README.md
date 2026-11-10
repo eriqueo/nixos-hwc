@@ -10,6 +10,8 @@ environment and user directory layout.
 - Does NOT manage: app-specific config → `apps/`, theming → `theme/`.
 
 ## Structure
+`shell/` and `development/` derive checkout and workspace paths through `domains/lib/hm.nix`. Successful switch/test/home activations share prompt and compositor refresh; builds do not refresh the session. Runner failures return before refresh.
+
 `shell/parts/zsh-init.nix` sends `snix`, `tnix`, `bnix` and `hms` through the local verification/release runner. It requires a committed main checkout and verifies the candidate before activation.
 `shell/index.nix` supplies general CLI tools. Claude installation belongs to `apps/claude-code/`, selected by the base role.
 `shell/index.nix` installs `net-tools` for interactive network-script search from any directory. Its single registry supplies descriptions and accepted filenames; `--details` requests full evidence from the chosen script.
@@ -33,6 +35,8 @@ core/
 ```
 
 ## Changelog
+
+- 2026-11-09: Share checkout paths and successful activation refresh across shell helpers; preserve lane arguments and failure status.
 - 2026-11-04: Gate both activation lanes through the shared local verifier; remove the dirty-tree switch bypass.
 - 2026-11-04: Consolidate Claude installation in its app module; keep native laptop updates and Nix-managed CLI availability on other hosts.
 - 2026-10-11: shell: `_hwc_ls` renamed `hwc_ls`. Claude Code's shell snapshot drops functions whose names start with one underscore but keeps aliases, so agent shells got `ls` → a missing function and every `ls` failed "command not found".

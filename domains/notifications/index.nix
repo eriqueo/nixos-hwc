@@ -13,9 +13,9 @@
 # adapters over hwc-alert. No Slack, no gotify, no n8n webhook path.
 #
 # USED BY:
-#   - profiles/monitoring.nix (enables notification delivery)
+#   - profiles/monitoring/sys.nix (enables notification delivery)
 #   - domains/monitoring/alerts (alert detection → delivery via _internal)
-#   - domains/data/backup (backup success/failure notifications)
+#   - backup event adapters (success/failure notifications)
 
 { config, lib, pkgs, ... }:
 

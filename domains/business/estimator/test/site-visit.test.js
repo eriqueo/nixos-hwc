@@ -56,6 +56,10 @@ assert.equal(switchJobDraft(changedMode, { mode:'new_customer',jobId:'',customer
 console.log('PASS calculator preferences, unknown measurements, manual edits and per-job isolation');
 const engine = await import('../src/engine/assembler.js');
 const { enrichState } = await import('../src/engine/geometry.js');
+const pureContract = await import('../src/engine/calculator-contract.js');
+assert.equal(pureContract.parseCalculatorIntake(detailed, detailed.jt_job_id), detailed);
+assert.equal(pureContract.automaticBudgetBlocks({ state: 'uncertain' }), true);
+console.log('PASS pure intake contract');
 assert.ok(engine.estimateIssues({ ...DEFAULT_STATE, measurements_checked:'yes', calculator_input_status:'pending' }, []).some(i=>i.includes('have not loaded')));
 assert.ok(engine.estimateIssues({ ...DEFAULT_STATE, measurements_checked:'yes', calculator_input_status:'failed' }, []).some(i=>i.includes('have not loaded')));
 const fullyMeasured = { ...DEFAULT_STATE,calculator_intake:calculatorIntake,calculator_input_status:'ready',calculator_scope_checked:'yes',measurements_checked:'yes',shower_finish:'tile',floor_finish:'none',has_shower_door:'no',has_floor_tile:'no',shower_trim_allowance:null,accessory_allowance:null,has_toilet:'no',has_vanity:'no' };

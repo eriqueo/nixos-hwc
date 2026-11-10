@@ -4,20 +4,17 @@ let
   cfg = config.hwc.home.apps.neomutt;
 
   mailAccs = config.hwc.mail.accounts or {};
-  vals     = lib.attrValues mailAccs;
-  haveAccs = vals != [];
+  accounts = lib.attrValues mailAccs;
+  haveAccs = accounts != [];
 
   primary =
-    let chosen = let p = lib.filter (a: a.primary or false) vals;
-                 in if p != [] then lib.head p else (if vals != [] then lib.head vals else null);
-    in chosen;
+    lib.findFirst (a: a.primary or false) (if haveAccs then lib.head accounts else null) accounts;
 
   on = cfg.enable && haveAccs;
 
-  theme      = import ./parts/theme.nix      { inherit config lib; };
-  appearance = import ./parts/appearance.nix { inherit lib pkgs config theme; };
-  behavior   = import ./parts/behavior.nix   { inherit lib pkgs config; };
-  session    = import ./parts/session.nix    { inherit lib pkgs config; };
+  theme      = import ./parts/theme.nix {};
+  appearance = import ./parts/appearance.nix { inherit lib accounts primary theme; };
+  behavior   = import ./parts/behavior.nix   { inherit lib accounts; };
 in
 {
   #==========================================================================
@@ -40,17 +37,13 @@ in
 
     # Normal configuration path
     (lib.mkIf on {
-      # If your parts need to know the chosen account, you can expose it like this:
-      # (purely internal; optional)
-      _module.args.hwcNeomuttPrimary = primary;
-
-      home.packages         = (session.packages or []);
-      home.sessionVariables = (session.env or {});
-      systemd.user.services = (session.services or {});
+      home.packages = with pkgs; [
+        neomutt msmtp isync notmuch urlscan abook lynx zathura
+      ];
 
       home.file = lib.mkMerge [
-        (appearance.files config.home.homeDirectory)
-        (behavior.files   config.home.homeDirectory)
+        appearance.files
+        behavior.files
       ];
     })
   ];

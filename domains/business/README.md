@@ -14,6 +14,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
 
 ## Structure
 
+Estimator pure calculator contracts live in `engine/calculator-contract.js`; browser transport stays in `api/crm.js`. Geometry has one implementation. Both manual catalog export entries delegate to the PostgreSQL exporter. `verification/` checks production engine outputs and captured export behavior. Superseded DataX market-research code and unused website/estimator bundles are removed; source owners, recovery data and the permanent website compatibility link remain.
+
 Pico’s Alpine manifest pins APK tools and libapk2 together at 2.14.13-r0.
 
 Paperless’s `index.nix` shares a hash-pinned Debian fetch helper between its runtime and Gotenberg contexts.
@@ -123,6 +125,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-09: Finish source/output migrations; centralize estimator contracts, geometry and PostgreSQL export; replace copied test implementations with production regressions.
 
 - 2026-11-09: Preserve static briefing module requests beside the same-origin MCP endpoint.
 
@@ -343,7 +347,7 @@ business/
   `hwc_subcontractor_v1`: one category-`sub` relationship case per exact
   candidate identity, with repeated posts retained as append-only evidence.
 - 2026-08-28: Corrected the DataX-leftovers audit: `fb-group-scraper/node_modules` is a 15 MB ignored working-tree artifact, not checked-in content; the tracked scraper sources remain unreferenced.
-- 2026-08-26: `datax/` module deleted — `hwc.business.datax` is gone. The module owned the postgres role + database that lead-scout connects to, and after `ALTER DATABASE datax RENAME TO lead_scout` (85b44464) its name named nothing it owned, which is a Law 2 break. The role + database declaration moved into `domains/server/native/ai/lead-scout/index.nix`, where home-scout and research-scout already keep theirs. Two behaviour changes went with the move, both verified against the live cluster first: `ensureDBOwnership = true` now aligns lead_scout's database owner with its role (every table in it was already owned by that role, so nothing moved), and the old module's six raw GRANTs plus its `fb-monitor-bak/schema.sql` apply were dropped as redundant and stale. The per-database backup registration was dropped, matching the other two scouts — `postgresql-db-backup` was retired wholesale the same day (85b60856), so a registration into it would have been dead config reading as a backup. lead_scout is covered by the borg pre-hook's nightly `pg_dumpall` into `/var/lib/backups`, which carries every database. The `datax/` directory still holds unreferenced 2026-05 scraper leftovers (`dashboard/`, `fb-classifier/`, `fb-group-scraper/`, `fb-monitor-bak/`); its 15 MB `node_modules` is ignored and untracked, not checked in. Removing these leftovers is a separate change.
+- 2026-08-26: `datax/` module deleted — `hwc.business.datax` is gone. The module owned the postgres role + database that lead-scout connects to, and after `ALTER DATABASE datax RENAME TO lead_scout` (85b44464) its name named nothing it owned, which is a Law 2 break. The role + database declaration moved into `domains/server/native/ai/lead-scout/index.nix`, where home-scout and research-scout already keep theirs. Two behaviour changes went with the move, both verified against the live cluster first: `ensureDBOwnership = true` now aligns lead_scout's database owner with its role (every table in it was already owned by that role, so nothing moved), and the old module's six raw GRANTs plus its `fb-monitor-bak/schema.sql` apply were dropped as redundant and stale. The per-database backup registration was dropped, matching the other two scouts — `postgresql-db-backup` was retired wholesale the same day (85b60856), so a registration into it would have been dead config reading as a backup. lead_scout is covered by the borg pre-hook's nightly `pg_dumpall` into `/var/lib/backups`, which carries every database. The retained 2026-05 scraper source was removed on 2026-11-09 after tracing its replacement in the owned lead-scout app. Untracked local payloads and runtime data are outside that source removal.
 - 2026-08-20: morning briefing reads `/var/lib/hwc/gluetun/*/status.json` and surfaces VPN tunnel state (`failed` → critical, `degraded` → warning, plus a stale-monitor warning if a check has not run in an hour). This is the second half of making the gluetun health check alert on transitions rather than state: transition-only alerting means a tunnel that degraded at 21:00 and is still down at 06:00 is deliberately silent overnight, and something has to hold that standing state. The briefing is where Eric actually looks, so it holds it — the same reasoning as the existing still-down vs auto-recovered split for service failures.
 - 2026-08-20: paperless — migrated from the `/docs` subpath to a name-based vhost; see that module's README for the CSRF-origin coupling that makes this a three-setting change rather than a route flip.
 - 2026-08-06: Law 10 burn-down — `umami/parts/weekly-report.nix`'s option block (`enable`, `onCalendar`, `recipient`) moved into `umami/index.nix`; the part is implementation only. Law 10 names "mkOption anywhere else, including `parts/*.nix`" as the violation. Namespace `hwc.business.umami.weeklyReport.*` unchanged. Surfaced by the corrected charter-law10 check (v12.6).

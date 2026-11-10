@@ -1,4 +1,4 @@
-{ config, lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, osConfig ? {}, workspacePlan ? (import ../../hyprland/parts/hardware.nix { inherit lib pkgs; }).workspacePlan, ... }:
 
 let
   ollamaEnabled = lib.attrByPath [ "hwc" "ai" "ollama" "enable" ] false osConfig;
@@ -48,39 +48,27 @@ let
       ++ [ "tray" "custom/notification" "custom/power" ];
   };
 
-  workspaceInternal = {
+  workspaceCommon = {
     disable-scroll = true;
     all-outputs = false;
     warp-on-scroll = false;
-    format = "{name}";
     "swap-icon-label" = false;
-    persistent-workspaces = {
-      "1" = []; "2" = []; "3" = []; "4" = [];
-      "5" = []; "6" = []; "7" = []; "8" = [];
-    };
     on-click = "activate";
     on-scroll-up = "hyprctl dispatch 'hl.dsp.focus({workspace=\"e+1\"})'";
     on-scroll-down = "hyprctl dispatch 'hl.dsp.focus({workspace=\"e-1\"})'";
   };
-
-  workspaceExternal = {
-    disable-scroll = true;
-    all-outputs = false;
-    warp-on-scroll = false;
+  persistent = slots: builtins.listToAttrs (map (slot: { name = toString slot; value = []; }) slots);
+  workspaceInternal = workspaceCommon // {
+    format = "{name}";
+    persistent-workspaces = persistent workspacePlan.slots;
+  };
+  workspaceExternal = workspaceCommon // {
     format = "{icon}";
-    "swap-icon-label" = false;
-    format-icons = {
-      "11" = "1"; "12" = "2"; "13" = "3"; "14" = "4";
-      "15" = "5"; "16" = "6"; "17" = "7"; "18" = "8";
-      "default" = "•";
-    };
-    persistent-workspaces = {
-      "11" = []; "12" = []; "13" = []; "14" = [];
-      "15" = []; "16" = []; "17" = []; "18" = [];
-    };
-    on-click = "activate";
-    on-scroll-up = "hyprctl dispatch 'hl.dsp.focus({workspace=\"e+1\"})'";
-    on-scroll-down = "hyprctl dispatch 'hl.dsp.focus({workspace=\"e-1\"})'";
+    format-icons = builtins.listToAttrs (map (slot: {
+      name = toString (slot + workspacePlan.externalOffset);
+      value = toString slot;
+    }) workspacePlan.slots) // { default = "•"; };
+    persistent-workspaces = persistent workspacePlan.externalSlots;
   };
 
   ollamaWidget = lib.optionalAttrs ollamaEnabled {

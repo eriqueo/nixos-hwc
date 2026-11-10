@@ -107,19 +107,19 @@
           fi
           return $rc
         }
-        snix() {
-          _hwc_rebuild switch "$@" || return $?
+        _hwc_activation_complete() {
           [[ -o interactive ]] && _hwc_reinit_prompt
           if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
             hyprctl reload >/dev/null
           fi
         }
+        snix() {
+          _hwc_rebuild switch "$@" || return $?
+          _hwc_activation_complete
+        }
         tnix() {
           _hwc_rebuild test "$@" || return $?
-          [[ -o interactive ]] && _hwc_reinit_prompt
-          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-            hyprctl reload >/dev/null
-          fi
+          _hwc_activation_complete
         }
         bnix() {
           _hwc_rebuild build "$@"
@@ -134,10 +134,7 @@
         hms() {
           python3 "$HWC_NIXOS_DIR/workspace/nixos-dev/verification/release.py" deploy \
             --repo "$HWC_NIXOS_DIR" --lane home "$@" || return $?
-          [[ -o interactive ]] && _hwc_reinit_prompt
-          if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-            hyprctl reload >/dev/null
-          fi
+          _hwc_activation_complete
         }
 
         # Fuzzy finding function
@@ -156,12 +153,12 @@
 
         # add-app shell function
         add-app() {
-          ${config.home.homeDirectory}/.nixos/workspace/nixos-dev/add-home-app.sh "$@"
+          "$HWC_WORKSPACE_ROOT/nixos-dev/add-home-app.sh" "$@"
         }
 
         # Interactive graph function for hwc-graph tool
         graph() {
-          local graph_script="${config.home.homeDirectory}/.nixos/workspace/nixos-dev/graph/hwc_graph.py"
+          local graph_script="$HWC_WORKSPACE_ROOT/nixos-dev/graph/hwc_graph.py"
 
           # If arguments provided, pass directly to script
           if [ $# -gt 0 ]; then

@@ -45,7 +45,7 @@ let
   laptopPersonal = "/home/eric/200_personal";
   laptopTech = "/home/eric/300_tech";
   laptopMail = "/home/eric/400_mail";
-  laptopMedia = "/home/eric/500_media";
+  laptopMedia = laptopMediaRoot;
   laptopVaults = "/home/eric/900_vaults";
   laptopSsh = "${userHome}/.ssh";
   laptopConfig = "${userHome}/.config";
@@ -455,7 +455,7 @@ in
       server-replica = mkOption {
         type = types.nullOr types.path;
         default = if isServer then "/home/eric/900_vaults/brain" else null;
-        description = "Server-side Syncthing replica of the unified brain (path harmonized with laptop)";
+        description = "Server-side Git clone of the unified brain (path harmonized with laptop)";
       };
 
       inbox-mobile = mkOption {

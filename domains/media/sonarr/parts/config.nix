@@ -2,11 +2,12 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.sonarr;
-  arrConfig = import ../../../lib/arr-config.nix { inherit lib pkgs; };
+  arrConfig = import ../../arr-config.nix { inherit lib pkgs; };
   appsRoot = config.hwc.paths.apps.root;
   configPath = "${appsRoot}/sonarr/config";
   enforceScript = arrConfig.mkArrConfigScript {
     name = "sonarr";
+    port = (import ../../../networking/ports.nix).sonarr.port;
     inherit configPath;
     urlBase = "";  # vhost at sonarr.<vhostDomain>; no path prefix
   };

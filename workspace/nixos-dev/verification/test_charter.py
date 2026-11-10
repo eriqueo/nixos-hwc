@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -59,6 +60,51 @@ class CharterContract(unittest.TestCase):
         result = subprocess.run([sys.executable, str(Path(charter.__file__)),
                                  '--root', str(self.root / 'missing')], capture_output=True)
         self.assertEqual(result.returncode, 2)
+
+    def readme_cli(self, *args):
+        script = os.environ.get('HWC_README_GENERATOR',
+                                str(Path(__file__).resolve().parents[1] / 'generate-domain-readmes.py'))
+        return subprocess.run([sys.executable, script, '--repo-root', str(self.root), *args],
+                              capture_output=True, text=True)
+
+    def test_readme_cli_matches_current_rule_scope_and_rejects_missing_heading(self):
+        self.put('domains/home/apps/example/README.md', 'Module documentation')
+        self.put('domains/home/apps/example/parts/helper.nix', '{}')
+        self.assertEqual(self.readme_cli('--check').returncode, 0)
+        self.put('domains/home/README.md', '## Purpose\n## Boundaries\n## Structure\n')
+        result = self.readme_cli('--check')
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('Changelog', result.stdout)
+        self.assertTrue(charter.inspect(self.root, 12))
+
+    def test_readme_generation_is_current_and_preserves_existing_documents(self):
+        self.put('domains/server/index.nix', '{}')
+        readme = self.root / 'domains/server/README.md'
+        original = (self.root / 'domains/home/README.md').read_bytes()
+        self.assertEqual(self.readme_cli('--generate', '--dry-run').returncode, 0)
+        self.assertFalse(readme.exists())
+        result = self.readme_cli('--generate')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        content = readme.read_text()
+        self.assertEqual([line[3:] for line in content.splitlines() if line.startswith('## ')],
+                         list(charter.README_SECTIONS))
+        self.assertIn('index.nix', content)
+        self.assertNotIn('options.nix', content)
+        self.assertEqual((self.root / 'domains/home/README.md').read_bytes(), original)
+        self.assertEqual(self.readme_cli('--check').returncode, 0)
+        self.assertEqual(charter.inspect(self.root, 12), [])
+
+    def test_permission_report_processes_every_violation_without_early_exit(self):
+        script = os.environ.get('HWC_PERMISSION_LINTER',
+                                str(Path(__file__).resolve().parents[1] / 'lints/permission-lint.sh'))
+        scope = self.root / 'fixture'
+        self.put('fixture/one.nix', 'PGID = "1000";')
+        self.put('fixture/two.nix', 'PGID = "1000";')
+        result = subprocess.run(['bash', script, str(scope)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn('one.nix', result.stdout)
+        self.assertIn('two.nix', result.stdout)
+        self.assertIn('Summary', result.stdout)
 
     def test_rules_do_not_match_their_own_definition(self):
         self.put('workspace/nixos-dev/verification/charter.py', Path(charter.__file__).read_text())

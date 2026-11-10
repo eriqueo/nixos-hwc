@@ -1,5 +1,9 @@
 # ⚠️ READ BEFORE USING TDARR
 
+## Structure
+
+index.nix declares options; parts/config.nix owns the container, parts/setup.nix owns startup ordering and parts/safety.nix owns manual safety commands. The web listener default comes from networking/ports.nix. The legacy workers option is retained as compatibility; saved Tdarr settings own worker concurrency.
+
 ## Your Files Are Safe - Here's How
 
 I've implemented **5 layers of protection** to ensure your media files are never lost or corrupted:
@@ -147,3 +151,7 @@ sudo nixos-rebuild switch --flake .#hwc-server
 ---
 
 **Questions?** Read the full safety guide: `docs/TDARR-SAFETY-GUIDE.md`
+
+## Changelog
+
+- 2026-11-09: Remove empty assertion scaffolding and share the web listener default with routing; keep safety behavior and runtime pins.

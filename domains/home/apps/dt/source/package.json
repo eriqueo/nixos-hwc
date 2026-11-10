@@ -7,8 +7,8 @@
     "dt": "./dist/cli/index.js"
   },
   "scripts": {
-    "build": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outdir=dist --packages=external --banner:js='#!/usr/bin/env node' --splitting --outbase=src",
-    "build:all": "node build.mjs",
+    "build": "node build.mjs",
+    "build:all": "npm run build",
     "dev": "tsx src/cli/index.ts"
   },
   "dependencies": {

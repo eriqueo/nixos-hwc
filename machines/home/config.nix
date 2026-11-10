@@ -409,7 +409,6 @@
 
   # Rsync backup DISABLED - using Borg exclusively
   # See hwc.data.borg below for primary backup
-  hwc.data.backup.enable = false;
 
   # Permanent historical data identity: retain archive visibility and pruning
   # across the host rename. These names are not network destinations.
@@ -627,7 +626,7 @@
     };
   };
 
-  # Note: Backup is configured above (hwc.data.backup block at line ~304)
+  # Backup uses the Borg policy configured above.
   # NixOS config excluded - it's in git. Databases handled by preBackupScript.
 
   # Navidrome music streaming (container)
@@ -807,9 +806,9 @@
     # Published on behalf of the containers living in this netns; they cannot
     # publish their own.
     ports = [
-      "127.0.0.1:8080:8080" # qBittorrent UI (Caddy proxies to localhost)
+      "127.0.0.1:${toString config.hwc.media.qbittorrent.webPort}:${toString config.hwc.media.qbittorrent.webPort}" # qBittorrent UI
       "127.0.0.1:8081:8085" # SABnzbd (container uses 8085 internally)
-      "127.0.0.1:5010:5010" # Mousehole (MAM IP updater)
+      "127.0.0.1:${toString config.hwc.media.mousehole.port}:${toString config.hwc.media.mousehole.port}" # Mousehole
     ];
 
     portForwarding = {

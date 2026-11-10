@@ -7,7 +7,7 @@ import { FlooringScope } from './FlooringScope.jsx';
 import { JobSelector } from './JobSelector.jsx';
 import { deriveGeometry, deriveDeckGeometry } from '../engine/geometry.js';
 import templates from '../data/templates.json';
-import { CALCULATOR_FIELDS } from '../api/crm.js';
+import { CALCULATOR_FIELDS } from '../engine/calculator-contract.js';
 
 function PillToggle({ label, value, onChange }) {
   const on = value === 'yes';
@@ -217,15 +217,15 @@ export function ScopeTab({ s, set, selectJob, prefill, onAssemble, isMobile = fa
               onChange={v => set('shower_accent_tile_sqft', v)} unit="sf" step={2}
               show={s.has_accent_tile === 'yes'} />
             {s.has_paint === 'yes' && (<>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                <div style={{ flex: 1 }}>
+              <div className="scope-areas">
+                <div>
                   <Select label="Paint" value={ps} onChange={v => { set('paint_scope', v); set('bathroom_wall_paint_sqft', null); }} options={[
                     { v: 'walls_and_ceiling', l: 'Walls + Ceiling' },
                     { v: 'walls_only',        l: 'Walls Only' },
                     { v: 'ceiling_only',      l: 'Ceiling Only' },
                   ]} />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   <NumInput label="Area" value={s.bathroom_wall_paint_sqft ?? Math.round(derivedPaint)}
                     onChange={v => set('bathroom_wall_paint_sqft', v)} unit="sf" step={10} />
                 </div>
@@ -235,15 +235,15 @@ export function ScopeTab({ s, set, selectJob, prefill, onAssemble, isMobile = fa
               onChange={v => set('baseboard_lf', v)} unit="lf" step={1}
               show={s.has_baseboard === 'yes'} />
             {s.demo_scope === 'full_gut' && (<>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                <div style={{ flex: 1 }}>
+              <div className="scope-areas">
+                <div>
                   <Select label="Drywall" value={ds} onChange={v => { set('drywall_scope', v); set('drywall_sqft', null); }} options={[
                     { v: 'walls_and_ceiling', l: 'Walls + Ceiling' },
                     { v: 'walls_only',        l: 'Walls Only' },
                     { v: 'ceiling_only',      l: 'Ceiling Only' },
                   ]} />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   <NumInput label="Area" value={s.drywall_sqft ?? Math.round(derivedDrywall)}
                     onChange={v => set('drywall_sqft', v)} unit="sf" step={10} />
                 </div>

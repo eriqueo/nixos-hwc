@@ -527,7 +527,7 @@ assert lib.assertMsg (c.hwc.media.youtube.transcripts.deepgram.enable
   && lib.elem "secrets" service.serviceConfig.SupplementaryGroups
   && lib.elem c.age.secrets.deepgram-api-key.file service.restartTriggers)
   "Transcripts Deepgram credential, identity or reload wiring failed";
-pkgs.runCommand "transcripts-deepgram" { nativeBuildInputs = [ python pkgs.ripgrep ]; } ''
+pkgs.runCommand "transcripts-deepgram" { nativeBuildInputs = [ python pkgs.ripgrep pkgs.nodejs_22 ]; } ''
   export PYTHONPATH=${(repoRoot + "/workspace/media/youtube-services")}
   cd ${(repoRoot + "/workspace/media/youtube-services")}
   python3 -c "import api"
@@ -2254,6 +2254,66 @@ pkgs.runCommand "xps-media-readiness" { nativeBuildInputs = [ pkgs.python3 ]; } 
           assert elapsed < 15, (state, "probe exceeded its ceiling")
       print("XPS production preflight: healthy/degraded accepted; unavailable, suspended, failed and timed-out probes rejected")
   PY
+  touch "$out"
+'';
+
+audiobook-copy-contract = pkgs.runCommand "audiobook-copy-contract" {
+  nativeBuildInputs = [ (pkgs.python3.withPackages (ps: [ ps.requests ])) pkgs.rsync ];
+} ''
+  export PYTHONDONTWRITEBYTECODE=1
+  python3 ${./audiobook-copier.py} ${repoRoot + "/workspace/automation/hooks/audiobook-copier.py"}
+  touch "$out"
+'';
+
+media-configuration-contract = let
+  base = self.nixosConfigurations.hwc-home;
+  changed = (base.extendModules { modules = [ {
+    hwc.paths.apps.root = lib.mkForce "/fixture-apps";
+    hwc.media = {
+      beets = { enable = lib.mkForce true; configDir = lib.mkForce "/fixture-beets"; };
+      audiobookshelf.port = lib.mkForce 19442;
+      qbittorrent.webPort = lib.mkForce 19441;
+      sabnzbd.webPort = lib.mkForce 19443;
+      pinchflat.port = lib.mkForce 19444;
+      tdarr = { enable = lib.mkForce true; webPort = lib.mkForce 19445; };
+      organizr = { enable = lib.mkForce true; webPort = lib.mkForce 19446; };
+      sonarr.port = lib.mkForce 19447;
+      radarr.port = lib.mkForce 19448;
+      lidarr.port = lib.mkForce 19449;
+      prowlarr.port = lib.mkForce 19450;
+      readarr.port = lib.mkForce 19451;
+      books.port = lib.mkForce 19452;
+      jellyseerr.port = lib.mkForce 19453;
+      navidrome.port = lib.mkForce 19454;
+      mousehole.port = lib.mkForce 19455;
+      youtube.transcripts.port = lib.mkForce 19456;
+      calibre.ports = { desktop = lib.mkForce 19457; webserver = lib.mkForce 19458; };
+      orchestration.audiobookCopier = {
+        sourceDir = lib.mkForce "/fixture-source";
+        destDir = lib.mkForce "/fixture-library";
+        stateDir = lib.mkForce "/fixture-state";
+        triggerLibraryScan = lib.mkForce false;
+        audioExtensions = lib.mkForce [ "fixture" ];
+      };
+    };
+  } ]; }).config;
+  fixture = pkgs.writeText "media-configuration-contract.json" (builtins.toJSON {
+    routes = changed.hwc.networking.shared.effectiveRoutes;
+    ports = lib.mapAttrs (_: value: value.ports) changed.virtualisation.oci-containers.containers;
+    beets = changed.systemd.services.podman-beets.preStart;
+    arr = lib.genAttrs [ "sonarr" "radarr" "lidarr" "prowlarr" ] (name:
+      lib.removePrefix "+" (lib.findFirst (command: lib.hasInfix "enforce-${name}-config" command)
+        (throw "missing arr configuration hook") changed.systemd.services."podman-${name}".serviceConfig.ExecStartPre));
+    wrapper = changed.system.build.audiobookCopierWrapper;
+    implementation = repoRoot + "/workspace/automation/hooks/audiobook-copier.py";
+    sweep = changed.systemd.services.hot-sweep.serviceConfig.ExecStart;
+    shell = pkgs.runtimeShell;
+  });
+in pkgs.runCommand "media-configuration-contract" {
+  nativeBuildInputs = [ pkgs.python3 pkgs.bash pkgs.coreutils ];
+} ''
+  export PYTHONDONTWRITEBYTECODE=1
+  python3 ${./configuration-contract.py} ${fixture}
   touch "$out"
 '';
 }

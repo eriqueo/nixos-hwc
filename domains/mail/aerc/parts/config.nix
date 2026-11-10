@@ -10,10 +10,7 @@ let
     tags      = import ./tags.nix { inherit lib mailContract; inherit colors; };
     appearance = import ./appearance.nix { inherit lib colors tags mailContract; };
 
-    maildirBase =
-        let nmRoot = config.hwc.mail.notmuch.maildirRoot or "";
-            pathBase = config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail";
-        in if nmRoot != "" then nmRoot else "${pathBase}/Maildir";
+    maildirBase = config.hwc.mail.notmuch.maildirRoot;
 
     searchRegistry = import ../../notmuch/parts/searches.nix {
       inherit lib mailContract;

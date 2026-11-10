@@ -1,5 +1,5 @@
 // Pure intake/state contract shared by the browser and preliminary-budget engine.
-import { CALCULATOR_FIELDS, CALCULATOR_INPUT_VERSION, deckAnswerEstimates } from '../api/crm.js';
+import { CALCULATOR_FIELDS, CALCULATOR_INPUT_VERSION, deckAnswerEstimates } from './calculator-contract.js';
 
 import { createFlooring } from './flooring.js';
 export const PROJECT_TYPES = { bathroom: 'Bathroom', deck: 'Deck', flooring: 'Flooring' };

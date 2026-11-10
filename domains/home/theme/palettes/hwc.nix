@@ -5,7 +5,7 @@
 # Use for: business tools, estimator PWA dev, any HWC-context theming.
 
 { osConfig ? {} }:
-{
+(import ./common.nix) // rec {
   name = "hwc";
 
   # --- Background Hierarchy ---
@@ -16,9 +16,9 @@
   bg3      = "32373c";  # Highest: active elements, buttons, borders
 
   # Legacy aliases (compatible with gruv.nix consumers)
-  bg       = "282828";  # → bg1
-  bgAlt    = "2c3338";  # → bg2
-  bgDark   = "1d2021";  # → bg0
+  bg       = bg1;  # → bg1
+  bgAlt    = bg2;  # → bg2
+  bgDark   = bg0;  # → bg0
   surface0 = "282d32";  # intermediate shade
   surface1 = "2c3338";  # intermediate shade
   surface2 = "32373c";  # intermediate shade
@@ -31,9 +31,9 @@
   fg3      = "50626f";  # Muted: disabled, comments, dividers        (blue-grey muted)
 
   # Legacy aliases
-  fg       = "d5c4a1";  # → fg1
-  fgDim    = "a7aaad";  # → fg2
-  muted    = "50626f";  # → fg3
+  fg       = fg1;  # → fg1
+  fgDim    = fg2;  # → fg2
+  muted    = fg3;  # → fg3
 
   # --- Primary Accents ---
   # Orange is the Heartwood signature. Red is the pop accent — one element per layout max.
@@ -57,21 +57,21 @@
   info          = "5e81ac"; # Blue: info/help                (HWC accent-blue)
 
   # Legacy aliases
-  good  = "a3be8c";  # → success
-  warn  = "cf995f";  # → warning
-  crit  = "bf616a";  # → error
+  good  = success;  # → success
+  warn  = warning;  # → warning
+  crit  = error;  # → error
 
   # --- UI Element Colors ---
   # Selection & Marking
   selection   = "434c5e"; # Nord blue-grey selection (visible on dark bg)
   selectionFg = "ebdbb2"; # Bright cream text on selection
-  selectionBg = "434c5e"; # Nord blue-grey selection
+  selectionBg = selection; # Nord blue-grey selection
   marked      = "bf616a"; # Marked items (nord red)
   markedAlt   = "5e81ac"; # Alt marked color (unified blue)
 
   # Interactive Elements
   cursorColor = "d5c4a1"; # Text cursor — body cream
-  caret       = "d5c4a1"; # Caret/insertion point
+  caret       = cursorColor; # Caret/insertion point
   link        = "5e81ac"; # Hyperlinks — unified blue (info)
   linkHover   = "cf995f"; # Hovered links — orange
 
@@ -132,12 +132,6 @@
   };
 
   # --- Hyprland helpers ---
-  alpha = {
-    opaque = "ff";
-    strong = "cc";
-    soft   = "aa";
-    faint  = "66";
-  };
 
   hypr = {
     orange = "d08770";  # Primary accent for borders/active window
@@ -145,17 +139,4 @@
     muted  = "81a1c1";  # bg3 for inactive
   };
 
-  # --- Pointer theme config ---
-  cursor = {
-    size = 24;
-
-    xcursor = {
-      name    = "Nordzy-cursors";
-      package = "nordzy-cursor-theme";
-    };
-
-    hyprcursor = {
-      name         = "Nordzy-hyprcursors";
-    };
-  };
 }

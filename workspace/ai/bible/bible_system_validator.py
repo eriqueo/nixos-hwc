@@ -1,4 +1,4 @@
-#\!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 AI Bible Documentation System - Validation & Health Check Tool
 Agent 8: Configuration & Deployment System
@@ -135,7 +135,7 @@ class BibleSystemValidator:
                     self._add_result(description, "pass", f"Valid configuration with correct permissions")
                 else:
                     self._add_result(description, "warning", 
-                                   f"Valid config but permissions {actual_perms} \!= {expected_perms}")
+                                   f"Valid config but permissions {actual_perms} != {expected_perms}")
                 
             except Exception as e:
                 self._add_result(description, "fail", f"Invalid configuration: {e}")
@@ -609,4 +609,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-EOF < /dev/null

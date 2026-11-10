@@ -33,6 +33,7 @@ import urllib.parse
 import urllib.request
 
 import screens
+from mcp_client import McpSession, GatewayError
 from screens import CONFIG, TZ
 
 import re as _compiled_re
@@ -55,7 +56,6 @@ WRITE_TOOLS = {
     # match is exactly the event the phone chose. sync runs vdirsyncer.
     "hwc_calendar": {"create", "delete", "sync"},
 }
-PROTOCOL = "2025-06-18"
 GATEWAY_TIMEOUT = 60
 SYNC_WAIT = 40       # seconds a calendar write waits for Radicale to show it
 DONE_DAYS = 7        # completed tasks stay visible (to reopen) this long
@@ -74,71 +74,17 @@ class Invalid(ValueError):
     """Bad input from the phone: 400 with this message."""
 
 
-class GatewayError(RuntimeError):
-    """The gateway refused or failed: 502 with this message."""
-
-
-# ── gateway (Streamable HTTP JSON-RPC, one session per call) ────────────────
-
-def _rpc(body, sid):
-    headers = {"Content-Type": "application/json",
-               "Accept": "application/json, text/event-stream",
-               "MCP-Protocol-Version": PROTOCOL}
-    if sid:
-        headers["Mcp-Session-Id"] = sid
-    req = urllib.request.Request(GATEWAY, data=json.dumps(body).encode(),
-                                 headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=GATEWAY_TIMEOUT) as r:
-            sid = r.headers.get("Mcp-Session-Id") or sid
-            ctype = r.headers.get("Content-Type", "")
-            raw = r.read().decode(errors="replace")
-    except urllib.error.HTTPError as exc:
-        raise GatewayError(f"gateway HTTP {exc.code}") from exc
-    except OSError as exc:
-        raise GatewayError(f"gateway unreachable: {exc}") from exc
-    if "id" not in body:
-        return None, sid
-    msg = None
-    if "text/event-stream" in ctype:
-        for line in raw.splitlines():
-            if line.startswith("data:"):
-                try:
-                    j = json.loads(line[5:].strip())
-                except ValueError:
-                    continue
-                if isinstance(j, dict) and j.get("id") == body["id"]:
-                    msg = j
-    else:
-        msg = json.loads(raw)
-    if not msg:
-        raise GatewayError(f"no gateway reply to {body['method']}")
-    if msg.get("error"):
-        raise GatewayError(msg["error"].get("message") or "gateway error")
-    return msg.get("result") or {}, sid
-
-
 def gateway_call(tool, args):
     """Call one allowlisted gateway tool; returns its result envelope."""
     if args.get("action") not in WRITE_TOOLS.get(tool, ()):
         raise GatewayError(f"{tool} {args.get('action')} is not allowed from the phone apps")
     if not GATEWAY:
         raise GatewayError("no MCP gateway on this host; changes are disabled")
-    sid = None
+    gateway = McpSession(GATEWAY, timeout=GATEWAY_TIMEOUT, client="wall-display-apps")
     try:
-        _, sid = _rpc({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
-            "protocolVersion": PROTOCOL, "capabilities": {},
-            "clientInfo": {"name": "wall-display-apps", "version": "1"}}}, None)
-        _rpc({"jsonrpc": "2.0", "method": "notifications/initialized"}, sid)
-        result, _ = _rpc({"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-                          "params": {"name": tool, "arguments": args}}, sid)
+        result = gateway.rpc("tools/call", {"name": tool, "arguments": args})
     finally:
-        if sid:  # end the session; the gateway keeps them otherwise
-            try:
-                urllib.request.urlopen(urllib.request.Request(
-                    GATEWAY, method="DELETE", headers={"Mcp-Session-Id": sid}), timeout=5).close()
-            except OSError:
-                pass
+        gateway.close()
     text = next((c.get("text", "") for c in result.get("content", []) if c.get("type") == "text"), "")
     try:
         env = json.loads(text)

@@ -131,16 +131,7 @@ let
     }
   );
 
-  hosts = config.hwc.networking.hosts;
-  # Alias of this host in the registry, when it has one (servers only).
-  thisAlias = lib.findFirst (a: hosts.servers.${a} == config.networking.hostName) null (
-    lib.attrNames hosts.servers
-  );
-  brainMcp = config.hwc.server.ai.brainMcp or { enable = false; };
-
-  # Syncthing folders that are the agent workspace root, sit inside it, or
-  # contain it. Scratch, worktrees and private captures must never leave the
-  # host; state/ travels by git only.
+  # Scratch and worktrees must remain host-local; only state/ syncs by git.
   agentsRoot = config.hwc.paths.user.agents;
   home = config.hwc.paths.user.home;
   expandHome = p: if lib.hasPrefix "~/" p then home + lib.removePrefix "~" p else p;
@@ -180,16 +171,12 @@ in
       };
       brainUrl = lib.mkOption {
         type = lib.types.str;
-        default = hosts.url {
-          server = "work";
-          port = 23443;
-          path = "/mcp";
-        };
-        defaultText = lib.literalExpression ''hwc.networking.hosts.url { server = "work"; port = 23443; path = "/mcp"; }'';
-        description = ''
-          brain-mcp's tailnet endpoint. The host running brain-mcp asserts that
-          this names its own route, so a move or port change fails the build.
-        '';
+        description = "Brain MCP URL supplied by the role or machine composition.";
+      };
+      localBrainUrl = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Expected URL of a local Brain MCP service, or null when this host runs none.";
       };
       extraServers = lib.mkOption {
         type = lib.types.attrsOf lib.types.attrs;
@@ -236,16 +223,9 @@ in
         # Checked where brain-mcp runs: the URL every host's sessions use must
         # be this host's own route.
         assertion =
-          !(cfg.userMcp.enable && brainMcp.enable)
-          || (
-            thisAlias != null
-            && cfg.userMcp.brainUrl == hosts.url {
-              server = thisAlias;
-              port = brainMcp.reverseProxyPort;
-              path = "/mcp";
-            }
-          );
-        message = "hwc.system.apps.agent-harness.userMcp.brainUrl (${cfg.userMcp.brainUrl}) does not name brain-mcp's route on ${config.networking.hostName}. Update its default when brain-mcp moves or changes port.";
+          !cfg.userMcp.enable || cfg.userMcp.localBrainUrl == null
+          || cfg.userMcp.brainUrl == cfg.userMcp.localBrainUrl;
+        message = "hwc.system.apps.agent-harness.userMcp.brainUrl (${cfg.userMcp.brainUrl}) does not name the local brain-mcp route (${toString cfg.userMcp.localBrainUrl}). Update the composition inputs when brain-mcp moves or changes port.";
       }
       {
         assertion = syncedAgentFolders == [ ];

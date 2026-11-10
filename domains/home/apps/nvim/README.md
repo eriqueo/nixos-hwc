@@ -20,19 +20,20 @@ Provides a complete Neovim setup with:
 - **Does NOT own**: Editor selection logic (handled by development domain)
 
 ## Structure
+`parts/appearance.nix` generates the installed `core/colorscheme.lua`; no static copy is deployed.
 
 ```
 nvim/
 ├── index.nix           # Main aggregator, deploys lua via xdg.configFile
 ├── README.md           # This file
 └── parts/
+    ├── appearance.nix # Palette-driven colorscheme renderer
     └── lua/
         ├── core/
         │   ├── init.lua        # Entry point, requires all modules
         │   ├── keymaps.lua     # Native keys and mapleader; generated core/leader.lua owns Space actions
         │   ├── options.lua     # Vim options
         │   ├── plugins.lua     # lazy.nvim plugin definitions
-        │   └── colorscheme.lua # Gruvbox with Deep Nord colors
         └── plugins/
             ├── fzf-lua.lua     # Primary fuzzy finder (native fzf binary)
             ├── telescope.lua   # Secondary pickers (help/commands/keymaps)
@@ -55,6 +56,7 @@ nvim/
 | `K` | Hover documentation |
 
 ## Changelog
+- 2026-11-09: Delete the unused hard-coded colorscheme copy; appearance.nix remains the generated colorscheme producer.
 
 - 2026-10-12: Source generated Space actions and which-key labels from keymap grammar. Keep one LSP attach producer. Group language, git, sessions, tabs, marks and agent actions by intent.
 

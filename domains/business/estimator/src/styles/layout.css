@@ -22,6 +22,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .estimate-issues ul { padding-left: 20px; line-height: 1.6; }
 .manual-work { margin: 8px 0; padding: 10px; background: var(--surface-elevated); border-radius: 6px; }
 .manual-work p { font-size: 12px; line-height: 1.5; }
+.scope-areas { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.scope-areas > div { flex: 1 1 160px; min-width: 0; }
 .site-help { font-size: 12px; line-height: 1.5; }
 .customer-inputs { margin-top: 12px; padding: 12px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-elevated); font-size: 12px; overflow-wrap: anywhere; }
 .customer-inputs p { line-height: 1.5; }

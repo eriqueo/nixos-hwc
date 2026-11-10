@@ -11,7 +11,6 @@
 
 {
   # No backups or Samba on the stick.
-  hwc.data.backup.enable = lib.mkForce false;
   hwc.system.networking.samba.enable = lib.mkForce false;
 
   # Keep audio, trim monitoring/key remapping to stay lightweight.

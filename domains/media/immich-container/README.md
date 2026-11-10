@@ -14,6 +14,8 @@ photo library, PostgreSQL data and NVIDIA interfaces.
 
 ## Structure
 
+ML CPU policy uses the explicit target setting or the established four-core pure-evaluation default. Evaluation never reads the builder's /proc/cpuinfo.
+
 Managed database credentials use the vendor `DB_PASSWORD_FILE` loader and a read-only secret bind. The server omits `DB_URL`, requires shared role provisioning before startup, and reloads on encrypted-secret changes. Existing container-visible media paths stay unchanged.
 
 The ML recipe consumes the shared exact-source Starlette Host parser backport from `domains/lib/mkContainer.nix`.
@@ -29,7 +31,6 @@ The pinned Ubuntu image owns its emSign distrust list independently of the newer
 ```
 domains/media/immich-container/
 ├── index.nix          # Options, pinned image/library inputs and build contexts
-├── sys.nix            # System-lane import point
 ├── README.md
 └── parts/
     └── config.nix     # Containers, storage, DB ownership, metrics/dependencies
@@ -103,6 +104,8 @@ trigger an automatic database file-path migration. Keep `/usr/src/app/upload`
 and the existing live mount wiring through runtime-only releases.
 
 ## Changelog
+
+- 2026-11-09: Remove the empty sys.nix import and make target CPU policy independent of the evaluation host.
 - 2026-11-05: Correct the ZIP type guard for upstream urllib3 metadata and exercise symlink rejection with all original fixture files preserved.
 - 2026-11-05: Preserve the consumed security base and add an offline HTTP dependency/framing layer. Follow both layers in existing checks and reject missing, corrupt or escaping wheel inputs before writes.
 - 2026-11-03: Wire the existing password-file option to vendor startup, use Immich's restricted owning role, and require protected shared PostgreSQL provisioning.

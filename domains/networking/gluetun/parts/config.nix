@@ -13,7 +13,7 @@ let
   # multi-instance conversion did not move the live tunnel's servers.json or
   # state. No special case — the name IS the directory.
   dataDir = name: "${appsRoot}/${name}";
-  stateDir = name: "${cfg.stateRoot}/${name}";
+  stateDir = name: instances.${name}.stateDirectory;
 
   #==========================================================================
   # CONTAINER — one per instance
@@ -97,46 +97,13 @@ EOF
   # like health — the same absence-of-evidence trap that hid the slskd leak for
   # six weeks. So the port is published to ONE file per instance, and each
   # client's follower reads that file.
-  portFile = name: "${stateDir name}/forwarded-port";
-
-  # qBittorrent: live preference update over its API, no restart needed.
-  syncQbittorrent = name: i: ''
-    QBT_API="http://127.0.0.1:${toString config.hwc.media.qbittorrent.webPort}"
-    SID=$(curl -sf -c - "$QBT_API/api/v2/auth/login" \
-      --data "username=admin&password=il0wwlm?" 2>/dev/null | awk '/SID/ {print $NF}' || true)
-
-    if [ -n "$SID" ]; then
-      curl -sf -b "SID=$SID" "$QBT_API/api/v2/app/setPreferences" \
-        --data "json={\"listen_port\":$FORWARDED_PORT}" && \
-        echo "Updated qBittorrent listening port to $FORWARDED_PORT" || \
-        echo "Failed to update qBittorrent port"
-    else
-      echo "Could not authenticate with qBittorrent"
-    fi
-  '';
-
-  # slskd: its listen port lives in slskd.yml, which is generated from agenix
-  # secrets by slskd-config-generator. Rather than rewriting the generated file
-  # behind the generator's back (two producers of one line), the generator reads
-  # the port file — so re-running it and restarting the container is the whole
-  # sync. Restart only on change, so a steady port costs nothing.
-  syncSlskd = name: i: ''
-    echo "Regenerating slskd config for port $FORWARDED_PORT and restarting slskd"
-    systemctl restart slskd-config-generator.service
-    systemctl restart podman-slskd.service
-  '';
-
-  syncImpl = {
-    qbittorrent = syncQbittorrent;
-    slskd = syncSlskd;
-  };
-
-  mkPortSync = name: i: {
+  mkPortSync = name: i:
+    let client = cfg.portForwardingClients.${i.portForwarding.syncTo}; in {
     "${name}-port-sync" = {
       description = "Sync ${name} forwarded port to ${i.portForwarding.syncTo}";
       # Ordered after the client too: the loop recovers either way, but starting
       # before it exists means a guaranteed failed auth on every boot.
-      after = [ "podman-${name}.service" "podman-${i.portForwarding.syncTo}.service" ];
+      after = [ "podman-${name}.service" client.unit ];
       requires = [ "podman-${name}.service" ];
       wantedBy = [ "multi-user.target" ];
 
@@ -153,7 +120,7 @@ EOF
 
         GLUETUN_API="http://127.0.0.1:${toString i.controlPort}"
         CHECK_INTERVAL=${toString i.portForwarding.checkInterval}
-        PORT_FILE="${portFile name}"
+        PORT_FILE="${i.forwardedPortFile}"
         LAST_PORT=""
 
         mkdir -p "$(dirname "$PORT_FILE")"
@@ -179,7 +146,7 @@ EOF
             # between the two leaves the file authoritative rather than stale.
             printf '%s' "$FORWARDED_PORT" > "$PORT_FILE"
 
-            ${(syncImpl.${i.portForwarding.syncTo}) name i}
+            ${client.sync}
 
             LAST_PORT="$FORWARDED_PORT"
           fi

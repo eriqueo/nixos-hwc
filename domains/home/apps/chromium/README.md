@@ -8,11 +8,15 @@ Installs Chromium with proprietary codecs/WideVine (`enableWideVine = true`) plu
 - ❌ Does not manage GPU drivers or the gpu-toggle machinery (system hardware domain); no extensions, profiles content, or per-site settings.
 
 ## Structure
+
+`parts/launcher.nix` consumes shared Intel render-node/iHD detection from `domains/lib/hm.nix`; both profiles retain their flags, gpu-integrated boundary and EGL selection.
 - `index.nix` — HM options, package override, desktop entry, mimeApps defaults, sys-lane assertion.
 - `sys.nix` — system-lane option, dconf/dbus, session-restore managed policy, tmpfiles exclusion keeping the `/tmp` profile-singleton files from 10-day aging.
 - `parts/launcher.nix` — `mkLauncher` building the two wrappers with GPU-safe flags and VA-API driver selection.
 
 ## Changelog
+
+- 2026-11-09: Share Intel VAAPI setup with Firefox; preserve both Chromium profiles and EGL selection.
 - 2026-09-28: Exclude `/tmp/org.chromium.Chromium.*/Singleton*` from tmpfiles aging. The 10-day `/tmp` rule deleted a long-running instance's `SingletonCookie`, so a new launch took the profile lock alongside it and both browsers stacked "Something went wrong when opening your profile" dialogs.
 - 2026-09-12: Run both launchers through the system-owned `gpu-integrated` boundary when available, preventing Chromium's GPU process from opening NVIDIA during Vulkan/GL device enumeration while retaining Intel acceleration.
 - 2026-09-12: Preserve the system-owned Mesa EGL vendor selection in both launchers while continuing to strip PRIME offload variables; deleting the EGL selection made Intel-rendered Chromium probe and hold the NVIDIA device.

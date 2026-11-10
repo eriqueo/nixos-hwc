@@ -1,22 +1,17 @@
 # domains/home/apps/neomutt/parts/behavior.nix
-{ lib, pkgs, config, osConfig ? {}, ... }:
+{ lib, accounts }:
 let
-  # Pull shared mail accounts (may be empty during refactors)
-  mailAccs  = config.hwc.mail.accounts or {};
-  accVals   = lib.attrValues mailAccs;
-  haveAccs  = accVals != [];
-
   # Generate ",g1", ",g2", ... macros to jump to each account's INBOX (optional)
   # Uses maildirName so it matches your local Maildir layout.
   inboxMacroLines =
     lib.imap0 (i: a:
       ''macro index ",g${toString (i + 1)}" "<change-folder>=${a.maildirName}/INBOX<enter>" "Go: ${a.name} INBOX"''
-    ) accVals;
+    ) accounts;
 
   inboxMacros = lib.concatStringsSep "\n" inboxMacroLines;
 in
 {
-  files = profileBase: {
+  files = {
     ".config/neomutt/behavior.muttrc".text =
       ''
 ############################################
@@ -59,7 +54,7 @@ macro index ",gt" "<change-folder>=Trash<enter>"      "Go: Trash"
 macro index ",ga" "<change-folder>=Archive<enter>"    "Go: Archive"
 macro index ",gg" "<change-folder>?"                  "Go: choose folder"
 ''
-      + lib.optionalString haveAccs
+      + lib.optionalString (accounts != [])
         ("\n# Per-account INBOX shortcuts (auto-generated)\n" + inboxMacros + "\n")
       + ''
 ############################################

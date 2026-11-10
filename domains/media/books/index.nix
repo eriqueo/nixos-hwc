@@ -349,6 +349,7 @@ in
   ];
 
   options.hwc.media.books = {
+    port = lib.mkOption { type = lib.types.port; default = (import ../../networking/ports.nix).books.port; };
     enable = lib.mkEnableOption "LazyLibrarian books management container";
 
     image = lib.mkOption {

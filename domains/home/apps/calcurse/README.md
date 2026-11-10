@@ -8,7 +8,10 @@ Installs the calcurse TUI calendar/scheduler with a declarative XDG config (`~/.
 - ❌ No appointment/todo data and no CalDAV sync (task/calendar backends live in the mail/calendar stack); terminal colors come from the kitty theme, not this module.
 
 ## Structure
+The single module owns the package and configuration directly; it has no validation-only output block.
+
 - `index.nix` — enable option, package, desktop entry, generated conf.
 
 ## Changelog
+- 2026-11-09: Remove empty assertion scaffolding; preserve package and configuration output.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

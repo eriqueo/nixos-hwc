@@ -119,6 +119,7 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.media.navidrome = {
+    port = lib.mkOption { type = lib.types.port; default = (import ../../networking/ports.nix).navidrome.port; };
     enable = lib.mkEnableOption "navidrome container";
     image = lib.mkOption { type = lib.types.str; default = runtimeImage; description = "Qualified Nix-built application, Go and native-library image"; };
     dataDir = lib.mkOption {
@@ -133,7 +134,6 @@ in
 
   imports = [
     ./sys.nix
-    ./parts/config.nix
   ];
 
   #==========================================================================

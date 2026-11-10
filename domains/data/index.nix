@@ -10,7 +10,6 @@
 {
   imports = [
     ./databases/index.nix
-    ./backup/index.nix      # hwc.data.backup — merged backup system
     ./borg/index.nix         # hwc.data.borg — BorgBackup engine
     ./storage/index.nix
     ./syncthing/index.nix  # hwc.data.syncthing — bidirectional file sync

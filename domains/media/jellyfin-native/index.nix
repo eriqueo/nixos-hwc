@@ -154,12 +154,12 @@ in {
       path = lib.mkOption {
         type = lib.types.str;
         default = "/media";
-        description = "Reverse proxy path";
+        description = "Compatibility input; the central route table owns the published Jellyfin path";
       };
       upstream = lib.mkOption {
         type = lib.types.str;
         default = "localhost:8096";
-        description = "Upstream server for reverse proxy";
+        description = "Compatibility input; the central route table owns the Jellyfin upstream";
       };
     };
     gpu = {

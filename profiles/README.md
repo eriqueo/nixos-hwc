@@ -20,6 +20,8 @@ nothing else. Machines compose roles via the `machines` registry in
 - Machine membership lives ONLY in the `flake.nix` machines table.
 
 ## Structure
+The base system role imports host facts and binds the harness Brain MCP endpoint and optional local consistency value. Mail defaults belong to the mail module; desktop keeps its own new-message tags. Backup settings use the active Borg module.
+
 The base home role enables the Claude app, which owns the installation method. Machine overrides can select the existing native updater.
 
 ```
@@ -34,6 +36,7 @@ mail/        home.nix             # work — hwc.mail menu
 ```
 
 ## Changelog
+- 2026-11-09: Bind harness MCP facts at the role layer, remove repeated notmuch policy and retire inactive backup setters.
 - 2026-11-04: Consolidate Claude installation in its app module; keep native laptop updates and Nix-managed CLI availability on other hosts.
 - 2026-11-03: Desktop role no longer enables the Slack desktop client; Eric does not use it. `slack-cli` stays.
 - 2026-10-25: Guard the newer pkexec wrapper opt-in by its declared option; stable desktop systems retain their existing polkit wrapper and newer systems keep explicit enablement.

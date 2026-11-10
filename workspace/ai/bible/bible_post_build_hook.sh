@@ -1,4 +1,4 @@
-#\!/bin/bash
+#!/bin/bash
 # AI Bible Documentation System - Post-Build Integration Hook
 # Agent 7: Integration & Workflow Manager
 #
@@ -46,12 +46,12 @@ trap cleanup EXIT ERR
 
 # Check if workflow manager is available
 check_workflow_manager() {
-    if [[ \! -f "$WORKFLOW_MANAGER" ]]; then
+    if [[ ! -f "$WORKFLOW_MANAGER" ]]; then
         log "ERROR" "Workflow manager not found: $WORKFLOW_MANAGER"
         return 1
     fi
     
-    if [[ \! -x "$WORKFLOW_MANAGER" ]]; then
+    if [[ ! -x "$WORKFLOW_MANAGER" ]]; then
         log "ERROR" "Workflow manager not executable: $WORKFLOW_MANAGER"
         return 1
     fi
@@ -89,7 +89,7 @@ determine_build_status() {
     fi
     
     # 2. Check for NixOS build artifacts
-    if [[ \! -d "/run/current-system" ]]; then
+    if [[ ! -d "/run/current-system" ]]; then
         log "WARN" "No current system detected - build may have failed"
         build_success="false"
     fi
@@ -172,14 +172,14 @@ validate_system_state() {
     log "INFO" "Validating system state"
     
     # Check if configuration file exists
-    if [[ \! -f "$CONFIG_FILE" ]]; then
+    if [[ ! -f "$CONFIG_FILE" ]]; then
         log "WARN" "Configuration file not found: $CONFIG_FILE"
         log "WARN" "Workflow may run with default settings"
     fi
     
     # Check if Ollama service is available (required for AI operations)
     if command -v systemctl >/dev/null 2>&1; then
-        if \! systemctl is-active ollama >/dev/null 2>&1; then
+        if ! systemctl is-active ollama >/dev/null 2>&1; then
             log "WARN" "Ollama service not active - AI features may be limited"
         fi
     fi
@@ -206,7 +206,7 @@ integrate_git_hooks() {
     local hooks_dir="${git_dir}/hooks"
     local post_commit_hook="${hooks_dir}/post-commit"
     
-    if [[ \! -d "$git_dir" ]]; then
+    if [[ ! -d "$git_dir" ]]; then
         log "WARN" "Not in a git repository - skipping git hook integration"
         return 0
     fi
@@ -233,7 +233,7 @@ HOOK_EOF
     else
         log "INFO" "Creating new post-commit hook with bible system integration"
         cat > "$post_commit_hook" << 'HOOK_EOF'
-#\!/bin/bash
+#!/bin/bash
 # Git post-commit hook with AI Bible Documentation System integration
 
 # AI Bible Documentation System Integration
@@ -256,7 +256,7 @@ main() {
     log "INFO" "Arguments: $*"
     
     # Validate prerequisites
-    if \! check_workflow_manager; then
+    if ! check_workflow_manager; then
         log "ERROR" "Workflow manager validation failed"
         return 1
     fi
@@ -265,7 +265,7 @@ main() {
     check_lock
     
     # Validate system state
-    if \! validate_system_state; then
+    if ! validate_system_state; then
         log "ERROR" "System state validation failed"
         return 1
     fi
@@ -277,7 +277,7 @@ main() {
     
     # Execute workflow
     local workflow_success=true
-    if \! execute_workflow "$build_success"; then
+    if ! execute_workflow "$build_success"; then
         workflow_success=false
     fi
     
@@ -350,4 +350,3 @@ HELP_EOF
         exit 1
         ;;
 esac
-EOF < /dev/null

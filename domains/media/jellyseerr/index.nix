@@ -178,6 +178,7 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.media.jellyseerr = {
+    port = lib.mkOption { type = lib.types.port; default = (import ../../networking/ports.nix).jellyseerr.port; };
     enable = lib.mkEnableOption "jellyseerr container";
     image = lib.mkOption { type = lib.types.str; default = runtime.image; description = "Qualified container image; local default built from system.build.seerrRuntimeImageContext"; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; };

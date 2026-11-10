@@ -9,6 +9,12 @@
 
 ## Structure
 
+MCP configuration inspection reads evaluated host settings and routes. Its host
+schema and role/channel metadata come from the flake machine registry through
+`HWC_MCP_FLEET`. Nix query caches include the checkout path. GPU configuration
+uses the supported `hardware.graphics` API on both channels; the old path backup
+and unreachable OpenGL branches are removed.
+
 MCP mail/calendar share buffered argv execution and bounded binary discovery in
 `src/src/executors/shell.ts` (under `mcp/` in this domain). Calendar command
 instances bind their khal configuration once; the tool aggregator supplies command
@@ -76,7 +82,6 @@ domains/system/
 │   ├── coredump.nix     # Bounded systemd-coredump storage (26.05+ settings API)
 │   ├── filesystem.nix    # Filesystem tmpfiles; options at hwc.system.core.filesystem (alias: hwc.filesystem)
 │   ├── packages.nix      # Base/server/security package bundles (hwc.system.core.packages.*)
-│   ├── paths.nix         # Path source of truth (hwc.paths.*)
 │   ├── polkit.nix (moved to services/polkit)
 │   ├── thermal.nix
 │   └── validation.nix    # Domain-wide assertions
@@ -108,6 +113,8 @@ domains/system/
 - Keep home-lane references guarded with `osConfig ? hwc` per the Handshake Protocol when mirrored into `sys.nix` files elsewhere.
 
 ## Changelog
+
+- 2026-11-09: Derive MCP host metadata from the fleet registry, evaluate route/host values, isolate query caches by checkout, and remove dead GPU/path scaffolding.
 
 - 2026-11-09: Untangle MCP mail/calendar command handling: share literal argv
   execution and one in-flight binary lookup, bind khal config per tool instance,

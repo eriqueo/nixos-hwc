@@ -1,4 +1,4 @@
-#\!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 AI Bible Documentation System - Workflow Manager
 Agent 7: Integration & Workflow Manager
@@ -1040,4 +1040,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-EOF < /dev/null

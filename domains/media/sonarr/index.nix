@@ -289,6 +289,7 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.media.sonarr = {
+    port = lib.mkOption { type = lib.types.port; default = (import ../../networking/ports.nix).sonarr.port; };
     enable = lib.mkEnableOption "sonarr container";
     image = lib.mkOption { type = lib.types.str; default = runtime.image; description = "Qualified local image built from system.build.sonarrRuntimeImageContext"; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "vpn" ]; default = "media"; };

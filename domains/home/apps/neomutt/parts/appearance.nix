@@ -1,12 +1,7 @@
 # domains/home/apps/neomutt/parts/appearance.nix (drop-in)
-{ lib, pkgs, config, theme, osConfig ? {}, ... }:
+{ lib, accounts, primary, theme }:
 
 let
-  # Accounts (now under hwc.mail.accounts)
-  accVals   = lib.attrValues (config.hwc.mail.accounts or {});
-  haveAccs  = accVals != [];
-
-  # Theme tokens (t may be partial; m is optional mono attributes)
   t   = theme.tokens or {};
   m   = theme.mono   or {};
   get = name: (t.${name} or {});   # returns an attrset; colorLine defaults fg/bg
@@ -19,13 +14,9 @@ let
       pat = if pattern == null || pattern == "" then "" else " '" + pattern + "'";
     in "color ${kind} ${fg} ${bg}${pat}";
 
-  # Primary account (prefer explicit primary; else first; else null)
-  primary =
-    let p = lib.filter (a: a.primary or false) accVals;
-    in if p != [] then lib.head p else (if haveAccs then lib.head accVals else null);
 in
 {
-  files = profileBase: {
+  files = {
     # -------------------- MAIN CONFIG (neomuttrc) --------------------
     ".config/neomutt/neomuttrc".text = ''
       ############################################
@@ -45,7 +36,7 @@ in
         let
           n = a.maildirName or (a.name or "inbox");
           d = a.sidebarLabel or a.label or a.name or n;
-        in ''named-mailboxes "${d}" "=${n}/INBOX"'') accVals)}
+        in ''named-mailboxes "${d}" "=${n}/INBOX"'') accounts)}
 
       ############################################
       # UX: Caches / Pager / Threaded workflow

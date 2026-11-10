@@ -80,7 +80,7 @@ in
 
     port = mkOption {
       type = types.int;
-      default = 13378;
+      default = (import ../../networking/ports.nix).audiobookshelf.port;
       description = "Port for Audiobookshelf web interface";
     };
 

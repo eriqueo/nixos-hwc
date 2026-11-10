@@ -557,4 +557,86 @@ pkgs.runCommand "xps-household-desktop" { nativeBuildInputs = [ pkgs.nodejs ]; }
   JS
   touch $out
 '';
+
+home-untangle = let
+  laptop = self.nixosConfigurations.hwc-laptop;
+  home = laptop.config.home-manager.users.eric;
+  raw = package: builtins.unsafeDiscardStringContext package.drvAttrs.text;
+  browser = name: import (repoRoot + "/domains/home/apps/${name}/parts/launcher.nix") { inherit lib pkgs; };
+  chromium = (browser "chromium").packages;
+  workspacePlan = { slots = [ 2 4 ]; externalOffset = 20; externalSlots = [ 22 24 ]; };
+  hardware = import (repoRoot + "/domains/home/apps/hyprland/parts/hardware.nix") {
+    inherit lib pkgs workspacePlan;
+  };
+  behavior = import (repoRoot + "/domains/home/apps/hyprland/parts/behavior.nix") {
+    inherit lib pkgs workspacePlan; config = home;
+  };
+  scripts = import (repoRoot + "/domains/home/apps/hyprland/parts/scripts.nix") {
+    inherit lib pkgs workspacePlan;
+  };
+  bars = import (repoRoot + "/domains/home/apps/waybar/parts/behavior.nix") {
+    inherit lib pkgs workspacePlan; config = home; osConfig = laptop.config;
+  };
+  fixture = {
+    init = builtins.unsafeDiscardStringContext home.programs.zsh.initContent;
+    browsers = {
+      firefox = raw (builtins.head (browser "firefox").packages);
+      chromium = raw (builtins.head chromium);
+      workbench = raw (builtins.elemAt chromium 1);
+    };
+    workspace = {
+      mapping = hardware.workspace;
+      bindings = behavior.keybinds;
+      inherit bars;
+      script = raw (lib.findFirst (package: package.name == "hwc-workspace-switch") null scripts);
+    };
+  };
+  overridden = (laptop.extendModules { modules = [{ hwc.paths.nixos = "/tmp/hwc-nixos-fixture"; }]; })
+    .config.home-manager.users.eric;
+  work = self.nixosConfigurations.hwc-work;
+  mismatched = (work.extendModules { modules = [{
+    hwc.system.apps.agent-harness.userMcp.brainUrl = lib.mkForce "https://wrong.invalid/mcp";
+  }]; }).config;
+  validSystem = config: lib.all (entry: entry.assertion) config.assertions;
+  neomutt = accounts: (inputs.home-manager.lib.homeManagerConfiguration {
+    inherit pkgs;
+    modules = [ (repoRoot + "/domains/home/apps/neomutt/index.nix") ({ lib, ... }: {
+      options.hwc.mail.accounts = lib.mkOption { type = lib.types.attrs; default = {}; };
+      config = {
+        home = { username = "fixture"; homeDirectory = "/tmp/neomutt-fixture"; stateVersion = "24.05"; };
+        hwc.home.apps.neomutt.enable = true;
+        hwc.mail.accounts = accounts;
+      };
+    }) ];
+  }).config;
+  first = { name = "First"; maildirName = "first"; };
+  second = { name = "Second"; maildirName = "second"; primary = true; };
+  empty = neomutt {};
+  fallback = neomutt { a = first; b = second // { primary = false; }; };
+  primary = neomutt { a = first; b = second; };
+in
+assert lib.assertMsg (lib.all (config:
+  config.hwc.system.apps.agent-harness.userMcp.brainUrl == "https://hwc-work.ocelot-wahoo.ts.net:23443/mcp")
+  (map (system: system.config) (builtins.attrValues self.nixosConfigurations)))
+  "home composition: all hosts must receive the shared Brain MCP URL";
+assert lib.assertMsg (validSystem work.config && !validSystem mismatched)
+  "home composition: a wrong local Brain MCP URL must fail its consumer assertion";
+assert lib.assertMsg (overridden.home.sessionVariables.HWC_NIXOS_DIR == "/tmp/hwc-nixos-fixture"
+  && lib.all (name: overridden.home.sessionVariables.${name} == "/tmp/hwc-nixos-fixture/workspace")
+    [ "HWC_WORKSPACE_ROOT" "WORKSPACE" "SCRIPTS" ])
+  "home paths: overriding the central checkout must reach every shell runtime path";
+assert lib.assertMsg (!(empty.home.file ? ".config/neomutt/neomuttrc") && empty.warnings != []
+  && lib.hasInfix ''set spoolfile = "=first/INBOX"'' fallback.home.file.".config/neomutt/neomuttrc".text
+  && lib.hasInfix ''set spoolfile = "=second/INBOX"'' primary.home.file.".config/neomutt/neomuttrc".text
+  && lib.hasInfix ''Go: Second INBOX'' primary.home.file.".config/neomutt/behavior.muttrc".text)
+  "neomutt: no-account, fallback and explicit primary must reach the generated files";
+pkgs.runCommand "home-untangle" {
+  nativeBuildInputs = with pkgs; [ python3 zsh bash jq coreutils ripgrep ];
+  passthru = { inherit fixture; };
+} ''
+  python3 -B ${(repoRoot + "/domains/home/verification/test_untangle.py")} \
+    ${pkgs.writeText "home-untangle.json" (builtins.toJSON fixture)}
+  touch "$out"
+'';
+
 }

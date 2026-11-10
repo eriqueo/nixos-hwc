@@ -113,19 +113,7 @@
     bridge.enable = lib.mkDefault true;
     aerc.enable = lib.mkDefault true;
 
-    notmuch = {
-      maildirRoot = lib.mkDefault "/home/eric/400_mail/Maildir";
-      userName = "Eric O'Keefe";
-      newTags = [ "unread" "inbox" ];
-      excludeFolders = [ "trash" "spam" "[Gmail]/All Mail" ];
-      savedSearches = {
-        inbox = "tag:inbox and not tag:archived";
-        unread = "tag:unread";
-        work = "from:*@iheartwoodcraft.com or from:*heartwoodcraftmt@gmail.com";
-        personal = "from:*@proton.me or from:*eriqueokeefe@gmail.com";
-        urgent = "tag:urgent or tag:important";
-      };
-    };
+    notmuch.newTags = [ "unread" "inbox" ];
   };
 }
 # The HM 26.05 stateVersion-default pins used to live here. They moved to

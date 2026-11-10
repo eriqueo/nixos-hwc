@@ -35,9 +35,9 @@ export function allTools(config: ServerConfig): ToolDef[] {
   const tools: ToolDef[] = [
     // Consolidated multi-action tools
     ...servicesTools(config.cacheTtl.runtime, config.nixosConfigPath),
-    ...buildTools(config.nixosConfigPath, config.cacheTtl.runtime),
+    ...buildTools(config.nixosConfigPath),
     ...monitoringTools(),
-    ...configTools(config.nixosConfigPath, config.cacheTtl.declarative),
+    ...configTools(config.nixosConfigPath, config.cacheTtl.declarative, config.fleet),
     ...secretsTools(config.nixosConfigPath),
     ...storageTools(),
     ...networkTools(config.cacheTtl.runtime, config.nixosConfigPath),

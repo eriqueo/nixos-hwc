@@ -1,6 +1,9 @@
 import * as esbuild from 'esbuild';
 import fs from 'node:fs';
 
+const manifest = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
+const output = manifest.bin.dt;
+
 // Bundle CLI entry point — externalize native modules and ink (needs React runtime)
 // The source already starts with `#!/usr/bin/env node`; esbuild preserves it on
 // line 1 of the bundle, so we MUST NOT add another shebang via `banner` (Node
@@ -10,12 +13,12 @@ await esbuild.build({
   bundle: true,
   platform: 'node',
   format: 'esm',
-  outfile: 'dist/dt.mjs',
+  outfile: output,
   packages: 'external',
   target: 'node20',
   sourcemap: true,
 });
 
-fs.chmodSync('dist/dt.mjs', 0o755);
+fs.chmodSync(output, 0o755);
 
-console.log('Built dist/dt.mjs');
+console.log(`Built ${output}`);

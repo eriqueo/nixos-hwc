@@ -204,13 +204,14 @@ borg-destinations = let
   }; }).config;
   primary = c.services.borgbackup.jobs.hwc-backup;
   secondary = c.services.borgbackup.jobs.hwc-backup-test;
-  # Inspect this module's real assertion without forcing unrelated fleet
-  # assertion messages whose interpolation may require optional settings.
-  valid = config: let
-    module = import (repoRoot + "/domains/data/borg/index.nix") { inherit config lib pkgs; };
-    assertions = (builtins.head module.config.content.contents).assertions;
-  in (lib.findFirst (a: lib.hasPrefix "Additional Borg destinations" a.message)
-    (throw "destination assertion absent") assertions).assertion;
+  # Evaluate the owner's public assertions without importing unrelated fleet
+  # assertions or depending on the owner's internal mkIf/mkMerge shape.
+  valid = config: lib.all (entry: entry.assertion) (lib.evalModules {
+    modules = [
+      { _module.freeformType = lib.types.attrsOf lib.types.raw; }
+      (import (repoRoot + "/domains/data/borg/index.nix") { inherit config lib pkgs; })
+    ];
+  }).config.assertions;
   invalid = settings: (base.extendModules { modules = [ fixtureModule settings ]; }).config;
   unit = name: c.systemd.services."borgbackup-job-${name}";
   xpsSnapshot = pkgs.writeText "xps-state-snapshot.json" (builtins.toJSON {

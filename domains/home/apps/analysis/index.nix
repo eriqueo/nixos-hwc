@@ -1,9 +1,8 @@
 # domains/home/apps/analysis/index.nix
-{ config, lib, pkgs, osConfig ? {}, ... }:
+{ config, lib, pkgs, ... }:
 let
-  inherit (lib) mkIf mkMerge;
+  inherit (lib) mkIf;
   cfg = config.hwc.home.apps.analysis;
-  isNixOS = osConfig ? hwc;
 in
 {
   #==========================================================================
@@ -35,22 +34,5 @@ in
       ] ++ cfg.extraPackages);
     in [ pythonEnv ];
 
-    # Assertions: use mkMerge to safely concatenate conditional lists
-    assertions = mkMerge [
-      [
-        {
-          assertion = pkgs ? python3;
-          message = "Python 3 must be available in pkgs.";
-        }
-      ]
-      (mkIf isNixOS [
-        # Add NixOS-specific assertions here if needed
-        # Example:
-        # {
-        #   assertion = true;  # or some real check
-        #   message = "NixOS-specific check passed.";
-        # }
-      ])
-    ];
   };
 }

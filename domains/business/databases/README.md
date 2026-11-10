@@ -11,6 +11,8 @@ Business data layer for Heartwood Craft. Manages the `hwc` PostgreSQL database s
 
 ## Structure
 
+`export_estimator_data.py` owns PostgreSQL catalog exports. It accepts `--database` and `--output-dir`, completes all reads before writing, and replaces generated files atomically. A failed query preserves the previous exports. Estimator Python, shell and npm export entries use this same producer.
+
 ```
 domains/business/databases/
 ├── index.nix                    # Module: hwc.business.databases.* (database provisioning)
@@ -52,7 +54,7 @@ python3 export_calculator_json.py
 
 # Export estimator data (rates, catalog, templates → assembler app)
 python3 export_estimator_data.py
-# Writes: domains/business/estimator/app/src/data/{tradeRates,catalog_export,templates}.json
+# Writes: domains/business/estimator/src/data/{tradeRates,jtMappings,catalog,pricebook,catalog_export,templates}.json
 ```
 
 After exporting, rebuild the apps:
@@ -84,6 +86,8 @@ After enabling and rebuilding:
 3. Verify: `sudo -u postgres psql -d hwc -c "\dt public.*"`
 
 ## Changelog
+
+- 2026-11-09: Unify manual estimator export with the PostgreSQL owner and preserve existing exports on failed reads.
 
 - 2026-05-01: Added export scripts, estimate_templates table, 70 catalog items with Craftsman/JT rates
 - 2026-04-12: Created index.nix module (hwc.business.databases.*), wired into business domain

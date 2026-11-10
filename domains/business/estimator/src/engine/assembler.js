@@ -16,7 +16,7 @@
  */
 import { assembleFlooring, flooringIssues } from './flooring.js';
 import { PROJECT_TYPES } from './intake.js';
-import { automaticBudgetBlocks } from '../api/crm.js';
+import { automaticBudgetBlocks } from './calculator-contract.js';
 import { tradeRate, matPrice } from './pricing.js';
 import { calculatorMeasurementIssues } from './geometry.js';
 import { evaluateFormula, evaluateCondition } from './formulaEngine.js';
@@ -176,37 +176,8 @@ export function assemble(state, projectType = state.projectType || 'bathroom') {
   return result;
 }
 
-// -- Geometry (kept here for backward compat -- also in geometry.js) ----------
-
-export function deriveGeometry(s) {
-  const fl        = s.bathroom_length_ft * s.bathroom_width_ft;
-  const perim     = 2 * (s.bathroom_length_ft + s.bathroom_width_ft);
-  const showerW   = s.shower_wall_1_width_ft + s.shower_wall_2_width_ft
-                  + s.shower_wall_3_width_ft + s.shower_wall_4_width_ft;
-  const wallTile  = showerW * s.shower_wall_height_ft;
-  const panTile   = s.shower_pan_width_ft * s.shower_pan_length_ft;
-  const curbTile  = Math.ceil(
-    (s.shower_curb_height_in * 2) / 12 * s.shower_curb_length_ft
-    + (s.shower_curb_width_in * 2) / 12 * s.shower_curb_length_ft
-  );
-  const accentTile = showerW * 1.25;
-  const wallArea   = perim * s.wall_height_ft;
-  const ceilArea   = fl;
-  const paintableWalls = Math.max(0, wallArea - wallTile);
-  const paintSqft  = wallArea;
-  return { fl, perim, wallTile, panTile, curbTile, accentTile, paintSqft, wallArea, ceilArea, paintableWalls, showerW };
-}
-
-export function deriveDeckGeometry(s) {
-  const deckSqft   = s.deck_length_ft * s.deck_width_ft;
-  const perimeter  = 2 * (s.deck_length_ft + s.deck_width_ft);
-  const joistCount = Math.ceil(s.deck_length_ft / (s.joist_spacing_in / 12)) + 1;
-  const railingLf  = s.railing_lf || 0;
-  const stairCount = s.stair_tread_count || 0;
-  const footingCount = Math.max(4, Math.ceil(deckSqft / 36));
-  const deckingLf  = Math.ceil(deckSqft / 0.5);
-  return { deckSqft, perimeter, joistCount, railingLf, stairCount, footingCount, deckingLf };
-}
+// Permanent exports for existing consumers; geometry has one implementation.
+export { deriveGeometry, deriveDeckGeometry } from './geometry.js';
 
 // -- JT parameter builders (for webhook push) ---------------------------------
 

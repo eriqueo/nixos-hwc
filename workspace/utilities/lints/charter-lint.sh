@@ -1,1 +1,0 @@
-../../nixos-dev/charter-lint.sh

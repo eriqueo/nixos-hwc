@@ -33,6 +33,8 @@ Owns Frigate and its generated configuration. Prometheus owns alert evaluation; 
 
 ## Structure
 
+Its fixed listener default comes from networking/ports.nix, shared with the route. The existing assertion still rejects changing the host-networked application's fixed port.
+
 The container uses its explicit NVIDIA CDI grant with no-new-privileges. It does not use privileged mode. The emitted-config contract checks these flags and GPU wiring.
 
 `index.nix` also exports the pinned 0.18.2 runtime recipe with its exact Starlette backport and requires its prebuilt image before startup. The native 0.18 configuration keeps three days of motion and fourteen days of event footage; continuous recording retention is zero.
@@ -705,6 +707,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-09: Share the fixed listener default with routing; preserve runtime recipes, camera policy and the fixed-port assertion.
 
 - 2026-11-05: Read the existing urllib32.8 source/result pair from the shared manifest; preserve the emitted Frigate image recipe and context.
 

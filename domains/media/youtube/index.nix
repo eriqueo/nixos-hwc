@@ -17,7 +17,7 @@
       enable = lib.mkEnableOption "YouTube transcripts extraction API";
       port = lib.mkOption {
         type = lib.types.port;
-        default = 8100;
+        default = (import ../../networking/ports.nix).transcripts.port;
         description = "API server port";
       };
       outputDirectory = lib.mkOption {

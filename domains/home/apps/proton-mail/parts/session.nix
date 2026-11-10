@@ -51,8 +51,4 @@ in
     };
   };
 
-  # Environment variables
-  env = {
-    # ProtonMail uses system defaults
-  };
 }

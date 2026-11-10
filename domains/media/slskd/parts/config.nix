@@ -9,7 +9,7 @@ let
   # this generator; this is the only place that writes slskd.yml, so the port
   # cannot be written by two producers and drift. Off-VPN (or before the first
   # sync) it falls back to the static port.
-  portFile = "${config.hwc.networking.gluetun.stateRoot}/${cfg.vpnInstance}/forwarded-port";
+  portFile = lib.attrByPath [ cfg.vpnInstance "forwardedPortFile" ] "" config.hwc.networking.gluetun.instances;
 
   generateConfigScript = pkgs.writeShellScript "generate-slskd-config" ''
     LISTEN_PORT=${toString cfg.listenPort}

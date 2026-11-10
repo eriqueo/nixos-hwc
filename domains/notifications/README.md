@@ -48,6 +48,8 @@ notifications/
 | `hwc.notifications.notify.transitionMode` | Transition decision engine: `shadow` (default, records only) or `off` |
 
 ## Changelog
+
+- 2026-11-09: Correct notifier caller comments after retiring the dormant backup engine; preserve existing event command names.
 - 2026-11-09: Add the `discord-projects` channel (`#projects`, secret `discord-webhook-projects`) and move the `projects` topic to it from `discord-ops`. A P1 on that topic still adds SMTP.
 
 - 2026-11-09: Accept long schema-valid bodies within a 1 MiB HTTP envelope; reject oversized requests with 413. Both shell CLIs share delivery-count validation and fail on partial/unrouted delivery. Replace source-text HTTP assertions with real HTTP/audit checks.

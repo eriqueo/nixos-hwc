@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+ports.nix is the pure default/option-address table consumed by media modules and their existing route entries. Gluetun owns per-instance forwardedPortFile/statusFile paths and generic follower scheduling; media registers client sync/probe commands through portForwardingClients. Failed client updates stop the follower so its next start retries them. AI MCP route/root selection consumes the AI owner's effective active flags.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it. The briefing route check runs the adapted production route over isolated HTTP without certificate provisioning. It copies only the static module and policy, excluding runtime report symlinks.
 
 `internalContainerNetworks` declares application-private Podman bridges. Startup validates internal routing, DNS, driver and IPv6 before dependent containers start.
@@ -90,18 +92,21 @@ networking/
 ├── reverseProxy/       # Caddy NixOS service, DNS plugin + owner-filtered route rendering
 │   └── index.nix       # Former-owner forwards and opt-in read-only LAN vhosts/DNS
 ├── routes.nix          # Centralized service route definitions
+├── ports.nix           # Pure media listener defaults and option addresses
 ├── podman-network.nix  # media-network systemd service
 ├── cloudflared/        # Cloudflare Tunnel (public webhook ingress)
 │   └── index.nix
 ├── gluetun/            # VPN container (WireGuard via ProtonVPN)
 │   ├── index.nix
 │   ├── sys.nix
-│   └── parts/           # Config, packages, scripts, helpers
+│   └── parts/           # Config and health scripts
 ├── vpn/                # Host ProtonVPN via wg-quick (hwc.networking.vpn.protonvpn; laptop, on demand)
 │   └── index.nix
 ```
 
 ## Changelog
+
+- 2026-11-09: Share configured media listeners with existing routes, move VPN client policy into media, remove empty parts and use effective MCP enable state.
 
 - 2026-11-09: Keep the briefing MCP proxy within its path namespace so shared JavaScript assets remain static files. Verify real Caddy routing, module MIME type and the former broad-prefix failure with isolated HTTP fixtures that exclude runtime reports.
 

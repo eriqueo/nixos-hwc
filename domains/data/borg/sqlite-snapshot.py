@@ -22,10 +22,7 @@ import sys
 import time
 import uuid
 
-import re as _compiled_re
-
-# Fixed patterns compile once; matching stays at the original call sites.
-_CREATE_FULLMATCH_RE = _compiled_re.compile(r"[a-z][a-z0-9-]{0,31}")
+_CREATE_FULLMATCH_RE = re.compile(r"[a-z][a-z0-9-]{0,31}")
 
 
 

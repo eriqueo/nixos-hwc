@@ -15,7 +15,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, computed_field
 import uvicorn
 
 from transcript import (
@@ -127,7 +127,11 @@ class JobRequest(XOptions):
     force: bool = Field(default=False, description="re-extract videos that are already saved")
 
 
+TERMINAL_STATUSES = frozenset(("complete", "failed", "cancelled"))
+
+
 class JobStatus(BaseModel):
+    schema_version: int = 1
     job_id: str
     status: str = "queued"
     completed: int = 0
@@ -138,9 +142,14 @@ class JobStatus(BaseModel):
     retryable: int = Field(default=0, description="failed items POST /job/{id}/retry would re-run")
     error: str = ""
 
+    @computed_field
+    @property
+    def terminal(self) -> bool:
+        return self.status in TERMINAL_STATUSES
+
 
 # ---------------------------------------------------------------------------
-# Job store — in memory, newest MAX_JOBS kept
+# AUTO-MANAGED: bounded in-memory jobs; evict finished history, shed at capacity
 # ---------------------------------------------------------------------------
 MAX_JOBS = 200
 
@@ -175,12 +184,14 @@ _inflight: set[str] = set()
 
 
 def _new_job(output_dir: Path) -> JobStatus:
-    job = JobStatus(job_id=uuid.uuid4().hex[:12], output_dir=str(output_dir))
-    _jobs[job.job_id] = job
-    while len(_jobs) > MAX_JOBS:  # dicts keep insertion order: drop the oldest
-        old = next(iter(_jobs))
+    while len(_jobs) >= MAX_JOBS:
+        old = next((key for key, job in _jobs.items() if job.terminal), None)
+        if old is None:
+            raise HTTPException(429, "All job slots are active. Wait for a job to finish.")
         del _jobs[old]
         _retry_specs.pop(old, None)
+    job = JobStatus(job_id=uuid.uuid4().hex[:12], output_dir=str(output_dir))
+    _jobs[job.job_id] = job
     return job
 
 
@@ -524,6 +535,22 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
     if not job:
         return
     job.status = "running"
+    try:
+        await _process_job(job, urls, items, mode, out_dir, force, x_mode, limit)
+    except asyncio.CancelledError:
+        job.status = "cancelled"
+        job.error = "Processing stopped. Submit the remaining URLs again."
+        raise
+    except Exception as exc:
+        logger.exception("Job %s failed", job_id)
+        job.status = "failed"
+        job.error = f"Processing failed: {type(exc).__name__}: {exc}"
+    finally:
+        job.current = {}
+
+
+async def _process_job(job: JobStatus, urls: list[str], items: list[WorkItem], mode: str,
+                       out_dir: Path, force: bool, x_mode: str, limit: int):
     retry = RetrySpec(urls=[], items=[], mode=mode, out_dir=out_dir, force=force)
 
     # Phase 1 — classify + expand. Playlists expand into their own titled
@@ -583,15 +610,15 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
             job.completed += 1
             continue
 
-        if fetched_any:
-            await asyncio.sleep(PACE_SECONDS)
-        fetched_any = True
-
         def stage(name: str, _url: str = item.url) -> None:
             job.current = {"url": _url, "stage": name}
 
+        # Reserve before pacing: another job can run while this one sleeps.
         _inflight.add(key)
         try:
+            if fetched_any:
+                await asyncio.sleep(PACE_SECONDS)
+            fetched_any = True
             if key.startswith("x:"):
                 result = await _extract_post(item.url, item.dest, item.x_mode, item.limit, on_stage=stage)
             else:
@@ -609,7 +636,7 @@ async def _run_job(job_id: str, urls: list[str], items: list[WorkItem], mode: st
             _inflight.discard(key)
         job.completed += 1
 
-    _retry_specs[job_id] = retry
+    _retry_specs[job.job_id] = retry
     job.retryable = len(retry.urls) + len(retry.items)
     job.current = {}
     job.status = "complete"
@@ -869,10 +896,11 @@ function poll(jobId) {
     _results=_base.concat(pd.results);
     const totalTxt=pd.total?('/'+pd.total):'';
     const cur=(pd.current&&pd.current.stage)?' — '+pd.current.stage:'';
-    $('msg').textContent=(pd.status==='complete'?'Done ':'Processing... ')
+    $('msg').className=pd.error?'msg err':'msg';
+    $('msg').textContent=pd.error || (pd.terminal?'Done ':'Processing... ')
       +'('+pd.completed+totalTxt+') → '+pd.output_dir+cur;
     renderResults(pd.status);
-    if(pd.status==='complete'){
+    if(pd.terminal){
       clearInterval(timer); $('go').disabled=false;
       $('retry').textContent='Retry failed ('+pd.retryable+')';
       $('retry').style.display=pd.retryable?'block':'none';
