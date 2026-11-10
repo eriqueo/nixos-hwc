@@ -51,9 +51,10 @@ gather-today.mjs       # Step 2c: expanded hwc_today board + case-ledger delta �
                        #   sections.today (bounded view, explorable depth, changes)
 gather-refinery.mjs    # Step 1c: refinery item store (local .md read) →
                        #   sections.refinery (action/active/hopper stages)
-gather-projects.mjs    # Step 1c: tracker hub portfolio (loopback :8765/api/portfolio) →
-                       #   sections.projects (overdue, waits on Eric 7d+, expiring
-                       #   cards, live-product cap); one hwc-notify `projects` digest
+gather-projects.mjs    # Step 1c: tracker hub (loopback :8765) /api/attention, the one
+                       #   ranked list, grouped into sections.projects decide /
+                       #   inPerson by place / unsorted / agent; /api/portfolio adds
+                       #   overdue and the live-product cap; one `projects` digest
 gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
                        #   (:8422/api/<tool>) → sections.research (articles
                        #   awaiting review + the standing themes report)
@@ -162,6 +163,8 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+
+- 2026-11-09: The Projects section reads the tracker hub's one ranked list (`/api/attention`) and groups it: decide now, in person by place, waits no agent sorted, owed by an agent. The briefing's own wait and card-expiry derivation is deleted.
 
 - 2026-11-09: Narrow the shared MCP proxy path matcher so it cannot intercept the browser transport module.
 

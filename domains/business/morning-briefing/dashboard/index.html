@@ -511,13 +511,22 @@ function makeResearch(r){
 function makeProjects(p){
   // The tracker portfolio: what needs Eric, then the cap and the groups.
   const sec=$('div',{class:'section'});
-  const need=(p.counts&&(p.counts.overdue+p.counts.waits+p.counts.expiring))||0;
+  const need=(p.counts&&(p.counts.overdue+p.counts.decide+p.counts.inPerson+p.counts.unsorted))||0;
   sec.appendChild($('div',{class:'sec-hdr'},$('span',null,'Projects'),$('span',{class:'sec-count'},need?`${need} need you`:'nothing waiting')));
   if(p.available===false||!p.counts){sec.appendChild($('div',{class:'alert alert-warning'},'tracker hub unreachable'));return sec}
   const row=(text,url,meta)=>{const r=$('div',{class:'item'});r.appendChild($('a',{class:'item-title',href:url,target:'_blank'},text));if(meta)r.appendChild($('span',{class:'item-meta'},` ${meta}`));return r};
   (p.overdue||[]).slice(0,3).forEach(o=>sec.appendChild(row(o.title,o.url,`${o.days}d overdue`)));
-  (p.waits||[]).slice(0,4).forEach(w=>sec.appendChild(row(w.title,w.url,`${w.days}d: ${w.ask}`)));
-  (p.expiring||[]).slice(0,2).forEach(c=>sec.appendChild(row(`${c.title} · ${c.card}`,c.url,c.daysLeft<=0?'expires today':`expires in ${c.daysLeft}d`)));
+  // The hub's one ranked list, in its order: decide, then errands by place,
+  // then waits no agent has sorted, then what an agent owes.
+  const group=(label,items,meta,limit)=>{if(!items.length)return;sec.appendChild($('div',{class:'item-meta',style:'margin-top:6px'},label));
+    items.slice(0,limit).forEach(i=>sec.appendChild(row(i.card?`${i.title} · ${i.card}`:i.title,i.url,meta(i))));
+    if(items.length>limit)sec.appendChild($('div',{class:'item-meta'},`+${items.length-limit} more`))};
+  const left=i=>i.daysLeft==null?'':i.daysLeft<0?' · expired':i.daysLeft===0?' · expires today':` · ${i.daysLeft}d left`;
+  if(p.attention===false)sec.appendChild($('div',{class:'alert alert-warning'},'the list of what waits on you could not be read'));
+  group('Decide now',p.decide||[],i=>`${i.ask}${left(i)}`,5);
+  (p.inPerson||[]).forEach(place=>group(`In person: ${place.where}`,place.items,i=>`${i.ask}${left(i)}`,4));
+  group('Waiting on you, not sorted',p.unsorted||[],i=>`${i.days==null?'':i.days+'d: '}${i.ask}`,4);
+  group('An agent owes you',p.agent||[],i=>i.ask,3);
   const cap=p.cap||{};
   sec.appendChild($('div',{class:'item-meta',style:'margin-top:6px'},`${cap.products||0} of ${cap.limit||8} live products${cap.over?' — over the cap':''} · ${p.counts.parked||0} parked`));
   (p.groups||[]).forEach(g=>{

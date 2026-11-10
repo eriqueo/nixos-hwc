@@ -124,6 +124,8 @@ business/
 
 ## Changelog
 
+- 2026-11-09: The Projects section reads the tracker hub's one ranked list (`/api/attention`) and groups it: decide now, in person by place, waits no agent sorted, owed by an agent. The briefing's own wait and card-expiry derivation is deleted.
+
 - 2026-11-09: Preserve static briefing module requests beside the same-origin MCP endpoint.
 
 - 2026-11-09: Use real HTTP for briefing timeout regressions so the pinned Node 22 suite cannot exit with unresolved fake requests.
