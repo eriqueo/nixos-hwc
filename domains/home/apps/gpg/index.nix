@@ -58,6 +58,20 @@ in
     # (above) supplies the pinentry/unlock path.
     services.pass-secret-service.enable = cfg.secretService.enable;
 
+    # Start with the graphical session, not default.target. Under lingering,
+    # default.target starts the daemon before Hyprland imports WAYLAND_DISPLAY
+    # and DISPLAY into the user manager. The daemon then has no display, gpg
+    # cannot show the GNOME3 pinentry, every locked-key decrypt returns None,
+    # and Electron safeStorage reads fail (T3 Code opened empty after a reboot).
+    # graphical-session.target is reached only after that environment import.
+    systemd.user.services.pass-secret-service = lib.mkIf cfg.secretService.enable {
+      Unit = {
+        PartOf = lib.mkForce [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+      };
+      Install.WantedBy = lib.mkForce [ "graphical-session.target" ];
+    };
+
     #==========================================================================
     # VALIDATION
     #==========================================================================

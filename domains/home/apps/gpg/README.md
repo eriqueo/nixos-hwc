@@ -8,7 +8,8 @@ Configures GPG plus the user gpg-agent (SSH support, GNOME3 pinentry, 2h passphr
 - ❌ Does not create or populate the pass store or GPG keys; agenix system secrets are a separate mechanism (`domains/secrets/`).
 
 ## Structure
-- `index.nix` — options (`enable`, `secretService.enable`), gpg/gpg-agent config, pass env, zsh GPG_TTY, pass-secret-service toggle.
+- `index.nix` — options (`enable`, `secretService.enable`), gpg/gpg-agent config, pass env, zsh GPG_TTY, pass-secret-service toggle bound to `graphical-session.target`.
 
 ## Changelog
+- 2026-11-10: pass-secret-service now starts with `graphical-session.target` instead of `default.target`. Started early, it had no display, so pinentry could not prompt after a reboot and Electron safeStorage reads failed.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).
