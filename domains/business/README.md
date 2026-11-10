@@ -13,6 +13,7 @@ finance, business databases, website/CMS, and the daily morning briefing.
   server-only).
 
 ## Structure
+Catalog export verification runs from the complete committed source tree so both operator entry points retain their relative imports.
 
 Estimator pure calculator contracts live in `engine/calculator-contract.js`; browser transport stays in `api/crm.js`. Geometry has one implementation. Both manual catalog export entries delegate to the PostgreSQL exporter. `verification/` checks production engine outputs and captured export behavior. Superseded DataX market-research code and unused website/estimator bundles are removed; source owners, recovery data and the permanent website compatibility link remain.
 
@@ -125,6 +126,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-09: Preserve repository context when packaging the catalog-export regression check.
 
 - 2026-11-09: Finish source/output migrations; centralize estimator contracts, geometry and PostgreSQL export; replace copied test implementations with production regressions.
 - 2026-11-09: The briefing no longer posts a projects digest to Discord. The tracker hub keeps one standing message in `#projects` current from the same list, so the digest was a second copy.

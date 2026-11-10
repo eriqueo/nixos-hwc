@@ -6,7 +6,7 @@ catalog-export-contract = pkgs.runCommand "catalog-export-contract" {
   nativeBuildInputs = [ pkgs.python3 pkgs.bash ];
 } ''
   export PYTHONDONTWRITEBYTECODE=1
-  python3 ${(repoRoot + "/domains/business/verification/test_catalog_export.py")}
+  python3 ${repoRoot}/domains/business/verification/test_catalog_export.py
   touch "$out"
 '';
 
