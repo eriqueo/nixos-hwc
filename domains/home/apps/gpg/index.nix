@@ -30,8 +30,14 @@ in
     services.gpg-agent = {
       enable = true;
       enableSshSupport = true;
-      # Use GUI pinentry for systemd services (Bridge, etc.)
-      pinentry.package = pkgs.pinentry-gnome3;
+      # Use GUI pinentry for systemd services (Bridge, etc.).
+      # Hosts running the secret service use pinentry-qt: pinentry-gnome3
+      # needs GNOME's gcr system prompter on D-Bus, which Hyprland hosts do
+      # not run, so it fell back to curses and failed with no tty. Every
+      # pass-secret-service unlock after a reboot failed that way (measured
+      # 2026-11-10: "gnome3.isatty ... Inappropriate ioctl for device").
+      pinentry.package =
+        if cfg.secretService.enable then pkgs.pinentry-qt else pkgs.pinentry-gnome3;
       # Cache passphrase for 2 hours to reduce prompts
       defaultCacheTtl = 7200;
       maxCacheTtl = 7200;
