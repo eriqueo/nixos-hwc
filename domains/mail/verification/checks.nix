@@ -882,6 +882,52 @@ mail-health-lanes = pkgs.runCommand "mail-health-lanes" {} ''
   touch "$out"
 '';
 
+# check_gpg delegates the stale-lock decision to hwc-gpg-stale-lock and only
+# reports. Runs the generated function against a real keyboxd: its live lock
+# must survive, an old dead-PID lock must be removed (remediate) or reported.
+mail-health-gpg-lock = pkgs.runCommand "mail-health-gpg-lock" {
+  nativeBuildInputs = [ pkgs.gnupg pkgs.python3 pkgs.coreutils ];
+} ''
+  set -euo pipefail
+  export HOME="$TMPDIR"
+  python3 - ${mailHome.home.file.".local/bin/mail-health-check".source} > check_gpg.sh <<'PY'
+  import re, sys
+  text = open(sys.argv[1]).read()
+  body = re.search(r'(?ms)^(check_gpg\(\) \{\n.*?^\}\n)', text)
+  assert body, "check_gpg not found in the generated script"
+  assert "hwc-gpg-stale-lock" in body.group(1), "check_gpg must call hwc-gpg-stale-lock"
+  assert "kill -0" not in body.group(1), "check_gpg must not keep its own lock test"
+  print(body.group(1))
+  PY
+  run() {   # run <AUTO_REMEDIATE>
+    AUTO_REMEDIATE="$1" bash -c '
+      set -euo pipefail
+      remed() { echo "REMED:$1"; }
+      infra() { echo "INFRA:$1:$2"; }
+      GNUPG_DIR="$GNUPGHOME"
+      source ./check_gpg.sh
+      check_gpg'
+  }
+  GNUPGHOME=$(mktemp -d "$TMPDIR/g.XXXX"); export GNUPGHOME; chmod 700 "$GNUPGHOME"
+  echo use-keyboxd > "$GNUPGHOME/common.conf"
+  gpg --batch --list-keys >/dev/null 2>&1 || true
+  test -f "$GNUPGHOME/public-keys.d/pubring.db.lock"
+  oldLock() { printf '%10d\nfixture-host\n' 999999 > "$GNUPGHOME/old.kbx.lock"
+              touch -d "@$(( $(date +%s) - 1000 ))" "$GNUPGHOME/old.kbx.lock"; }
+
+  oldLock; run false > report.out; cat report.out
+  grep -qx 'INFRA:gpg-stale-lock:Stale GPG lock: old.kbx.lock (dead-pid, PID: 999999)' report.out
+  test -f "$GNUPGHOME/old.kbx.lock"
+
+  run true > remed.out; cat remed.out
+  grep -qx 'REMED:Removed stale GPG lock: old.kbx.lock (dead-pid, PID: 999999)' remed.out
+  test ! -e "$GNUPGHOME/old.kbx.lock"
+  if grep -q pubring.db.lock report.out remed.out; then exit 1; fi
+  test -f "$GNUPGHOME/public-keys.d/pubring.db.lock"
+  gpgconf --kill all
+  touch "$out"
+'';
+
 mail-residency-shadow = let
   home = mailHome;
   standalone = self.homeConfigurations."eric@${mailHost}".config;

@@ -26,8 +26,11 @@ alerts and the tracker card.
 | freshness | this script: newest inbox file age | everything looks fine but nothing arrives |
 | availability, commands, labels, residency | System One from `mail-sync/status.json` | stale fetch/index, pending commands, label conflicts |
 
-Auto-remediation (default on) removes dead GPG locks, restarts gpg-agent and
+Auto-remediation (default on) removes stale GPG locks, restarts gpg-agent and
 restarts a stopped Bridge. Remediations are events, reported once to Slack, not cases.
+Which GPG locks are stale is decided by `hwc-gpg-stale-lock` from the gpg app
+(`domains/home/apps/gpg`); this script calls `--apply` (or `--check` with
+remediation off) and reports its lines. Checked by `mail-health-gpg-lock`.
 
 ## Where it goes
 
@@ -65,5 +68,6 @@ mail-classifier withdraw-transport --command-id X  # drop a stale command
 
 ## Changelog
 
+- 2026-11-10: `check_gpg` uses the shared `hwc-gpg-stale-lock` helper instead of its own test. The old test read the PID with `^\d+`, but GnuPG writes it right-aligned, so it saw every lock (live ones too) as stale and removed it. Requires `hwc.home.apps.gpg.enable`.
 - 2026-10-12: One case store with System One (`--extra-issues`); severity by consequence; MH-* tracker cards for stale cases; exit code means the checker ran; `summary.json` for the MCP tool. Cooldown and first-failure files retired.
 - 2026-03-26: Initial implementation

@@ -152,7 +152,7 @@ in
     '';
 
     # Ensure pass + gnupg tools exist
-    home.packages = [ pkgs.pass pkgs.gnupg ];
+    home.packages = [ pkgs.pass pkgs.gnupg staleLockHelper ];
 
     # Optional: bridge the pass store to the SecretService D-Bus API. When on,
     # apps that use libsecret/Electron safeStorage store their secrets in pass

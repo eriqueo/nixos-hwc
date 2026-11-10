@@ -34,6 +34,7 @@ let
     in if nmRoot != "" then nmRoot else fallback;
 
   stateDir = "\${XDG_STATE_HOME:-$HOME/.local/state}/mail-health";
+  staleLock = lib.getExe config.hwc.home.apps.gpg.staleLock.package;
   trackerRoot = lib.attrByPath [ "hwc" "home" "apps" "agent-harness" "tracker" "root" ] null config;
   trackerFile = if cfg.tracker.project != null && trackerRoot != null
                 then "${trackerRoot}/${cfg.tracker.project}/tracker.json" else "";
@@ -104,23 +105,20 @@ let
 
     # ─── Check 1: GPG keyboxd / agent ───────────────────────────
     check_gpg() {
-      # Stale lock files — THE root cause of the Mar 25 incident.
-      local -a lockfiles=()
-      while IFS= read -r -d "" f; do lockfiles+=("$f"); done \
-        < <(${pkgs.findutils}/bin/find "$GNUPG_DIR" -maxdepth 2 -name '*.lock' -print0 2>/dev/null)
-      for lockfile in "''${lockfiles[@]}"; do
-        [[ -f "$lockfile" ]] || continue
-        local lock_pid=""
-        lock_pid=$(${pkgs.gnugrep}/bin/grep -oP '^\d+' "$lockfile" 2>/dev/null || true)
-        if [[ -z "$lock_pid" ]] || ! kill -0 "$lock_pid" 2>/dev/null; then
-          if [[ "$AUTO_REMEDIATE" == "true" ]]; then
-            rm -f "$lockfile"
-            remed "Removed stale GPG lock: $(basename "$lockfile") (dead PID: ''${lock_pid:-unknown})"
-          else
-            infra gpg-stale-lock "Stale GPG lock: $(basename "$lockfile") (dead PID: ''${lock_pid:-unknown})"
-          fi
-        fi
-      done
+      # Stale lock files — THE root cause of the Mar 25 incident. The decision
+      # belongs to hwc-gpg-stale-lock (domains/home/apps/gpg); this only reports.
+      # The old inline test read the PID with `^\d+`, but dotlock writes it
+      # right-aligned, so every lock (live ones too) looked stale and was removed.
+      local mode=--check verb path reason pid
+      [[ "$AUTO_REMEDIATE" == "true" ]] && mode=--apply
+      while read -r verb path reason pid; do
+        reason="''${reason#reason=}"; pid="''${pid#pid=}"
+        case "$verb" in
+          removed) remed "Removed stale GPG lock: $(basename "$path") ($reason, PID: $pid)" ;;
+          stale)   infra gpg-stale-lock "Stale GPG lock: $(basename "$path") ($reason, PID: $pid)" ;;
+          failed)  infra gpg-stale-lock "Could not remove stale GPG lock: $(basename "$path") ($reason, PID: $pid)" ;;
+        esac
+      done < <(GNUPGHOME="$GNUPG_DIR" ${staleLock} "$mode" 2>&1 || true)
       if ! timeout 5 ${pkgs.gnupg}/bin/gpg-connect-agent /bye >/dev/null 2>&1; then
         if [[ "$AUTO_REMEDIATE" == "true" ]]; then
           ${pkgs.gnupg}/bin/gpgconf --kill gpg-agent 2>/dev/null || true
@@ -378,6 +376,10 @@ in
     assertions = [{
       assertion = cfg.tracker.project == null || trackerRoot != null;
       message = "hwc.mail.health.tracker.project needs hwc.home.apps.agent-harness.tracker.root on this host";
+    } {
+      # check_gpg calls hwc-gpg-stale-lock, which the gpg app owns.
+      assertion = config.hwc.home.apps.gpg.enable;
+      message = "hwc.mail.health needs hwc.home.apps.gpg.enable (stale-lock helper)";
     }];
 
     # CLI access for manual runs
