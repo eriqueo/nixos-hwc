@@ -1,13 +1,14 @@
 # System Core
 
 ## Purpose
-Foundational system configuration: identity, filesystem structure, boot, and cross-cutting defaults.
+Core packages, login, boot, resource limits and shared system defaults.
 
 ## Boundaries
-- Manages: User identity (PUID/PGID), tmpfiles structure, thermal management, boot config
+- Manages: package bundles, login selection, boot defaults and resource limits
 - Does NOT manage: Networking → `networking/`, user accounts → `users/`
 
 ## Structure
+The path contract comes from `domains/paths/paths.nix`; the abandoned local `.bak` copy is removed.
 `packages.nix` supplies system tools; Claude CLI installation belongs to the Home Manager app rather than the server package bundle.
 The journal ceiling is declared through the available channel option without changing its value.
 `index.nix` selects the channel's6.18 stable kernel. The fleet security check
@@ -28,6 +29,7 @@ core/
 ```
 
 ## Changelog
+- 2026-11-09: Remove the abandoned path declaration backup; retain the imported path owner.
 - 2026-11-04: Consolidate Claude installation in its app module; keep native laptop updates and Nix-managed CLI availability on other hosts.
 - 2026-11-02: Retire the kernel source override and emSign blacklist now that both channels provide fixed kernels and Mozilla trust bundles; keep minimum-version regression guards.
 - 2026-11-02: Select the declared journald API while preserving the1G default and per-host overrides.

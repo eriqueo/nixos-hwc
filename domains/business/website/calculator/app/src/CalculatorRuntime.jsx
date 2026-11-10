@@ -13,7 +13,7 @@ import { useState, useEffect, useRef } from "react";
 import { T, fonts } from "./theme";
 import { buildSteps, makeCalculator, makeHelpers } from "./calcData";
 import CalculatorLayout from "./CalculatorLayout";
-import { CALCULATOR_INPUT_VERSION } from '../../../../estimator/src/api/crm.js';
+import { CALCULATOR_INPUT_VERSION } from '../../../../estimator/src/engine/calculator-contract.js';
 
 // ─── Shared styles ─────────────────────────────────────────────────────────
 const inputStyle = {

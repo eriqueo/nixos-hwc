@@ -2,7 +2,7 @@
 # Deep Nord — expanded tokens for apps & adapters (Charter v6)
 
 { osConfig ? {} }:
-{
+(import ./common.nix) // rec {
   name = "deep-nord";
 
   # --- Background Hierarchy (4 shades for rich UI depth) ---
@@ -12,9 +12,9 @@
   bg3      = "434c5e";  # Highest: active elements, buttons, borders
 
   # Legacy aliases (keep for compatibility during transition)
-  bg       = "2e3440";  # → bg1
-  bgAlt    = "3b4252";  # → bg2
-  bgDark   = "0B1115";  # → bg0
+  bg       = bg1;  # → bg1
+  bgAlt    = bg2;  # → bg2
+  bgDark   = bg0;  # → bg0
   surface0 = "2f3541";  # intermediate shade
   surface1 = "343b49";  # intermediate shade
   surface2 = "394152";  # intermediate shade
@@ -26,9 +26,9 @@
   fg3      = "4C566A";  # Muted: disabled, comments, dividers
 
   # Legacy aliases
-  fg       = "ECEFF4";  # → fg0
+  fg       = fg0;  # → fg0
   fgDim    = "d8dee9";  # → fg2
-  muted    = "4C566A";  # → fg3
+  muted    = fg3;  # → fg3
 
   # --- Primary Accents (main interaction colors) ---
   accent     = "88c0d0"; # Cyan: primary accent (tabs, modes, links)
@@ -50,21 +50,21 @@
   info          = "81A1C1"; # Blue: info/help
 
   # Legacy aliases
-  good  = "A3BE8C";  # → success
-  warn  = "EBCB8B";  # → warning
-  crit  = "BF616A";  # → error
+  good  = success;  # → success
+  warn  = warning;  # → warning
+  crit  = error;  # → error
 
   # --- UI Element Colors (specific roles) ---
   # Selection & Marking
   selection   = "88c0d0"; # Primary selection color
   selectionFg = "2e3440"; # Text on selection
-  selectionBg = "88c0d0"; # Selection background
+  selectionBg = selection; # Selection background
   marked      = "B48EAD"; # Marked items (violet)
   markedAlt   = "5e81ac"; # Alt marked color
 
   # Interactive Elements
   cursorColor = "88c0d0"; # Text cursor
-  caret       = "88c0d0"; # Caret/insertion point
+  caret       = cursorColor; # Caret/insertion point
   link        = "81a1c1"; # Hyperlinks
   linkHover   = "5e81ac"; # Hovered links
 
@@ -106,12 +106,7 @@
   };
 
   # --- Hyprland helpers (pre-alpha hex chunks when you need rgba) ---
-  alpha = {
-    opaque = "ff";
-    strong = "cc";
-    soft   = "aa";
-    faint  = "66";
-  };
+
 
   # For convenience with Hyprland’s "rgba(RRGGBBAA)" border strings.
   hypr = {
@@ -132,19 +127,5 @@
 
   # --- Pointer theme config (palette-driven)
   # GTK/Qt use XCursor; Hyprland uses Hyprcursor. Keep them in sync here.
-  cursor = {
-    size = 24;
 
-    # GTK/Qt side (XCursor)
-    xcursor = {
-      name    = "Nordzy-cursors";
-      package = "nordzy-cursor-theme";  # pkgs.<this>
-    };
-
-    # Hyprland side (Hyprcursor)
-    hyprcursor = {
-      name         = "Nordzy-hyprcursors";
-      # The Hyprland-session adapter will link this into ~/.local/share/icons
-    };
-  };
 }

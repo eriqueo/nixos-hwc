@@ -66,6 +66,19 @@ in
   # IMPLEMENTATION & VALIDATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
+    hwc.networking.gluetun.portForwardingClients.slskd = {
+      unit = "podman-slskd.service";
+      sync = ''
+        echo "Regenerating slskd config for port $FORWARDED_PORT and restarting slskd"
+        systemctl restart slskd-config-generator.service
+        systemctl restart podman-slskd.service
+      '';
+      check = ''
+        ${pkgs.gnugrep}/bin/grep -q "listen_port: $PORT" /etc/slskd/slskd.yml 2>/dev/null
+      '';
+      failureReason = "slskd listen_port does not match forwarded port";
+    };
+
     assertions = helpers.mkVpnAssertions {
       name = "slskd";
       networkMode = cfg.network.mode;

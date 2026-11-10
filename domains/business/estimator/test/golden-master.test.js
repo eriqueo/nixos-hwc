@@ -6,9 +6,6 @@
  * in src/data/templates.json and diffs the output against the golden
  * snapshots in test/golden/<template>.json.
  *
- * Unlike test_comparison.mjs (which reimplements the engine inline and always
- * exits 0 on engine drift), this runner exits NON-ZERO on any diff. It is the
- * gate for every estimator refactor step.
  *
  * Usage:
  *   node test/golden-master.test.js            # verify against snapshots
@@ -36,8 +33,8 @@ const templates = JSON.parse(readFileSync(join(root, 'src/data/templates.json'),
 
 const UPDATE = process.argv.includes('--update');
 const PERTURB = process.argv.includes('--perturb');
+const NONFINITE = process.argv.includes('--nonfinite');
 
-// Numeric rounding tolerance (matches test_comparison.mjs item tolerance).
 const TOL = 0.01;
 
 // Fields compared per line item. _usedDefault/_catalogId/_ruleId are
@@ -84,15 +81,17 @@ function diffSnapshots(golden, actual) {
     const a = actual.items[i];
     for (const f of ITEM_FIELDS) {
       const gv = g[f], av = a[f];
-      if (typeof gv === 'number' && typeof av === 'number') {
-        if (Math.abs(gv - av) > TOL) diffs.push(`[${i}] ${g.name} .${f}: golden=${gv} actual=${av}`);
+      if (typeof gv === 'number' || typeof av === 'number') {
+        if (!Number.isFinite(gv) || !Number.isFinite(av) || Math.abs(gv - av) > TOL)
+          diffs.push(`[${i}] ${g.name} .${f}: golden=${gv} actual=${av}`);
       } else if (gv !== av) {
         diffs.push(`[${i}] ${g.name} .${f}: golden=${JSON.stringify(gv)} actual=${JSON.stringify(av)}`);
       }
     }
   }
   for (const f of ['items', 'laborHrs', 'cost', 'price']) {
-    if (Math.abs(golden.totals[f] - actual.totals[f]) > TOL) {
+    if (!Number.isFinite(golden.totals[f]) || !Number.isFinite(actual.totals[f])
+        || Math.abs(golden.totals[f] - actual.totals[f]) > TOL) {
       diffs.push(`totals.${f}: golden=${golden.totals[f]} actual=${actual.totals[f]}`);
     }
   }
@@ -135,6 +134,10 @@ for (const tmpl of templates) {
     // Self-test: nudge one number in-memory; the oracle MUST catch it.
     actual.items[0].qty += 1;
     actual.totals.price += 99.99;
+  }
+  if (NONFINITE && tmpl === templates[0]) {
+    actual.items[0].qty = NaN;
+    actual.totals.price = NaN;
   }
 
   const diffs = diffSnapshots(golden, actual);

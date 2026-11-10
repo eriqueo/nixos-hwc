@@ -12,6 +12,8 @@ Seerr (formerly Jellyseerr) is a request management and media discovery tool for
 
 ## Structure
 
+The host listener default comes from networking/ports.nix and its port option controls both the published binding and route. Container-internal ports and the qualified image remain unchanged.
+
 ```
 jellyseerr/
 ├── index.nix       # Options, security hunks, signed inputs and frozen dependency image builder
@@ -93,6 +95,8 @@ Seerr depends on:
 - `/opt/apps/jellyseerr/config:/app/config` - Configuration and database
 
 ## Changelog
+
+- 2026-11-09: Share the configured host listener with routing; retain the pinned runtime and settings contracts.
 
 - 2026-11-04: Add a frozen same-schema dependency and Next 15 client rebuild.
   Keep compiled server, migrations and native ABI; disable install scripts and

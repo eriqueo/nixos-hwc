@@ -11,6 +11,8 @@ Central path definitions providing machine-aware filesystem abstraction. Enables
 
 ## Structure
 
+Laptop media and photo defaults derive from one media root. Brain server path descriptions refer to its Git clone.
+
 Session exports use `HWC_USER_HOME` for the primary HWC identity. They do not
 override `HOME`: PAM/systemd supply each login/service account's actual home.
 
@@ -72,6 +74,8 @@ in {
 4. Allow per-machine overrides
 
 ## Changelog
+
+- 2026-11-09: Reuse the laptop media root and correct the brain replica description.
 - 2026-10-25: Remove the global HOME override after actual Dad HM/Plasma startup
   attempted Eric's private directory; retain the explicit HWC_USER_HOME export.
 - 2026-10-01: `user.inbox` is available on every host. Laptop capture and the inbox owner derive their screenshot directory from this shared root.

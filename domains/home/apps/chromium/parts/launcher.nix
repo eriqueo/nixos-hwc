@@ -1,6 +1,7 @@
 { lib, pkgs, ... }:
 
 let
+  hmLib = import ../../../../lib/hm.nix { inherit lib; };
   # Flags shared by both GPU paths. --enable-features is intentionally
   # NOT here — Chromium misbehaves when it's passed twice, so we compose
   # one final --enable-features arg below.
@@ -70,18 +71,7 @@ let
     # renders on the Intel render node — causing CPU-bound fallback decode.
     # This block is a NO-OP on machines without an Intel iGPU or without the
     # iHD driver installed, so the same wrapper is safe on other hosts.
-    intel_present=0
-    for n in /dev/dri/renderD*; do
-      v=$(cat "/sys/class/drm/$(basename "$n")/device/vendor" 2>/dev/null || true)
-      if [ "$v" = "0x8086" ]; then
-        intel_present=1
-        break
-      fi
-    done
-    if [ "$intel_present" = "1" ] && \
-       [ -r /run/opengl-driver/lib/dri/iHD_drv_video.so ]; then
-      export LIBVA_DRIVER_NAME=iHD
-    fi
+    ${hmLib.intelVaapiEnvironment}
 
     if command -v gpu-integrated >/dev/null 2>&1; then
       exec gpu-integrated chromium ${lib.escapeShellArgs baseFlags} ${profileArg} "$@"

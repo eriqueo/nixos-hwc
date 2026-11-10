@@ -1,37 +1,19 @@
-# Waybar Part: Packages (Expanded)
-# Defines all package dependencies for Waybar, its modules, and all helper scripts.
-{ lib, pkgs, osConfig ? {}, ... }:
+{ lib, pkgs, ... }:
+{
+  runtime = with pkgs; [
+    coreutils gnugrep gawk gnused procps util-linux
+    kitty wofi jq curl
+    networkmanager iw ethtool
+    libnotify mesa-demos nvtopPackages.full lm_sensors acpi powertop
+    speedtest-cli hyprland
+    baobab btop brightnessctl
+    power-profiles-daemon
+  ];
 
-with pkgs; [
-  # Waybar itself comes from programs.waybar.package (patched) in index.nix.
-
-  # Dependencies for built-in modules
-  pavucontrol
-  swaynotificationcenter
-  wlogout
-  blueman
-  networkmanagerapplet
-  lm_sensors
-
-  # Dependencies for custom script modules
-  jq
-  procps
-  coreutils
-  gawk
-  ethtool
-  iw
-  mesa-demos
-  acpi
-  powertop
-  speedtest-cli
-  curl
-
-  # GUI apps launched by scripts
-  baobab
-  kitty
-  btop
-  mission-center
-  nvtopPackages.full
-] ++ lib.optionals (pkgs.stdenv.hostPlatform.system == "x86_64-linux") [
-  linuxPackages.nvidia_x11.settings
-]
+  interactive = with pkgs; [
+    pavucontrol swaynotificationcenter wlogout blueman
+    networkmanagerapplet mission-center
+  ] ++ lib.optionals pkgs.stdenv.hostPlatform.isx86_64 [
+    pkgs.linuxPackages.nvidia_x11.settings
+  ];
+}

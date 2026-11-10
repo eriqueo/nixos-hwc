@@ -6,6 +6,10 @@
 
 ---
 
+## Structure
+
+index.nix registers the slskd forwarded-port sync/probe commands. sys.nix owns the container and tunnel binding. parts/config.nix reads the selected instance's forwardedPortFile and is the only slskd.yml writer. Gluetun publishes the port before invoking the client-owned generator/restart sequence.
+
 ## Overview
 
 slskd is a modern, web-based Soulseek client for peer-to-peer music sharing. This implementation uses containerized deployment with agenix-managed secrets for credential security.
@@ -426,3 +430,7 @@ shares.directories = [
 **Last Updated**: 2025-11-06
 **Architecture Version**: HWC 6.0
 **Module Version**: Container with runtime secret injection
+
+## Changelog
+
+- 2026-11-09: Move the client followup and consistency probe to slskd; consume the instance-owned port path without changing tunnel or container identity.

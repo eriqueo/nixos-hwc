@@ -43,7 +43,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 # ACTIVE PATHS — self-derived 2026-06-24 from nixos-hwc modules:
 #   domains/paths/paths.nix              (hot.root, hot.downloads, hot.surveillance, hot.receipts)
 #   domains/data/storage/index.nix       (processing/{sonarr,radarr,lidarr}-temp, downloads/incomplete)
-#   domains/data/backup/parts/server-backup-scripts.nix (backups/{containers,databases,system})
+#   historical backup exports: backups/{containers,databases,system} remain protected
 #   domains/business/paperless/index.nix (documents/{consume,export,staging})
 #   domains/media/tdarr/parts/config.nix (processing/{tdarr-temp,tdarr-backups})
 #   domains/media/{qbittorrent,sabnzbd}  (events, downloads)

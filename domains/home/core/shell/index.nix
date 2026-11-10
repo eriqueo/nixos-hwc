@@ -17,9 +17,8 @@ let
   fleet = hmLib.fleet osConfig;
   # Law 3 + Law 1: derive from system paths when hosted on NixOS, with a
   # home-derived fallback so the module evaluates with osConfig = {}.
-  nixosPath =
-    let p = lib.attrByPath [ "hwc" "paths" "nixos" ] null osConfig;
-    in if p != null then p else "${config.home.homeDirectory}/.nixos";
+  repoPaths = hmLib.nixosPaths { inherit osConfig; home = config.home.homeDirectory; };
+  nixosPath = repoPaths.nixos;
 
   # Theme tokens (guarded read — Law 1). Fallbacks are the palette's own
   # values so the module renders identically without the theme module.
@@ -245,8 +244,8 @@ in
     # Environment variables
     home.sessionVariables = cfg.sessionVariables // {
       COLORTERM = "truecolor";
-      HWC_NIXOS_DIR = "${config.home.homeDirectory}/.nixos";
-      HWC_WORKSPACE_ROOT = "${config.home.homeDirectory}/.nixos/workspace";
+      HWC_NIXOS_DIR = nixosPath;
+      HWC_WORKSPACE_ROOT = repoPaths.workspace;
     };
 
     # Modern Unix replacements configuration

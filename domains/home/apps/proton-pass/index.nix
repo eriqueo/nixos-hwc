@@ -3,7 +3,20 @@
 let
   cfg = config.hwc.home.apps.proton-pass;
 
-  session    = import ./parts/session.nix    { inherit lib pkgs config; };
+  # Remove when the packaged bundle registers a Linux tray click handler itself.
+  # The exact match makes upstream changes fail the build instead of silently drifting.
+  protonPassWithLinuxTrayClick = pkgs.proton-pass.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      asar extract "$out/share/proton-pass/app.asar" pass-tray
+      substituteInPlace pass-tray/.webpack/main/index.js \
+        --replace-fail "tray.on('double-click', onOpenPassHandler);" \
+                       "tray.on('double-click', onOpenPassHandler);
+    if (process.platform === 'linux')
+        tray.on('click', onOpenPassHandler);"
+      asar pack pass-tray "$out/share/proton-pass/app.asar"
+      rm -r pass-tray
+    '';
+  });
 in
 {
   #==========================================================================
@@ -17,6 +30,6 @@ in
   # IMPLEMENTATION
   #==========================================================================
   config = lib.mkIf cfg.enable {
-    home.packages = (session.packages or []);
+    home.packages = [ protonPassWithLinuxTrayClick ];
   };
 }

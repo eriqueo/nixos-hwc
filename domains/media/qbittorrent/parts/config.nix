@@ -95,6 +95,20 @@ PY
 in
 {
   config = lib.mkIf cfg.enable (lib.mkMerge [
+    {
+      hwc.networking.gluetun.portForwardingClients.qbittorrent = {
+        unit = "podman-qbittorrent.service";
+        sync = ''
+          QBT_API="http://127.0.0.1:${toString cfg.webPort}"
+          SID=$(curl -sf --max-time 10 -c - "$QBT_API/api/v2/auth/login" \
+            --data "username=admin&password=il0wwlm?" | awk '/SID/ {print $NF}')
+          [ -n "$SID" ] || { echo "Could not authenticate with qBittorrent" >&2; exit 1; }
+          curl -sf --max-time 10 -b "SID=$SID" "$QBT_API/api/v2/app/setPreferences" \
+            --data "json={\"listen_port\":$FORWARDED_PORT}"
+          echo "Updated qBittorrent listening port to $FORWARDED_PORT"
+        '';
+      };
+    }
     #=========================================================================
     # ASSERTIONS AND VALIDATION
     #=========================================================================

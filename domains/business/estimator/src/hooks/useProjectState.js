@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import preparedDraft from '../data/preparedDraft.json';
-import { parseCalculatorIntake } from '../api/crm.js';
+import { parseCalculatorIntake } from '../engine/calculator-contract.js';
 
 import { parseFlooring, createFlooring } from '../engine/flooring.js';
 import { calculatorPatch, applyCalculatorIntake, DEFAULT_STATE, PROJECT_TYPES } from '../engine/intake.js';

@@ -11,10 +11,14 @@ any domain (media, networking, data, etc.) can use them without depending on the
 ## Boundaries
 
 - **Pure functions only**: No `config` access, no NixOS module boilerplate
-- **Caller-owned services**: Native readiness and launcher helpers return commands. No systemd services in mkContainer (mkInfraContainer includes its infrastructure container wiring).
+- **Caller-owned services**: Native readiness and launcher helpers return commands. No systemd services in mkContainer (mkInfraContainers includes its infrastructure container wiring).
 - **Domain-independent**: No assumptions about which domain imports these
 
 ## Structure
+
+mkInfraContainer.nix exports one config-derived-set assembler, mkInfraContainers. Media owns its arr configuration helper at domains/media/arr-config.nix.
+
+`hm.nix` supplies resolved NixOS checkout/workspace paths and shared Intel VAAPI shell setup. Browser launchers retain their own flags and EGL policy.
 
 The frozen loader selects one exact table for HTTP and the four qualified library sources. It validates source hashes before original site startup and rejects early imports. The installer checks complete original frozen code parity before publishing files.
 
@@ -38,7 +42,7 @@ Inherited distribution patches use the same transformer and source checks.
 
 `mkContainer` also accepts `{ kind = "named"; names = [ ... ]; }` for explicit bridge membership. Legacy media/host/VPN callers retain their network arguments.
 
-Standalone HM fleet fallback covers hwc-home, hwc-work and hwc-xps; dependency-update commands use hwc-home.
+Standalone HM fleet fallback covers hwc-home, hwc-work and hwc-xps; dependency-update commands direct the operator through the local release lane.
 
 ```
 lib/
@@ -49,8 +53,7 @@ lib/
 ├── mkTsNode.nix           # Direct-node tsx loader launcher for Scout native units
 ├── mkHttpReady.nix        # Bounded read-only native HTTP readiness command
 ├── mkSimpleApp.nix        # Home Manager one-package module factory
-├── deps-update.nix        # Shared buildNpmPackage dependency update command
-└── arr-config.nix         # *arr-specific config.xml enforcement
+└── deps-update.nix        # Shared buildNpmPackage dependency update command
 ```
 
 ## Usage
@@ -76,6 +79,10 @@ During migration, `domains/server/containers/_shared/{pure,infra,arr-config}.nix
 re-export from these canonical files. Existing imports continue to work.
 
 ## Changelog
+
+- 2026-11-09: Remove the unused singular infrastructure assembler and move arr policy to media; retain plural assembly and qualified runtime recipes.
+
+- 2026-11-09: Share resolved Home Manager checkout paths and Intel VAAPI setup across existing consumers.
 
 - 2026-11-05: Resolve each original module’s own frozen loader before comparing its source code.
 

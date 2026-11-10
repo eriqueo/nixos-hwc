@@ -2,14 +2,17 @@
 #
 # Builds the `dt` CLI from the vendored TypeScript source. esbuild bundles
 # src/cli/index.ts into a single ESM file with native deps externalized; the
-# wrapper invokes Node directly with `node $out/lib/dt/dist/dt.mjs` — this
+# wrapper invokes Node directly with the package manifest entry — this
 # avoids the double-shebang trap (the source keeps its own shebang for dev,
 # and `node` cleanly ignores a line-1 shebang).
-{ lib, buildNpmPackage, nodejs, python3, pkg-config, sqlite, makeWrapper }:
+{ lib, buildNpmPackage, nodejs, python3, pkg-config, sqlite, makeWrapper, poppler-utils }:
 
-buildNpmPackage rec {
-  pname = "dt";
-  version = "1.0.0";
+let
+  manifest = builtins.fromJSON (builtins.readFile ../source/package.json);
+in
+buildNpmPackage {
+  pname = manifest.name;
+  version = manifest.version;
 
   src = ../source;
 
@@ -19,7 +22,7 @@ buildNpmPackage rec {
   nativeBuildInputs = [ python3 pkg-config makeWrapper ];
   buildInputs = [ sqlite ];
 
-  # Skip the package.json "build" script — we run our own esbuild pipeline.
+  # The explicit buildPhase runs the same build.mjs entry as npm run build.
   dontNpmBuild = true;
 
   buildPhase = ''
@@ -29,9 +32,10 @@ buildNpmPackage rec {
   '';
 
   doCheck = true;
+  nativeCheckInputs = [ poppler-utils ];
   checkPhase = ''
     runHook preCheck
-    node --import tsx --test src/__tests__/*.test.ts
+    node --import tsx --test --test-concurrency=2 src/__tests__/*.test.ts
     runHook postCheck
   '';
 
@@ -42,7 +46,7 @@ buildNpmPackage rec {
     cp -r dist node_modules package.json $out/lib/dt/
 
     makeWrapper ${nodejs}/bin/node $out/bin/dt \
-      --add-flags "$out/lib/dt/dist/dt.mjs"
+      --add-flags "$out/lib/dt/${manifest.bin.dt}"
 
     runHook postInstall
   '';

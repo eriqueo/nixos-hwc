@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { C, mono } from '../styles/theme.js';
 import { Box, Label } from './Section.jsx';
-import { deriveGeometry } from '../engine/assembler.js';
+import { deriveGeometry } from '../engine/geometry.js';
 import tradeRates from '../data/tradeRates.json';
 import { tradeRate } from '../engine/pricing.js';
 import { NumInput } from './NumInput.jsx';
@@ -125,8 +125,8 @@ export function DetailsTab({ s, set, isMobile = false }) {
         <div style={{ marginTop: 8, padding: 8, backgroundColor: C.card2, borderRadius: 4 }}>
           <span style={{ color: C.txD, fontSize: 10 }}>
             Tile allowances auto-calculated from sqft.
-            Floor: ${Math.max(400, Math.round(fl * 10)).toLocaleString()} ·
-            Shower: ${Math.max(800, Math.round(wallTile * 12)).toLocaleString()}
+            Floor: {Number.isFinite(fl) ? '$' + Math.max(400, Math.round(fl * 10)).toLocaleString() : 'needs room measurements'} ·
+            Shower: {Number.isFinite(wallTile) ? '$' + Math.max(800, Math.round(wallTile * 12)).toLocaleString() : 'needs shower measurements'}
           </span>
         </div>
         </>}

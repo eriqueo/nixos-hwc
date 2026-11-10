@@ -53,7 +53,6 @@ __pycache__/
 # n8n workflows - exported/generated files
 domains/server/n8n/parts/workflows/*.json
 n8n-simple.json
-domains/business/datax/dashboard/dashboard.json
 
 # morning-briefing - generated runtime artifacts
 domains/business/morning-briefing/logs/*.log
@@ -65,3 +64,8 @@ domains/business/morning-briefing/output/*
 domains/business/morning-briefing/dashboard/briefing.json
 .backups/
 .wrangler/
+
+# Generated output belongs to app builds, not the configuration source.
+/domains/business/estimator/dist/
+/domains/business/website/calculator/app/dist/
+/domains/business/website/site_files.pre-eviction-leftovers/

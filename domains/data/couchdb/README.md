@@ -11,6 +11,8 @@ CouchDB database server for Obsidian LiveSync. Runs as a native NixOS service (n
 
 ## Structure
 
+The service renders its runtime INI from config-generator.nix; credentials remain runtime shell values, with one template for static settings.
+
 ```
 domains/data/couchdb/
 ├── index.nix              # Options, service config, health monitor, validation
@@ -72,5 +74,7 @@ hwc.data.couchdb = {
 - `couchdb-health-monitor.service` — health check for LiveSync (manual trigger)
 
 ## Changelog
+
+- 2026-11-09: Use the existing pure INI template for actual runtime configuration; preserve emitted default bytes.
 
 - 2026-03-25: Created README per Law 12

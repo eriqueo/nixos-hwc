@@ -15,19 +15,8 @@ let
   immichModelCache = "${immichRoot}/model-cache";
   immichRedis = "${immichRoot}/redis";
 
-  # Auto-detect CPU cores from /proc/cpuinfo or use configured value
-  detectedCpuCores = let
-    cpuinfoPath = /proc/cpuinfo;
-    cpuinfoContent = builtins.readFile cpuinfoPath;
-    processorLines = lib.filter (line: lib.hasPrefix "processor" line) (lib.splitString "\n" cpuinfoContent);
-  in builtins.length processorLines;
-
-  cpuCores =
-    if cfg.machineLearning.cpuCores != null
-    then cfg.machineLearning.cpuCores
-    else if builtins.pathExists /proc/cpuinfo
-    then detectedCpuCores
-    else 4; # Safe fallback
+  # Target policy is explicit; evaluating on another machine must not tune it.
+  cpuCores = if cfg.machineLearning.cpuCores != null then cfg.machineLearning.cpuCores else 4;
 
   # ML threading configuration (auto-computed if not explicitly set)
   mlInterOpThreads =

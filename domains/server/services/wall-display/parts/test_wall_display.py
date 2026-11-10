@@ -15,7 +15,7 @@ import unittest
 from unittest.mock import patch
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
-from http.server import ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 fixture = tempfile.TemporaryDirectory()
 root = Path(fixture.name)
@@ -36,6 +36,8 @@ os.environ["WALL_CONFIG"] = str(root / "config.json")
 import screens
 import apps
 import server
+import voice
+from mcp_client import GatewayError
 
 
 class DisplayContract(unittest.TestCase):
@@ -405,6 +407,77 @@ assert.deepEqual(filteredTasks(S,{...base,list:'hwc',search:'missing'}),[]);
             http.shutdown()
             http.server_close()
             thread.join()
+
+
+class GatewayContract(unittest.TestCase):
+    def setUp(self):
+        state = self.state = {"mode": "json", "calls": [], "closed": []}
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                state["calls"].append(body)
+                method = body["method"]
+                if method == "notifications/initialized":
+                    self.send_response(503 if state["mode"] == "notify-fail" else 202); self.end_headers(); return
+                result = {"protocolVersion": "2025-06-18"} if method == "initialize" else {
+                    "content": [{"type": "text", "text": json.dumps(
+                        {"status": "error", "message": "refused", "suggestion": "inspect fixture"}
+                        if state["mode"] == "tool-error" else {"status": "ok", "data": {"fixture": True}})}],
+                    "isError": state["mode"] == "tool-error"}
+                reply = {"jsonrpc": "2.0", "id": body["id"], "result": result}
+                if state["mode"] == "wrong-id" or (state["mode"] == "init-fail" and method == "initialize"): reply["id"] += 100
+                self.send_response(200); self.send_header("Mcp-Session-Id", "fixture-session")
+                sse = state["mode"] == "sse" and method == "tools/call"
+                self.send_header("Content-Type", "text/event-stream" if sse else "application/json"); self.end_headers()
+                if sse:
+                    self.wfile.write(b'data: {"method":"notifications/progress"}\n\ndata: {"id":999,"result":{}}\n\n')
+                    self.wfile.write(("\n".join("data: " + line for line in json.dumps(reply, indent=2).splitlines()) + "\n\n").encode())
+                else: self.wfile.write(json.dumps(reply).encode())
+            def do_DELETE(self):
+                state["closed"].append(self.headers.get("Mcp-Session-Id")); self.send_response(204); self.end_headers()
+            def log_message(self, *_): pass
+        self.http = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.thread = threading.Thread(target=self.http.serve_forever, daemon=True); self.thread.start()
+        self.url = f"http://127.0.0.1:{self.http.server_port}/mcp"
+        self.addCleanup(self.stop)
+
+    def stop(self):
+        self.http.shutdown(); self.http.server_close(); self.thread.join()
+
+    def test_phone_and_voice_use_json_and_sse_without_replaying_actions(self):
+        for mode in ("json", "sse"):
+            self.state["mode"] = mode
+            with patch.object(apps, "GATEWAY", self.url):
+                self.assertEqual(apps.gateway_call("hwc_tasks_add", {})["data"], {"fixture": True})
+                before = len(self.state["calls"])
+                with self.assertRaises(GatewayError): apps.gateway_call("hwc_tasks_update", {"action": "not-allowed"})
+                self.assertEqual(len(self.state["calls"]), before)
+            connection = voice.Gateway(self.url)
+            try: self.assertEqual(connection.call("hwc_tasks_lists", {}), {"fixture": True})
+            finally: connection.close(); connection.close()
+        self.assertEqual(self.state["closed"], ["fixture-session"] * 4)
+        self.assertEqual(len([c for c in self.state["calls"] if c["method"] == "tools/call"]), 4)
+
+    def test_failed_initialization_closes_allocated_session(self):
+        for mode in ("init-fail", "notify-fail"):
+            self.state["mode"] = mode
+            with self.assertRaises(GatewayError): voice.Gateway(self.url)
+        self.assertEqual(self.state["closed"], ["fixture-session"] * 2)
+        self.assertFalse(any(c["method"] == "tools/call" for c in self.state["calls"]))
+
+    def test_tool_error_keeps_detail_and_closes_without_retry(self):
+        self.state["mode"] = "tool-error"
+        with patch.object(apps, "GATEWAY", self.url), self.assertRaisesRegex(GatewayError, "refused.*inspect fixture"):
+            apps.gateway_call("hwc_tasks_add", {})
+        self.assertEqual(self.state["closed"], ["fixture-session"])
+        self.assertEqual(len([c for c in self.state["calls"] if c["method"] == "tools/call"]), 1)
+
+    def test_json_id_mismatch_is_not_success(self):
+        connection = voice.Gateway(self.url); self.state["mode"] = "wrong-id"
+        try:
+            with self.assertRaisesRegex(GatewayError, "no gateway reply"): connection.call("hwc_tasks_lists", {})
+        finally: connection.close()
+        self.assertEqual(self.state["closed"], ["fixture-session"])
 
 
 # Run in the synthetic page with eval(await (await fetch('/fixture/checks')).text()).

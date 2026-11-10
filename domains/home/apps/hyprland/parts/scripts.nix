@@ -13,7 +13,7 @@
 #   let scripts = import ./parts/scripts.nix { inherit pkgs lib; };
 #   in { environment.systemPackages = scripts; }
 
-{ pkgs, lib, osConfig ? {}, ... }:
+{ pkgs, lib, osConfig ? {}, workspacePlan ? (import ./hardware.nix { inherit lib pkgs; }).workspacePlan, ... }:
 
 with pkgs;
 
@@ -200,16 +200,16 @@ with pkgs;
 
     MOVE=0
     if [[ "''${1:-}" == --move ]]; then MOVE=1; shift; fi
-    SLOT="''${1:?slot required (1-8)}"
+    SLOT="''${1:?slot required (${lib.concatMapStringsSep "," toString workspacePlan.slots})}"
     STATE_FILE="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hwc-workspace-link"
 
     # Capture focused monitor before any dispatch
     FOCUSED=$(${hyprland}/bin/hyprctl monitors -j | ${jq}/bin/jq -r '.[] | select(.focused) | .name')
 
     # Always switch current monitor normally
-    if [[ ! "$SLOT" =~ ^[1-8]$ ]]; then exit 64; fi
+    case "$SLOT" in ${lib.concatMapStringsSep "|" toString workspacePlan.slots}) ;; *) exit 64 ;; esac
     TARGET=$SLOT
-    if [[ ! "$FOCUSED" =~ ^(eDP|LVDS) ]]; then TARGET=$((SLOT + 10)); fi
+    if [[ ! "$FOCUSED" =~ ^(eDP|LVDS) ]]; then TARGET=$((SLOT + ${toString workspacePlan.externalOffset})); fi
     if [[ "$MOVE" == 1 ]]; then
       ${hyprland}/bin/hyprctl dispatch "hl.dsp.window.move({workspace='$TARGET'})"
       exit
@@ -226,7 +226,7 @@ with pkgs;
 
       if [[ "$FOCUSED" =~ ^(eDP|LVDS) ]]; then
         OTHER="$EXTERNAL"
-        TARGET_WS=$((SLOT + 10))
+        TARGET_WS=$((SLOT + ${toString workspacePlan.externalOffset}))
       else
         OTHER=$(echo "$MONITORS" | ${jq}/bin/jq -r '.[] | select(.name | test("^(eDP|LVDS)")) | .name' | head -1)
         TARGET_WS=$SLOT

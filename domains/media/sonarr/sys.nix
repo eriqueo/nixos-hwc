@@ -16,7 +16,7 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";  # Static default - GPU detection deferred
       timeZone = config.time.timeZone or "UTC";
-      ports = [ "127.0.0.1:8989:8989" ];
+      ports = [ "127.0.0.1:${toString cfg.port}:${toString (import ../../networking/ports.nix).sonarr.port}" ];
       volumes = [
         "${configPath}:/config"
         "${config.hwc.paths.media.root}/tv:/tv"

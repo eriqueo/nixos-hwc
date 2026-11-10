@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+`sys.nix` receives Brain MCP URLs from the base role. It checks an explicitly supplied local-server URL when present, without reading networking or server namespaces.
+
 The pinned handoff poll carries versioned handoff messages only. Old Close records retain history, late acknowledgements and safety holds, but grant no dispatch. Relays refuse unsupported messages before calling T3; canonical Review and Close use their reserved protocol.
 
 The pinned tracker explains unsupported Close previews in plain words. The refusal keeps its error code and status, sends no Close request, and restores the button focus. Legacy error responses remain readable. Cleanup admission and authority are unchanged. Review and Close share one typed finding example; Close states the existing code/detail bounds. Strict result validation and the Review prompt are preserved.
@@ -105,6 +107,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-11-09: Bind fleet and local Brain MCP facts in the base role; preserve URL consistency checks without reverse domain reads.
 
 - 2026-11-09 (b): `tracker.discordCards.publicUrl` gives card links the full tailnet host name (host name plus `hwc.networking.hosts.tailnetSuffix`). Discord refused the first live card because `http://hwc-work:8765` has no dot. Pins claude-config bfecf8a: the hub refuses to post with such a URL, and `POST /api/control/v1/posts/release` lets an operator re-post a card whose post did not land.
 - 2026-11-09: Tracker decision cards reach Discord. New `tracker.discordCards` (enable, token file, bot ingress, start date) feeds `hwc-tracker` and the new one-minute `tracker-post-cards` user timer. Its one producer is the system control bot's `hwc.server.ai.hwcControlBot.targets.projects`: system Home Manager reads it through osConfig and `flake.nix` hands the standalone lane the same value. The hub bounds posting (3 sends a call, 30 a day, one message per card). Stop the timer to stop posting; disable the bot target to remove both sides.

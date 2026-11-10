@@ -31,7 +31,7 @@ in
   #==========================================================================
   options.hwc.home.theme = {
     palette = lib.mkOption {
-      type = lib.types.enum [ "deep-nord" "gruv" "hwc" ];
+      type = lib.types.enum (builtins.attrNames palettes);
       default = "hwc";
       description = "Active theme palette (single source of truth).";
     };

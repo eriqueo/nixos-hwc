@@ -259,7 +259,6 @@ in {
 
   # Off until /mnt/backup is mounted and a local/cloud method is configured —
   # enabled-with-no-methods was a no-op that only emitted an eval warning.
-  hwc.data.backup.enable = false;
 
   # AUTO-MANAGED: independent Borg archives, bounded by parent/child ZFS
   # quotas and client retention. Never upgrade the pool or resize an existing

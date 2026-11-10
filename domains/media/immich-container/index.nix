@@ -232,7 +232,6 @@ let
 in
 {
   imports = [
-    ./sys.nix
     ./parts/config.nix
   ];
 

@@ -7,9 +7,7 @@ let
 
   afewPkg = import ./package.nix { inherit lib pkgs; cfg = cfg; };
 
-  mailRoot =
-    let base = nmCfg.maildirRoot or "";
-    in if base != "" then base else "${config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail"}/Maildir";
+  mailRoot = nmCfg.maildirRoot;
 
   # Folder-state filters: tag messages that arrive already in Archive/Trash/Spam
   # (e.g. synced from Proton where they were already there)

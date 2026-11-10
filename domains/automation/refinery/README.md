@@ -1,33 +1,13 @@
 # domains/automation/refinery
 
-Refinery — the substance-agnostic refinement engine that generalizes the
-nightly-builds + sr_gauntlet gauntlets. Full design lives in the brain vault at
-`tech/development/builds/refinery/refinery_engine_design.md`.
+Refinery configuration for the separately owned `eriqueo/refinery` application.
+Native board/review bundles use the pinned flake input; container mode uses the
+configured image. This directory owns local pipeline definitions, domain data,
+service environment, mounts and run-now integration.
 
-The module is being built in slices:
-
-- **Slice 01+02 — board:** the read-only Kanban **board** for the gauntlet
-  hopper. It renders every card across the brain vault's
-  `_inbox/nightly_builds/*/NN-*.md` goal folders (plus raw `_ideas.md` ideas) as
-  a live, status-grouped board.
-- **Slice 03 — engine core:** the substance-agnostic engine itself — a typed
-  Item state machine driven by pipelines, with hexagonal boundaries (the
-  core knows nothing about filesystem, Firestore, or Claude).
-
-The gate registry, pipelines, and interactivity (amend/rewind) are later slices
-(cards 04–09 in the hopper).
-
-- **Namespace:** `hwc.automation.refinery.*`
-- **URL:** `refinery.hwc.iheartwoodcraft.com` (Caddy vhost → `127.0.0.1:8060`)
-- **Reads:** the brain vault, read-only (`hwc.paths.brain.*`).
-
-The `:8060` service is the engine's own HTTP shell (`engine/src/shells/serve.ts`),
-esbuild-bundled to one dep-free JS file at build time. No client framework; plain
-form-posts (POST → 303). The engine core (`engine/`) is a standalone TypeScript
-library with `node --test` unit tests, substance-agnostic and IO-free beyond
-injected ports: relative imports carry `.js` extensions (ESM convention), it's
-compiled by **tsc** to `dist/`, and tests run against the compiled output
-(`tsc && node --test dist/test/**`).
+- Namespace: `hwc.automation.refinery.*`
+- Route: `refinery.hwc.iheartwoodcraft.com` → loopback port 8060.
+- Mutable state: `/var/lib/refinery`; preserve its items, receipts and human decisions.
 
 ## Structure
 
@@ -36,7 +16,7 @@ Native builds consume `inputs.refinery/engine`; update that input and the
 container image together before migrating review storage.
 | Path | Purpose |
 |---|---|
-| `parts/container.nix` | **Container mode** (`hwc.automation.refinery.mode = "container"`, 2026-09-04): runs the `eriqueo/refinery` image (`ghcr.io/eriqueo/refinery`) via `mkContainer` on the same port and `/var/lib/refinery` state dir, with the vault and gauntlet mirrors as volumes and the agenix `refinery-env` file for secrets and host values. The engine's source of truth is now that repo; native bundles now use the pinned `refinery` flake input, including the nightly review writer. The old `engine/` tree is historical source, not a build input. Host switch runbook: `deploy/README.md` in the repo. |
+| `parts/container.nix` | **Container mode** (`hwc.automation.refinery.mode = "container"`, 2026-09-04): runs the `eriqueo/refinery` image (`ghcr.io/eriqueo/refinery`) via `mkContainer` on the same port and `/var/lib/refinery` state dir, with the vault and gauntlet mirrors as volumes and the agenix `refinery-env` file for secrets and host values. The engine's source of truth is now that repo; native bundles now use the pinned `refinery` flake input, including the nightly review writer. The old embedded tree was removed; Git retains its historical source. Host switch runbook: `deploy/README.md` in the repo. |
 | `index.nix` | Module: options + the `:8060` service. Builds the **engine** package (buildNpmPackage → esbuild bundles **two** entry points: `serve.ts`→`server.js` for the board, and `cli/morning-review.ts`→`morning-review.js` wrapped as `bin/refinery-morning-review`). Pipelines baked to the store, mutable state in `/var/lib/refinery`. Hardened (ProtectHome=tmpfs + vault bound read-only for `/hopper`). Exposes a read-only `package` option so the **nightly-builds** morning-review pass runs the CLI without rebuilding the engine. |
 | `engine/src/cli/morning-review.ts` | The morning PR-review CLI shell. Late-binds config from env (`REFINERY_VAULT_DIR`, `REFINERY_DEFAULT_REPO`, `REFINERY_REVIEWS_DIR`, `REFINERY_LLM_PROVIDER`, optional `REFINERY_REVIEW_DATE`), wires real git/gh/fs/LLM adapters, runs the orchestrator, prints a JSON summary to stdout. Driven by `nightly-builds-review.service` (timer in the **nightly-builds** domain). |
 | `engine/src/shells/` | HTTP shell over the core: `http.ts` owns the routes and mutation handlers; `render.ts` gives every Refinery landing/detail surface the same executive hierarchy (situation → meaning → recommended action, with machine state/history folded) while preserving plain form-posts and CSS-only progressive disclosure; `serve.ts` is the service entry. |
@@ -57,6 +37,8 @@ container image together before migrating review storage.
 | `pipelines/` | Pipelines (data; lead_scout-style — `pipeline`/`label`/`enabled`/`llmProvider` + `executorMode`/`executors` + gate list + optional `defaultTraits`). `project-ideation.yaml` (live e2e, greenfield); `app-refinement.yaml` (live, **brownfield** — bring an existing app into engineering-principles compliance; fixing-systems gate pipeline); `nightly-build.yaml` + `datax-sr.yaml` (the two gauntlets as pipelines, shipped `enabled: false` — strangler-fig). |
 
 ## Changelog
+
+- 2026-11-09: Remove superseded embedded application/tests and gauntlet recipes; native bundles continue to use the pinned application owner. Local pipelines and runtime state remain.
 - 2026-10-10: `trackerUrl` option feeds `REFINERY_TRACKER_URL` in both native and container modes: an item linked to a tracker project links back to its hub page. Image pin moves to eriqueo/refinery 6a1cb1f (project link, `/api/items`, `/api/attention`). The hub's Backlog tab and Waiting-on-you panel read those routes; the Refinery stays the one store of work items.
 - 2026-09-30: `refinery-board` and `refinery-native-runnow` merge `hwc.system.apps.agent-harness.pipelineEnvironment` (`HWC_PIPELINE=1`), so the workspace guard only reports on the headless agents they launch. Inert on hwc-work, which runs container mode.
 - 2026-09-29: `srGauntletDir`, `dx1GauntletDir` and both gauntlet contracts point at `~/700_datax/gauntlets/{sr,dx1}_gauntlet` after the 700_datax layout cleanup.

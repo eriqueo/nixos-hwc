@@ -1,4 +1,4 @@
-#\!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 AI Bible Documentation System - Cleanup & Maintenance Tool
 Agent 8: Configuration & Deployment System
@@ -304,7 +304,7 @@ class BibleSystemCleanup:
             
             for script_path in scripts_to_remove:
                 path = Path(script_path)
-                if path.exists() and path \!= Path(__file__):  # Don't delete ourselves yet
+                if path.exists() and path != Path(__file__):  # Don't delete ourselves yet
                     path.unlink()
                     self.logger.info(f"Removed script: {script_path}")
             
@@ -485,4 +485,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-EOF < /dev/null

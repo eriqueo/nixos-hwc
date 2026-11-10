@@ -11,6 +11,8 @@
 let
   cfg = config.hwc.home.core.development;
   t = lib.types;
+  hmLib = import ../../../lib/hm.nix { inherit lib; };
+  repoPaths = hmLib.nixosPaths { inherit osConfig; home = config.home.homeDirectory; };
   # Law 1 standalone fallback; NixOS placement is owned by hwc.paths.
   goPaths = lib.attrByPath [ "hwc" "paths" "user" "go" ] {
     workspace = "${config.xdg.dataHome}/go";
@@ -159,8 +161,8 @@ in
       EDITOR = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       VISUAL = lib.mkForce (if cfg.editors.neovim then "nvim" else "micro");
       PROJECTS = config.xdg.userDirs.extraConfig.PROJECTS;
-      SCRIPTS = "$HOME/.nixos/workspace";
-      WORKSPACE = "$HOME/.nixos/workspace";
+      SCRIPTS = repoPaths.workspace;
+      WORKSPACE = repoPaths.workspace;
     } // goEnvironment // lib.optionalAttrs cfg.languages.python {
       PYTHONDONTWRITEBYTECODE = "1";
       PYTHONUNBUFFERED = "1";

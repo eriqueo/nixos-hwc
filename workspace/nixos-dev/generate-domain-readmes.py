@@ -17,26 +17,21 @@ Usage:
     ./generate-domain-readmes.py --generate
 
     # Validate specific domain
-    ./generate-domain-readmes.py --check --domain infrastructure
+    ./generate-domain-readmes.py --check --domain home
 
     # Show detailed report
     ./generate-domain-readmes.py --check --verbose
 """
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Optional
 from dataclasses import dataclass
 
-import re as _compiled_re
-
-# Fixed patterns compile once; matching stays at the original call sites.
-_EXTRACT_SECTIONS_FINDITER_RE = _compiled_re.compile(r'^##\s+(.+)$', _compiled_re.MULTILINE)
-_EXTRACT_SECTIONS_SUB_RE = _compiled_re.compile(r'[✅❌🔗🔧⚙️🎨🐚⌨️🌊📊🖥️🌐]')
-
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from verification.charter import README_SECTIONS, readme_requirements
 
 
 @dataclass
@@ -61,68 +56,16 @@ class ValidationResult:
 class DomainREADMEValidator:
     """Validates and generates domain README files"""
 
-    # Required sections for domain-level READMEs
-    DOMAIN_REQUIRED_SECTIONS = [
-        "Purpose & Scope",
-        "Domain Architecture",
-        "Domain Boundaries",
-    ]
-
-    # Required sections for module-level READMEs
-    MODULE_REQUIRED_SECTIONS = [
-        "Overview",
-        "Configuration",
-    ]
-
-    # Common sections (recommended but not required)
-    RECOMMENDED_SECTIONS = [
-        "Module Standards",
-        "Best Practices",
-        "Development Workflow",
-        "Troubleshooting",
-    ]
-
     def __init__(self, repo_root: Path):
         self.repo_root = repo_root
         self.domains_dir = repo_root / "domains"
-        self.template_path = repo_root / "docs" / "templates" / "DOMAIN_README_TEMPLATE.md"
+        self.requirements = readme_requirements(repo_root)
 
     def find_all_domains(self) -> List[DomainInfo]:
-        """Find all domain directories (domains/* and domains/*/*)"""
-        domains = []
-
-        # Level 1: Top-level domains (domains/*)
-        for domain_dir in self.domains_dir.iterdir():
-            if domain_dir.is_dir() and not domain_dir.name.startswith("."):
-                domains.append(DomainInfo(
-                    path=domain_dir,
-                    name=domain_dir.name,
-                    level="domain",
-                ))
-
-                # Level 2: Sub-domain modules (domains/*/*)
-                for subdir in domain_dir.iterdir():
-                    if subdir.is_dir() and not subdir.name.startswith("."):
-                        # Skip common non-module directories
-                        if subdir.name in ["core", "parts", "apps"]:
-                            # Look for modules inside these
-                            for module_dir in subdir.iterdir():
-                                if module_dir.is_dir() and not module_dir.name.startswith("."):
-                                    domains.append(DomainInfo(
-                                        path=module_dir,
-                                        name=module_dir.name,
-                                        level="module",
-                                        parent_domain=domain_dir.name,
-                                    ))
-                        else:
-                            domains.append(DomainInfo(
-                                path=subdir,
-                                name=subdir.name,
-                                level="module",
-                                parent_domain=domain_dir.name,
-                            ))
-
-        return domains
+        return [DomainInfo(path=path, name=path.name,
+                           level="domain" if sections else "module",
+                           parent_domain=None if sections else path.relative_to(self.domains_dir).parts[0])
+                for path, sections in self.requirements.items()]
 
     def extract_sections(self, readme_path: Path) -> Set[str]:
         """Extract section headings from a README file"""
@@ -134,10 +77,9 @@ class DomainREADMEValidator:
 
         # Extract h2 headers (## Section Name)
         sections = set()
-        for match in _EXTRACT_SECTIONS_FINDITER_RE.finditer(content):
+        for match in re.finditer(r'^##\s+(.+)$', content, re.MULTILINE):
             section = match.group(1).strip()
             # Remove emoji and extra formatting
-            section = _EXTRACT_SECTIONS_SUB_RE.sub('', section).strip()
             sections.add(section)
 
         return sections
@@ -159,22 +101,9 @@ class DomainREADMEValidator:
         # Extract sections from README
         sections = self.extract_sections(readme_path)
 
-        # Determine required sections based on level
-        required = (
-            self.DOMAIN_REQUIRED_SECTIONS
-            if domain.level == "domain"
-            else self.MODULE_REQUIRED_SECTIONS
-        )
-
-        # Check for missing sections (case-insensitive, partial match)
-        missing = []
-        for req_section in required:
-            found = any(
-                req_section.lower() in section.lower()
-                for section in sections
-            )
-            if not found:
-                missing.append(req_section)
+        required = self.requirements[domain.path]
+        missing = [section for section in required
+                   if not any(found.startswith(section) for found in sections)]
 
         is_valid = len(missing) == 0
 
@@ -183,13 +112,6 @@ class DomainREADMEValidator:
             "sections_found": len(sections),
             "all_sections": sorted(sections),
         }
-
-        # Check for recommended sections
-        recommended_found = [
-            rec for rec in self.RECOMMENDED_SECTIONS
-            if any(rec.lower() in s.lower() for s in sections)
-        ]
-        extra_info["recommended_found"] = recommended_found
 
         return ValidationResult(
             domain=domain,
@@ -200,233 +122,28 @@ class DomainREADMEValidator:
         )
 
     def generate_readme(self, domain: DomainInfo) -> str:
-        """Generate a skeleton README for a domain"""
-        if domain.level == "domain":
-            return self._generate_domain_readme(domain)
-        else:
-            return self._generate_module_readme(domain)
+        entries = sorted(path.name + ("/" if path.is_dir() else "")
+                         for path in domain.path.iterdir() if path.name != "README.md")
+        structure = "\n".join(entries)
+        return f"""# {domain.name}
 
-    def _generate_domain_readme(self, domain: DomainInfo) -> str:
-        """Generate a domain-level README"""
-        domain_name = domain.name.capitalize()
+## Purpose
 
-        return f"""# {domain_name} Domain
+[Describe the capability.]
 
-## Purpose & Scope
+## Boundaries
 
-**The {domain_name} Domain** provides [primary purpose]. This domain manages [what it manages] and handles [what it handles].
+[State what this owner manages and link to related owners.]
 
-**Key Principle**: If it's [decision criteria] → {domain.name} domain.
+## Structure
 
-## Domain Architecture
-
-The {domain.name} domain follows [architectural pattern] with **[organizing principle]**:
-
-```
-domains/{domain.name}/
-├── index.nix                    # Domain aggregator
-├── core/                        # Essential {domain.name} functionality
-├── [category]/                  # [Category description]
-└── parts/                       # Shared {domain.name} components
+```text
+{structure}
 ```
 
-## Domain Boundaries
+## Changelog
 
-### ✅ **This Domain Manages**
-- [Responsibility 1]: [Detailed description]
-- [Responsibility 2]: [Detailed description]
-
-### ❌ **This Domain Does NOT Manage**
-- [Not responsible 1]: → Goes to `domains/[other-domain]/`
-- [Not responsible 2]: → Goes to `domains/[other-domain]/`
-
-### 🔗 **Integration Points**
-- **Consumes from**: `domains/[dependency1]/`
-- **Provides to**: `domains/[consumer1]/`
-
-## Module Standards
-
-### Standard Module Structure
-```
-domains/{domain.name}/[category]/[module]/
-├── index.nix                   # Main implementation
-├── options.nix                 # API definition (REQUIRED)
-├── sys.nix                     # System-lane integration (if needed)
-└── parts/                      # Implementation details
-```
-
-### Option Namespace Pattern
-```nix
-# domains/{domain.name}/[category]/[module]/options.nix
-options.hwc.{domain.name}.[category].[module] = {{
-  enable = mkEnableOption "[Module description]";
-  # Module-specific options
-}};
-```
-
-## Best Practices
-
-### ✅ **Do**
-- **[Practice 1]**: [Detailed explanation]
-- **Follow Charter**: Maintain compliance with HWC Charter v6.0
-
-### ❌ **Don't**
-- **[Anti-pattern 1]**: [Why not and what to do instead]
-
-## Development Workflow
-
-### Adding New Modules
-1. **Create module directory**: `mkdir -p domains/{domain.name}/[category]/[module]/`
-2. **Follow module standards**: Create `index.nix`, `options.nix`, `parts/config.nix`
-3. **Define namespace**: `hwc.{domain.name}.[category].[module].*`
-4. **Add to aggregator**: Include in `domains/{domain.name}/[category]/index.nix`
-
-### Testing Changes
-```bash
-# Build domain changes
-sudo nixos-rebuild build --flake .#hwc-[machine]
-
-# Test specific module
-nix eval .#nixosConfigurations.hwc-[machine].config.hwc.{domain.name}.[module].enable
-```
-
-## Validation & Troubleshooting
-
-### Verify Configuration
-```bash
-# Check domain module status
-nix eval .#nixosConfigurations.hwc-[machine].config.hwc.{domain.name}
-
-# Check for conflicts
-nixos-rebuild build --flake .#hwc-[machine] --show-trace
-```
-
-## Reference Links
-
-- **Charter**: `CHARTER.md` - Complete HWC architecture
-- **Template**: `docs/templates/DOMAIN_README_TEMPLATE.md`
-- **Related Domains**:
-  - `domains/[related]/README.md` - [Relationship]
-
----
-
-**Charter Compliance**: v6.0
-**Last Updated**: [Generate date with: date +%Y-%m-%d]
-"""
-
-    def _generate_module_readme(self, domain: DomainInfo) -> str:
-        """Generate a module-level README"""
-        module_name = domain.name.capitalize()
-        parent = domain.parent_domain or "[domain]"
-
-        return f"""# {module_name} Module
-
-**Charter v6.0 Compliant Module**
-**Namespace**: `hwc.{parent}.[category].{domain.name}.*`
-**Location**: `domains/{parent}/[category]/{domain.name}/`
-
----
-
-## Overview
-
-{module_name} provides [description of what this module does].
-
-**Key Features:**
-- [Feature 1]
-- [Feature 2]
-- [Feature 3]
-
-## Architecture
-
-### Module Structure
-
-```
-domains/{parent}/[category]/{domain.name}/
-├── index.nix              # Main entry point
-├── options.nix            # API declarations
-├── parts/
-│   ├── config.nix        # Core configuration
-│   └── [other].nix       # Additional parts
-└── README.md             # This file
-```
-
-### Dependencies
-
-```nix
-hwc.[dependency1]           # [Why needed]
-hwc.[dependency2]           # [Why needed]
-```
-
-## Configuration
-
-### Basic Setup
-
-```nix
-# machines/[machine]/config.nix
-hwc.{parent}.[category].{domain.name} = {{
-  enable = true;
-  # Basic options here
-}};
-```
-
-### Advanced Configuration
-
-```nix
-hwc.{parent}.[category].{domain.name} = {{
-  enable = true;
-
-  # Advanced options
-  [option1] = [value];
-  [option2] = [value];
-}};
-```
-
-## Common Operations
-
-### Starting/Stopping
-```bash
-# Check status
-systemctl status [service-name]
-
-# Restart
-sudo systemctl restart [service-name]
-```
-
-### Viewing Logs
-```bash
-# Service logs
-journalctl -u [service-name] -f
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**Issue 1**: [Description]
-- **Solution**: [How to fix]
-
-**Issue 2**: [Description]
-- **Solution**: [How to fix]
-
-### Validation
-```bash
-# Verify module configuration
-nix eval .#nixosConfigurations.hwc-[machine].config.hwc.{parent}.[category].{domain.name}
-
-# Build with trace
-sudo nixos-rebuild build --flake .#hwc-[machine] --show-trace
-```
-
-## Reference Links
-
-- **Parent Domain**: `domains/{parent}/README.md`
-- **Charter**: `CHARTER.md`
-- **Template**: `docs/templates/DOMAIN_README_TEMPLATE.md`
-
----
-
-**Charter Compliance**: v6.0
-**Last Updated**: [date]
+- [Describe the change and date.]
 """
 
     def run_validation(
@@ -453,7 +170,6 @@ sudo nixos-rebuild build --flake .#hwc-[machine] --show-trace
 
         # Report results
         invalid_count = sum(1 for r in results if not r.is_valid)
-        missing_count = sum(1 for r in results if not r.readme_exists)
 
         if check_only:
             self._print_validation_report(results, verbose)
@@ -555,7 +271,8 @@ sudo nixos-rebuild build --flake .#hwc-[machine] --show-trace
                 else:
                     print(f"  Type: Module-level README")
             else:
-                readme_path.write_text(content)
+                with readme_path.open("x") as output:
+                    output.write(content)
                 print(f"✅ Created: {rel_path}")
 
 
@@ -593,7 +310,7 @@ def main():
     parser.add_argument(
         "--domain",
         type=str,
-        help="Filter to specific domain (e.g., 'infrastructure' or 'server/frigate')",
+        help="Filter to specific domain (e.g., 'home' or 'home/apps/firefox')",
     )
 
     parser.add_argument(

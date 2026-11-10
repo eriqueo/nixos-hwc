@@ -11,6 +11,7 @@ export function loadConfig(): ServerConfig {
     transport: (process.env.HWC_MCP_TRANSPORT as ServerConfig["transport"]) || "stdio",
     logLevel: (process.env.HWC_MCP_LOG_LEVEL as ServerConfig["logLevel"]) || "info",
     nixosConfigPath: process.env.HWC_NIXOS_CONFIG_PATH || "/home/eric/.nixos",
+    fleet: JSON.parse(process.env.HWC_MCP_FLEET || "{}"),
     cacheTtl: {
       runtime: parseInt(process.env.HWC_MCP_CACHE_TTL_RUNTIME || "60", 10),
       declarative: parseInt(process.env.HWC_MCP_CACHE_TTL_DECLARATIVE || "300", 10),

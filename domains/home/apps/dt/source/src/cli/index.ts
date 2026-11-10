@@ -52,45 +52,28 @@ program
   .argument('[period]', 'today, yesterday, or YYYY-MM-DD', 'today')
   .action(cmdLog);
 
-program
-  .command('week')
-  .description('Weekly summary')
-  .option('-b, --back <n>', 'weeks back', '0')
-  .action((opts) => {
-    import('../lib/time.js').then(({ weekRange, formatDuration }) => {
-      import('../db/queries.js').then(({ getCategorySummary }) => {
-        const range = weekRange(parseInt(opts.back));
-        const cats = getCategorySummary(range.from, range.to);
-        const total = cats.reduce((s, c) => s + c.total_minutes, 0);
-        console.log(`Week ${opts.back === '0' ? '(current)' : `-${opts.back}`}:`);
-        for (const c of cats) {
-          console.log(`  ${c.category.padEnd(14)} ${formatDuration(c.total_minutes)}`);
-        }
-        console.log(`  ${'─'.repeat(22)}`);
-        console.log(`  ${'TOTAL'.padEnd(14)} ${formatDuration(total)}`);
-      });
+for (const [period, label, rangeName, description] of [
+  ['week', 'Week', 'weekRange', 'Weekly summary'],
+  ['month', 'Month', 'monthRange', 'Monthly summary'],
+] as const) {
+  program
+    .command(period)
+    .description(description)
+    .option('-b, --back <n>', `${period}s back`, '0')
+    .action(async (opts) => {
+      const time = await import('../lib/time.js');
+      const { getCategorySummary } = await import('../db/queries.js');
+      const range = time[rangeName](parseInt(opts.back));
+      const categories = getCategorySummary(range.from, range.to);
+      const total = categories.reduce((sum, row) => sum + row.total_minutes, 0);
+      console.log(`${label} ${opts.back === '0' ? '(current)' : `-${opts.back}`}:`);
+      for (const row of categories) {
+        console.log(`  ${row.category.padEnd(14)} ${time.formatDuration(row.total_minutes)}`);
+      }
+      console.log(`  ${'─'.repeat(22)}`);
+      console.log(`  ${'TOTAL'.padEnd(14)} ${time.formatDuration(total)}`);
     });
-  });
-
-program
-  .command('month')
-  .description('Monthly summary')
-  .option('-b, --back <n>', 'months back', '0')
-  .action((opts) => {
-    import('../lib/time.js').then(({ monthRange, formatDuration }) => {
-      import('../db/queries.js').then(({ getCategorySummary }) => {
-        const range = monthRange(parseInt(opts.back));
-        const cats = getCategorySummary(range.from, range.to);
-        const total = cats.reduce((s, c) => s + c.total_minutes, 0);
-        console.log(`Month ${opts.back === '0' ? '(current)' : `-${opts.back}`}:`);
-        for (const c of cats) {
-          console.log(`  ${c.category.padEnd(14)} ${formatDuration(c.total_minutes)}`);
-        }
-        console.log(`  ${'─'.repeat(22)}`);
-        console.log(`  ${'TOTAL'.padEnd(14)} ${formatDuration(total)}`);
-      });
-    });
-  });
+}
 
 program
   .command('amend')

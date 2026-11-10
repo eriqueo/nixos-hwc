@@ -9,6 +9,10 @@
 { config, lib, pkgs, ... }:
 let
   userName = config.hwc.system.users.user.name;
+  hosts = config.hwc.networking.hosts;
+  localBrain = config.hwc.server.ai.brainMcp or { enable = false; };
+  thisAlias = lib.findFirst (name: hosts.servers.${name} == config.networking.hostName)
+    null (lib.attrNames hosts.servers);
   t3State = "${config.hwc.paths.user.home}/.t3/userdata";
   # Helper to gather all sys.nix files from home apps (Charter v7 compliance)
   gatherSys = dir:
@@ -29,6 +33,7 @@ in
   imports = [
     # System domain (includes paths via domains/system/core/index.nix)
     ../../domains/system/index.nix
+    ../../domains/networking/hosts/index.nix
 
     # Secrets domain (absorbed from profiles/security.nix)
     ../../domains/secrets/index.nix
@@ -114,19 +119,20 @@ in
   hwc.system.hardware.monitoring.enable = true;
 
   hwc.system.apps.agent-harness.enable = lib.mkDefault true;
+  hwc.system.apps.agent-harness.userMcp = {
+    brainUrl = lib.mkDefault (hosts.url { server = "work"; port = 23443; path = "/mcp"; });
+    localBrainUrl = lib.mkIf (localBrain.enable && thisAlias != null)
+      (hosts.url { server = thisAlias; port = localBrain.reverseProxyPort; path = "/mcp"; });
+  };
+  assertions = [{
+    assertion = !(config.hwc.system.apps.agent-harness.enable
+      && config.hwc.system.apps.agent-harness.userMcp.enable && localBrain.enable)
+      || thisAlias != null;
+    message = "A local Brain MCP service needs a registered host alias.";
+  }];
   # REA's MCP server in the generated ~/.mcp.json (its CLI is the home lane).
   # x86_64 only, same reason as the home lane: no aarch64 Apktool.
   hwc.system.apps.rea.enable = lib.mkDefault pkgs.stdenv.hostPlatform.isx86_64;
-
-  # Backup — defaults off, machines enable per-need.
-  # Value defaults (retention, sources, excludes, schedule, paths) live as
-  # option defaults in domains/data/backup/index.nix; this role only flips
-  # behavior.
-  hwc.data.backup = {
-    enable = lib.mkDefault false;
-    notifications.enable = lib.mkDefault true;
-    monitoring.enable = true;
-  };
 
   # Configured primary Borg hosts protect existing T3 state even if the app is
   # disabled later. Do not depend on the home activation lane for data policy.

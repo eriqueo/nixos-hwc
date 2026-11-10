@@ -16,8 +16,8 @@ in
       gpuMode = "intel";
       timeZone = config.time.timeZone or "UTC";
       ports = [
-        "127.0.0.1:8083:8080"  # Desktop interface (Selkies web, default 8080)
-        "127.0.0.1:8090:8090"  # Content Server (direct, no nginx)
+        "127.0.0.1:${toString cfg.ports.desktop}:8080"
+        "127.0.0.1:${toString cfg.ports.webserver}:8090"
       ];
       volumes = [
         "${configPath}:/config"

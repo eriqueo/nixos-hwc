@@ -5,12 +5,9 @@
 import type { ToolDef, ToolResult } from "../types.js";
 import { catchError } from "../errors.js";
 import { safeExec } from "../executors/shell.js";
-import { TtlCache } from "../cache.js";
 import { contract } from "../result.js";
 
-const cache = new TtlCache();
-
-export function buildTools(nixosConfigPath: string, runtimeTtl: number): ToolDef[] {
+export function buildTools(nixosConfigPath: string): ToolDef[] {
   return [
     {
       name: "hwc_build_git_status",

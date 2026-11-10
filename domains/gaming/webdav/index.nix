@@ -84,13 +84,13 @@ in
       syncSaves = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Expose .srm save RAM files for sync";
+        description = "Legacy compatibility input; WebDAV exposes the complete configured dataDir without filtering save RAM files";
       };
 
       syncStates = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Expose save state files for sync";
+        description = "Legacy compatibility input; WebDAV exposes the complete configured dataDir without filtering save state files";
       };
 
       dataDir = lib.mkOption {

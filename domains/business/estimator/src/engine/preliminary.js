@@ -4,7 +4,7 @@
  */
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { parseCalculatorIntake, deckAnswerEstimates, CALCULATOR_INPUT_VERSION } from '../api/crm.js';
+import { parseCalculatorIntake, deckAnswerEstimates, CALCULATOR_INPUT_VERSION } from './calculator-contract.js';
 import { calculatorPatch, DEFAULT_STATE } from './intake.js';
 import { enrichState, rawInputs } from './geometry.js';
 import { assemble, buildJtItems, estimateIssues, computeTotals } from './assembler.js';

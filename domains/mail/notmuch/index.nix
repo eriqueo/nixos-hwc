@@ -4,16 +4,11 @@ let
   cfg = config.hwc.mail.notmuch or {};
   mailContract = config.hwc.mail.classifier.contract;
   defaultNewTags = [ "new" "unread" "inbox" ];
-  paths = import ./parts/paths.nix { inherit lib config cfg; };
-  ident = import ./parts/identity.nix { inherit lib cfg defaultNewTags; };
   afewCfg = config.hwc.mail.afew or {};
   afewPkg = import ../afew/package.nix { inherit lib pkgs; cfg = afewCfg; };
   cfgPart = import ./parts/config.nix {
     inherit lib pkgs;
-    maildirRoot = paths.maildirRoot;
-    inherit (ident) userName primaryEmail otherEmails newTags;
-    excludeFolders = cfg.excludeFolders or [];
-
+    inherit (cfg) maildirRoot userName primaryEmail otherEmails newTags excludeFolders;
   };
 
   special = import ./parts/folders.nix { inherit lib config; };
@@ -35,9 +30,22 @@ in
   # OPTIONS
   #==========================================================================
   options.hwc.mail.notmuch = {
-    maildirRoot = lib.mkOption { type = lib.types.str; default = ""; };
-    userName = lib.mkOption { type = lib.types.str; default = ""; };
-    primaryEmail = lib.mkOption { type = lib.types.str; default = "eric@iheartwoodcraft.com"; };
+    maildirRoot = lib.mkOption {
+      type = lib.types.str;
+      default = "${config.home.homeDirectory}/400_mail/Maildir";
+      apply = value: if value == "" then "${config.home.homeDirectory}/400_mail/Maildir" else value;
+    };
+    userName = lib.mkOption {
+      type = lib.types.str;
+      default = "Eric O'Keefe";
+      # Empty input keeps the historical standalone fallback.
+      apply = value: if value == "" then "eric okeefe" else value;
+    };
+    primaryEmail = lib.mkOption {
+      type = lib.types.str;
+      default = "eric@iheartwoodcraft.com";
+      apply = value: if value == "" then "eriqueo@proton.me" else value;
+    };
     # One identity producer for notmuch and the classifier's self-learning guard.
     otherEmails = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -46,11 +54,26 @@ in
         "office@iheartwoodcraft.com" "admin@iheartwoodcraft.com"
         "eric@contractorcto.com" "g_hwcmt@proton.me" "g_erique@proton.me"
       ];
+      apply = value: if value == [] then [
+        "eric@iheartwoodcraft.com" "eriqueokeefe@gmail.com" "heartwoodcraftmt@gmail.com"
+      ] else value;
     };
     newTags = lib.mkOption { type = lib.types.listOf lib.types.str; default = defaultNewTags; };
-    excludeFolders = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
+    excludeFolders = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "trash" "spam" "[Gmail]/All Mail" ];
+    };
     postNewHook = lib.mkOption { type = lib.types.lines; default = ""; };
-    savedSearches = lib.mkOption { type = lib.types.attrsOf lib.types.str; default = {}; };
+    savedSearches = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {
+        inbox = "tag:inbox and not tag:archived";
+        unread = "tag:unread";
+        work = "from:*@iheartwoodcraft.com or from:*heartwoodcraftmt@gmail.com";
+        personal = "from:*@proton.me or from:*eriqueokeefe@gmail.com";
+        urgent = "tag:urgent or tag:important";
+      };
+    };
     installDashboard = lib.mkOption { type = lib.types.bool; default = false; };
     # Defaults come from the canonical taxonomy (domains/mail/taxonomy/) —
     # edit data.nix there, NOT these options; a direct override here silently
@@ -71,7 +94,7 @@ in
     { home.packages = cfgPart.packages; }
     { programs.notmuch = cfgPart.programs.notmuch; }
 
-    { home.file."${paths.maildirRoot}/.notmuch/hooks/post-new" = {
+    { home.file."${cfg.maildirRoot}/.notmuch/hooks/post-new" = {
         text = hookTxt.text;
         executable = true;
       };

@@ -9,6 +9,8 @@
 
 ## Structure
 
+Vaultwarden retains its old reverseProxy.port option as a compatibility input. Its configured HTTPS vhost remains the public route; the old value opens no separate listener.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 `parts/services/{firefly-db-env,firefly-pico-db-env,paperless-db-env,n8n-postgres-env}.age` carry separate CRITICAL database credentials in their consumers' existing environment-file formats. `umami-env.age` adds a password to DATABASE_URL while preserving APP_SECRET and all other fields. These payloads retain the generated five-recipient root:secrets0440 policy.
@@ -88,6 +90,8 @@ these same rules instead of maintaining another host list.
 - Follow Charter Law 3 for paths—mounts and service configs should reference `config.hwc.paths.*`, not hardcoded locations.
 
 ## Changelog
+
+- 2026-11-09: Label the retained Vaultwarden port input as compatibility; do not change credentials, mount modes, routes or container behavior.
 
 - 2026-11-09: Add `hwc-control-projects-token` (`parts/services/`), a generated 64-hex token shared by the tracker hub and the HWC control bot for project decision cards. Never displayed; encrypted to the agreed five-recipient default and checked by work host-key decryption for size and shape before publication. Generated `root:secrets / 0440` mount. REPLACEABLE: regenerate and rebuild.
 - 2026-11-09: Add `discord-webhook-projects` (`parts/services/discord-webhook/projects.age`), the `#projects` channel webhook Eric supplied. Encrypted to the agreed five-recipient default; work host-key decryption matched byte for byte. Generated `root:secrets / 0440` mount; hwc-notify restarts on ciphertext change.

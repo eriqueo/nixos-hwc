@@ -8,12 +8,12 @@ Installs the Proton Mail desktop client (`pkgs.protonmail-desktop`), makes the p
 - ❌ Does not manage: account credentials or mailbox data (app-managed), theming (system defaults), or the terminal mail stack (neomutt/aerc modules and the mail domain).
 
 ## Structure
-- `index.nix` — options; merges session/appearance/behavior part outputs.
-- `parts/session.nix` — package, command-level integrated-GPU wrapper, desktop entry, and optional autostart user service.
-- `parts/behavior.nix` — writes the desktop config.json.
-- `parts/appearance.nix` — intentionally empty (system theming; no files).
+- `index.nix` — options and session/behavior wiring.
+- `parts/session.nix` — packages, integrated-GPU command, desktop entry and optional user service.
+- `parts/behavior.nix` — desktop config.json.
 
 ## Changelog
+- 2026-11-09: Remove the empty appearance part and environment output; preserve config, command wrapper, desktop entry and optional service.
 - 2026-09-13: Promote GPU isolation from selected launchers to the plain `proton-mail` command. Hyprland's real login autostart invokes that command directly, so the prior desktop-entry/service wrapper did not cover the live caller.
 - 2026-09-13: Route the normal `proton-mail.desktop` launch through the same boundary as autostart, and correct the wrapper target to the package's real `proton-mail` executable. Live attribution showed the app runs as a desktop-launched transient scope because autostart is disabled.
 - 2026-09-12: Start the autostart client through the system-owned `gpu-integrated` boundary when available, keeping Electron's device probing from holding the laptop dGPU open.

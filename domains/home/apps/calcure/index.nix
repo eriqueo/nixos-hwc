@@ -98,10 +98,5 @@ in
       # Transparent background (inherits the terminal theme bg)
       color_background = -1
     '';
-
-    #==========================================================================
-    # VALIDATION
-    #==========================================================================
-    assertions = [];
   };
 }

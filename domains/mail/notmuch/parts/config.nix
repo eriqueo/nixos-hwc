@@ -7,7 +7,6 @@ in {
   programs.notmuch = {
     enable = true;
     new.tags = newTags;
-    # Only ignore folders explicitly passed in; default is none.
     new.ignore = excludeFolders;
     extraConfig = {
       database.path = maildirRoot;

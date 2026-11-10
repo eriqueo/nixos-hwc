@@ -205,6 +205,8 @@ Cadence should match `checkInterval` (default 5 min).
 
 ## Structure
 
+The configured host listener and its Gluetun published binding share networking/ports.nix with the existing vhost route.
+
 - **Module**: `domains/media/mousehole/`
   - `index.nix` — options, immutable runtime recipe, image guard and gluetun assertion
   - `sys.nix` — container definition via `mkContainer` (vpn network, resource limits, env, volumes)
@@ -222,6 +224,8 @@ Cadence should match `checkInterval` (default 5 min).
 ---
 
 ## Changelog
+
+- 2026-11-09: Share the configured host listener with routing and the VPN binding; preserve the runtime image and state snapshot.
 
 - **2026-10-23**: Pin original0.2.0 app and official fixed Bun1.4.4 through a recipe-derived local image. Preserve VPN/state/credential; prebuild outside startup. Add bounded atomic JSON snapshots to the existing Borg hook and correct Home/access/probe guidance. Source checks exercise generated executable, invalid/racing-input preservation, and actual image/hook binding removal.
 

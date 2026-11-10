@@ -205,13 +205,13 @@ in
       pcsx2 = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "PCSX2 core for PS2 games (requires beefy hardware)";
+        description = "Legacy compatibility input; PS2 games use the standalone PCSX2 launcher selected by sunshine.games";
       };
 
       dolphin = lib.mkOption {
         type = lib.types.bool;
         default = false;
-        description = "Dolphin core for GameCube/Wii games";
+        description = "Legacy compatibility input; GameCube games use the standalone Dolphin launcher selected by sunshine.games";
       };
 
       genesis-plus-gx = lib.mkOption {

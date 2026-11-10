@@ -4,31 +4,23 @@
 
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative, resolve, normalize } from "node:path";
-import type { ToolDef, ToolResult } from "../types.js";
+import type { ToolDef, ToolResult, ServerConfig } from "../types.js";
 import { nixEval, flakeMetadata } from "../executors/nix.js";
 import { mcpError, catchError } from "../errors.js";
 
 // Fixed patterns are shared; stateful uses reset their cursor below.
-const configToolsPatternRegex = /hostName\s*=\s*"([^"]+)"/;
-const configToolsPatternRegex2 = /stateVersion\s*=\s*"([^"]+)"/;
 const configToolsPatternRegex3 = /type\s*=\s*(?:types\.|lib\.types\.)?([\w.]+)/;
 const configToolsPatternRegex4 = /default\s*=\s*([^;]{1,60})/;
-const parseRoutesBlockRegexRegex = /\{\s*\n([^}]*?name\s*=\s*"[^"]+";[^}]*?)\}/g;
-const parseRoutesPatternRegex = /name\s*=\s*"([^"]+)"/;
-const parseRoutesPatternRegex2 = /mode\s*=\s*"([^"]+)"/;
-const parseRoutesPatternRegex3 = /port\s*=\s*(\d+)/;
-const parseRoutesPatternRegex4 = /path\s*=\s*"([^"]+)"/;
-const parseRoutesPatternRegex5 = /upstream\s*=\s*"([^"]+)"/;
-const parseRoutesPatternRegex6 = /needsUrlBase\s*=\s*(true|false)/;
 const parseImportsPatternRegex = /imports\s*=\s*\[([\s\S]*?)\];/;
 const parseImportsPathRegexRegex = /(?:\.\/)([^\s;]+\.nix)|(?:\.\.\/)+([^\s;]+\.nix)/g;
 const parseImportsPatternRegex2 = /(?:profiles|domains)\/[^\s;}\]]+/g;
 const searchOptionDeclarationsPatternRegex = /([\w.]+)\s*=\s*(?:lib\.)?mk(?:Option|EnableOption)/;
 const searchOptionDeclarationsPatternRegex2 = /^\s*([\w]+)\s*=\s*\{/;
 
-const HOSTS = ["hwc-home", "hwc-work", "hwc-laptop", "hwc-xps", "hwc-kids", "hwc-firestick"] as const;
 
-export function configTools(nixosConfigPath: string, declarativeTtl: number): ToolDef[] {
+export function configTools(nixosConfigPath: string, declarativeTtl: number,
+                            fleet: NonNullable<ServerConfig["fleet"]> = {}): ToolDef[] {
+  const hosts = Object.keys(fleet);
   return [
     {
       name: "hwc_config",
@@ -66,8 +58,8 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
           },
           host: {
             type: "string",
-            enum: HOSTS,
-            description: "[get_option/host_profile] Which host config to evaluate (default: hwc-home)",
+            ...(hosts.length ? { enum: hosts } : {}),
+            description: "[get_option/host_profile/port_map] Which host config to evaluate (default: hwc-home)",
           },
           // [port_map] params
           filter: {
@@ -84,6 +76,11 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
       },
       handler: async (args): Promise<ToolResult> => {
         const action = args.action as string;
+        if (args.host !== undefined && (typeof args.host !== "string"
+            || (hosts.length > 0 && !Object.hasOwn(fleet, args.host)))) {
+          return mcpError({ type: "VALIDATION_ERROR", message: "Unknown host",
+                            suggestion: `Valid hosts: ${hosts.join(", ")}` });
+        }
 
         // ── get_option ───────────────────────────────────────────
         if (action === "get_option") {
@@ -96,7 +93,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             const value = await nixEval(nixosConfigPath, host, optionPath, declarativeTtl);
             return { status: "ok", message: `${host}: ${optionPath}`, data: { host, path: optionPath, value } };
           } catch (err) {
-            return catchError("COMMAND_FAILED", "nix eval failed (is the option path correct? are changes committed?)", err, "Option paths must use dots (hwc.media.jellyfin.enable). Only committed changes are visible to nix eval.");
+            return catchError("COMMAND_FAILED", "nix eval failed (is the option path correct?)", err, "Option paths must use dots (hwc.media.jellyfin.enable). The configured path reference reads the working tree.");
           }
         }
 
@@ -139,10 +136,9 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
         if (action === "port_map") {
           try {
             const filter = (args.filter as string)?.toLowerCase();
-            const routesPath = join(nixosConfigPath, "domains/networking/routes.nix");
-            const content = await readFile(routesPath, "utf-8");
-
-            const routes = parseRoutes(content);
+            const host = (args.host as string) || "hwc-home";
+            const routes = await nixEval(nixosConfigPath, host,
+              "hwc.networking.shared.routes", declarativeTtl) as Route[];
             const filtered = filter
               ? routes.filter((r) =>
                   r.name.toLowerCase().includes(filter) ||
@@ -154,7 +150,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
 
             return { status: "ok", message: `${filtered.length} routes${filter ? ` matching '${filter}'` : ""}`, data: { routes: filtered, total: routes.length } };
           } catch (err) {
-            return catchError("INTERNAL_ERROR", "Failed to parse port map", err, "Check that domains/networking/routes.nix exists");
+            return catchError("INTERNAL_ERROR", "Failed to evaluate port map", err, "Choose a host with networking routes enabled");
           }
         }
 
@@ -172,29 +168,30 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             try {
               content = await readFile(configPath, "utf-8");
             } catch {
-              return mcpError({ type: "NOT_FOUND", message: `Machine config not found: ${configPath}`, suggestion: `Valid hosts: ${HOSTS.join(", ")}`, context: { host, path: configPath } });
+              return mcpError({ type: "NOT_FOUND", message: `Machine config not found: ${configPath}`, suggestion: `Valid hosts: ${hosts.join(", ")}`, context: { host, path: configPath } });
             }
 
             const imports = parseImports(content);
-            const profiles = imports.filter((i) => i.includes("profiles/"));
-            const domains = imports.filter((i) => i.includes("domains/"));
-
-            const flakePath = join(nixosConfigPath, "flake.nix");
-            const flakeContent = await readFile(flakePath, "utf-8");
-            const isStable = flakeContent.includes(`${host} = nixpkgs-stable`) ||
-                             flakeContent.includes(`${host.replace("hwc-", "")} = nixpkgs-stable`);
-
-            const hostnameMatch = content.match(configToolsPatternRegex);
-            const stateVersionMatch = content.match(configToolsPatternRegex2);
+            const roles = fleet[host]?.roles;
+            const profiles = roles ? roles.map(role => `profiles/${role}`)
+              : imports.filter(i => i.includes("profiles/"));
+            const domains = imports.filter(i => i.includes("domains/"));
+            const [hostname, stateVersion, release] = await Promise.all([
+              nixEval(nixosConfigPath, host, "networking.hostName", declarativeTtl),
+              nixEval(nixosConfigPath, host, "system.stateVersion", declarativeTtl),
+              nixEval(nixosConfigPath, host, "system.nixos.release", declarativeTtl),
+            ]);
+            const channel = fleet[host]?.channel;
 
             return {
               status: "ok",
               message: `Profile for ${host}`,
               data: {
                 host,
-                hostname: hostnameMatch?.[1] || host,
-                channel: isStable ? "stable (nixos-25.11)" : "unstable",
-                stateVersion: stateVersionMatch?.[1] || "unknown",
+                hostname,
+                channel: channel === "stable" ? `stable (nixos-${release})` : channel || "unknown",
+                stateVersion,
+                roles,
                 profiles,
                 domainImports: domains,
                 allImports: imports,
@@ -271,7 +268,7 @@ export function configTools(nixosConfigPath: string, declarativeTtl: number): To
             }
 
             const recursive = (args.recursive as boolean) ?? false;
-            const entries = await listDirEntries(absPath, normalRepo, recursive ? 3 : 0);
+            const entries = await listDirEntries(absPath, recursive ? 3 : 0);
             return {
               status: "ok",
               message: `${entries.length} entries in ${rawPath}`,
@@ -326,35 +323,6 @@ interface Route {
   path?: string;
   upstream?: string;
   needsUrlBase?: boolean;
-}
-
-function parseRoutes(content: string): Route[] {
-  const routes: Route[] = [];
-  const blockRegex = (parseRoutesBlockRegexRegex.lastIndex = 0, parseRoutesBlockRegexRegex);
-  let match: RegExpExecArray | null;
-
-  while ((match = blockRegex.exec(content)) !== null) {
-    const block = match[1];
-    const nameMatch = block.match(parseRoutesPatternRegex);
-    const modeMatch = block.match(parseRoutesPatternRegex2);
-    const portMatch = block.match(parseRoutesPatternRegex3);
-    const pathMatch = block.match(parseRoutesPatternRegex4);
-    const upstreamMatch = block.match(parseRoutesPatternRegex5);
-    const urlBaseMatch = block.match(parseRoutesPatternRegex6);
-
-    if (nameMatch && modeMatch) {
-      routes.push({
-        name: nameMatch[1],
-        mode: modeMatch[1],
-        port: portMatch ? parseInt(portMatch[1], 10) : undefined,
-        path: pathMatch?.[1],
-        upstream: upstreamMatch?.[1],
-        needsUrlBase: urlBaseMatch ? urlBaseMatch[1] === "true" : undefined,
-      });
-    }
-  }
-
-  return routes;
 }
 
 function parseImports(content: string): string[] {
@@ -465,7 +433,6 @@ interface DirEntry {
 
 async function listDirEntries(
   dir: string,
-  repoRoot: string,
   maxDepth: number,
   depth: number = 0,
 ): Promise<DirEntry[]> {
@@ -480,7 +447,7 @@ async function listDirEntries(
       const item: DirEntry = { name: entry.name, type: "directory" };
       if (depth < maxDepth) {
         try {
-          item.children = await listDirEntries(fullPath, repoRoot, maxDepth, depth + 1);
+          item.children = await listDirEntries(fullPath, maxDepth, depth + 1);
         } catch {
           /* unreadable */
         }

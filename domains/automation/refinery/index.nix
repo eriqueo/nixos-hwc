@@ -8,7 +8,7 @@
 # profiles), and supports amend / rewind / profile-toggle. The read-only gauntlet
 # hopper view is folded in as the /hopper route.
 #
-# Build: the engine carries deps (zod, yaml), so we `npm ci` via buildNpmPackage
+# Build: the pinned engine carries deps, so we `npm ci` via buildNpmPackage
 # (npmDepsHash dance — see project memory) and esbuild-bundle serve.ts into one
 # dep-free server.js. Pipelines are baked into the store from ./pipelines; mutable
 # state (items + the enabled overlay) lives in /var/lib/refinery (StateDirectory).

@@ -35,7 +35,7 @@ User enters measurements → assembler.js derives geometry + scope items
 ```
 hwc Postgres DB (trade_rates, catalog_items, estimate_templates)
   → export_estimator_data.py (domains/business/databases/)
-  → JSON files in app/src/data/ (tradeRates.json, templates.json, catalog_export.json)
+  → JSON files in src/data/ (tradeRates.json, templates.json, catalog_export.json)
   → Vite bundles into the app at build time
 ```
 
@@ -68,15 +68,22 @@ Material markup: cost x 1.429
 
 ## Structure
 
+Pure calculator parsing and vocabulary have no browser transport dependency.
+`intake.js` owns translation and state defaults; its flooring/catalog dependency
+does not belong in the shared calculator contract. Python, shell and npm catalog
+export entries delegate to the PostgreSQL owner. Generated dist is not tracked.
+
 The private estimator origin proxies exact customer/job reads and estimate writes. Caddy reads `estimator-api-key` at runtime and overwrites client keys. The PWA carries no API credential. Foreign Origin/Fetch Metadata and wrong methods are rejected; writes require the exact estimator Origin. Public tunnel routes stay blocked. Existing `/api/jobs/*` reads and local drafts are preserved.
 
 ```
 domains/business/estimator/
 ├── index.nix              # NixOS module: build service, Caddy, firewall
 ├── src/
-│   ├── api/crm.js         # Calculator↔estimator contract: v2 fields, deck answer estimates, CRM intake parsing
+│   ├── api/crm.js         # Browser CRM transport and compatibility contract exports
 │   ├── engine/
-│   │   ├── assembler.js   # Core: buildCatalog(), buildDeckCatalog(), geometry, parameters
+│   │   ├── assembler.js   # Estimate assembly, pricing, parameters and legacy geometry exports
+│   │   ├── calculator-contract.js # Pure shared v2 fields, parsing and rough deck assumptions
+│   │   ├── geometry.js    # One geometry owner; missing measurements stay unknown
 │   │   ├── flooring.js    # Versioned area inputs, quantities, validation and mapped composition
 │   │   ├── intake.js      # Pure shared translation and browser state defaults
 │   │   ├── preliminary.js # Bounded Node plan port, scope-filtered template/preset assumptions, no provider calls
@@ -104,7 +111,7 @@ domains/business/estimator/
 │   ├── golden-master.test.js   # Parity oracle: live engine vs golden snapshots (exits non-zero on diff)
 │   ├── json-import-hook.mjs    # Node resolve hook so Vite-style JSON imports load under plain Node
 │   ├── golden/                 # 8 golden snapshots, one per template (npm run test:golden -- --update)
-│   └── rate-audit.test.js      # P0 rate-fix validation (self-contained)
+│   └── rate-audit.test.js      # Production pricing, mapping, quantity and removal regressions
 ├── package.json, vite.config.js, index.html
 └── README.md
 ```
@@ -176,15 +183,21 @@ sudo ln -sfn /var/lib/estimator/builds/dist-$TIMESTAMP /var/lib/estimator/dist
 npm run test:golden                          # diff live engine vs golden snapshots; exit 1 on any drift
 node test/golden-master.test.js --update     # recapture snapshots (only after an INTENDED output change)
 node test/golden-master.test.js --perturb    # self-test: in-memory perturbation must go red
+node test/golden-master.test.js --nonfinite  # NaN quantities/totals must go red
+node test/rate-audit.test.js                 # production pricing and scope regressions
 ```
 
 The golden-master oracle is the gate for estimator refactors: it runs the
 real `src/engine/*` modules (via `test/json-import-hook.mjs`) against all 8
 templates and fails the exit code on any item/qty/price/total diff beyond
-±0.01. `test_comparison.mjs` (old vs new assembler comparison) always exits 0
-and is NOT a refactor gate.
+±0.01, including nonfinite output. The old comparison script copied both engines;
+it is removed. RATE_AUDIT.md contains May 5 recommendations, not current price
+policy. Commit 363decf65 subsequently changed exported demo burden and tile markup.
+The pricing test preserves those current inputs and exercises actual assembly.
 
 ## Changelog
+
+- 2026-11-09: Share pure calculator contracts and geometry, preserve unknown allowance measurements, unify manual PostgreSQL exports and test actual engine behavior. Paired Paint/Drywall controls wrap on narrow screens. Remove unused dist and copied comparison code.
 
 - 2026-11-02: Remove browser credentials; use exact same-origin proxy routes with runtime key injection and origin/method guards. Preserve paging, draft recovery and manual write locks; rebuild tracked assets.
 

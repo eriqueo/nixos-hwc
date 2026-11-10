@@ -8,19 +8,7 @@ let
   # REUSABLE MCP SERVICE TEMPLATE
   #==========================================================================
 
-  # Template function to create standardized MCP systemd services
-  # Parameters:
-  #   name: Service name (e.g., "mcp-filesystem-nixos")
-  #   description: Human-readable service description
-  #   command: Command to execute (list of strings for ExecStart)
-  #   user: User to run the service as
-  #   workingDirectory: Working directory for the service (optional)
-  #   environment: Environment variables (attrset, optional)
-  #   allowedPaths: Paths the service can read (list, optional)
-  #   writablePaths: Paths the service can write (list, optional)
-  #   extraServiceConfig: Additional systemd service configuration (attrset, optional)
   mkMcpService = {
-    name,
     description,
     command,
     user,
@@ -106,6 +94,19 @@ let
     ];
   };
 
+  filesystemCommand = [
+    "${pkgs.nodejs_22}/bin/npx" "-y" "@modelcontextprotocol/server-filesystem"
+  ] ++ cfg.filesystem.nixos.allowedDirs;
+  filesystemService = {
+    user = cfg.filesystem.nixos.user;
+    workingDirectory = "/home/${cfg.filesystem.nixos.user}";
+    environment.PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
+    allowedPaths = [ "/nix/store" "/run/current-system" ];
+    writablePaths = cfg.filesystem.nixos.allowedDirs ++ [
+      "/home/${cfg.filesystem.nixos.user}/.npm"
+    ];
+  };
+
 in
 {
   #==========================================================================
@@ -124,6 +125,12 @@ in
     # Proxy configuration
     proxy = {
       enable = lib.mkEnableOption "MCP proxy for stdio ↔ HTTP bridging" // { default = true; };
+      active = lib.mkOption {
+        type = lib.types.bool;
+        readOnly = true;
+        default = cfg.enable && cfg.proxy.enable;
+        description = "Whether this host runs the MCP HTTP proxy";
+      };
 
       port = lib.mkOption {
         type = lib.types.port;
@@ -166,6 +173,12 @@ in
     # Reverse proxy configuration
     reverseProxy = {
       enable = lib.mkEnableOption "Expose MCP servers via Caddy reverse proxy" // { default = false; };
+      active = lib.mkOption {
+        type = lib.types.bool;
+        readOnly = true;
+        default = cfg.proxy.active && cfg.reverseProxy.enable;
+        description = "Whether the running MCP proxy is published through Caddy";
+      };
 
       path = lib.mkOption {
         type = lib.types.str;
@@ -177,6 +190,7 @@ in
         type = lib.types.enum [ "none" "basic" "apikey" ];
         default = "none";
         description = ''
+          Legacy compatibility input; this module does not configure authentication.
           Authentication type for MCP reverse proxy:
           - none: No authentication (local network only)
           - basic: HTTP Basic authentication
@@ -219,82 +233,20 @@ in
       "d ${cfg.filesystem.nixos.draftsDir} 0755 ${cfg.filesystem.nixos.user} users -"
     ];
 
-    systemd.services.mcp-filesystem-nixos = mkIf cfg.filesystem.nixos.enable (mkMcpService {
-      name = "mcp-filesystem-nixos";
-      description = "MCP Filesystem Server for ~/.nixos directory";
-      command =
-        let
-          baseCmd = [
-            "${pkgs.nodejs_22}/bin/npx"
-            "-y"
-            "@modelcontextprotocol/server-filesystem"
-          ];
-        in
-          baseCmd ++ cfg.filesystem.nixos.allowedDirs;  # Each directory as separate argument
-      user = cfg.filesystem.nixos.user;
-      workingDirectory = "/home/${cfg.filesystem.nixos.user}";
+    systemd.services.mcp-filesystem-nixos = mkIf cfg.filesystem.nixos.enable
+      (mkMcpService (filesystemService // {
+        description = "MCP Filesystem Server for ~/.nixos directory";
+        command = filesystemCommand;
+      }));
 
-      # npx needs PATH set to find sh and other utilities
-      environment = {
-        PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
-      };
-
-      # Read-only paths for system dependencies (npx needs Nix store)
-      allowedPaths = [
-        "/nix/store"
-        "/run/current-system"
-      ];
-
-      # Write paths for allowed directories and NPM cache
-      writablePaths = cfg.filesystem.nixos.allowedDirs ++ [
-        "/home/${cfg.filesystem.nixos.user}/.npm"
-      ];
-    });
-
-    #--------------------------------------------------------------------------
-    # MCP PROXY (stdio ↔ HTTP bridge)
-    #--------------------------------------------------------------------------
-    systemd.services.mcp-proxy = mkIf cfg.proxy.enable (mkMcpService {
-      name = "mcp-proxy";
-      description = "MCP Proxy - stdio to HTTP bridge";
-      command =
-        let
-          proxyCmd = [
-            "${pkgs.mcp-proxy}/bin/mcp-proxy"
-            "--host" cfg.proxy.host
-            "--port" (toString cfg.proxy.port)
-            "--"
-            "${pkgs.nodejs_22}/bin/npx"
-            "-y"
-            "@modelcontextprotocol/server-filesystem"
-          ];
-        in
-          proxyCmd ++ cfg.filesystem.nixos.allowedDirs;  # Each directory as separate argument
-      user = cfg.filesystem.nixos.user;
-      workingDirectory = "/home/${cfg.filesystem.nixos.user}";
-
-      # npx needs PATH set to find sh and other utilities
-      environment = {
-        PATH = "/run/current-system/sw/bin:${pkgs.nodejs_22}/bin:${pkgs.bash}/bin";
-      };
-
-      # Read-only paths for system dependencies (npx needs Nix store)
-      allowedPaths = [
-        "/nix/store"
-        "/run/current-system"
-      ];
-
-      # Write paths for allowed directories and NPM cache
-      writablePaths = cfg.filesystem.nixos.allowedDirs ++ [
-        "/home/${cfg.filesystem.nixos.user}/.npm"
-      ];
-
-      # Override network restrictions (proxy needs to listen on localhost)
-      extraServiceConfig = {
-        # Network access required for HTTP server - security exception documented
-        # Proxy listens on 127.0.0.1 only (configured in options)
-      };
-    });
+    systemd.services.mcp-proxy = mkIf cfg.proxy.active
+      (mkMcpService (filesystemService // {
+        description = "MCP Proxy - stdio to HTTP bridge";
+        command = [
+          "${pkgs.mcp-proxy}/bin/mcp-proxy"
+          "--host" cfg.proxy.host "--port" (toString cfg.proxy.port) "--"
+        ] ++ filesystemCommand;
+      }));
 
       #--------------------------------------------------------------------------
       # VALIDATION

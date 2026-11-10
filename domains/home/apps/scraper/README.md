@@ -8,6 +8,8 @@ Social media scraper and comment analysis tools using Playwright for browser aut
 - Does NOT manage: Scraper source code (lives in `workspace/home/scraper/`)
 
 ## Structure
+
+`index.nix` derives its workspace source from the shared Home Manager checkout-path helper.
 ```
 scraper/
 ├── index.nix    # Wrapper scripts + Playwright setup
@@ -24,5 +26,7 @@ scraper/
 - `scrape-comments` — Run comment analysis
 
 ## Changelog
+
+- 2026-11-09: Use the shared checkout-path helper for wrapper sources in both Home Manager lanes.
 - 2026-07-11: `nixosPath` standalone fallback derives from `config.home.homeDirectory` instead of a `/home/eric` literal (Law 3, value unchanged).
 - 2026-03-26: Workspace source moved from workspace/hwc/social_media_scraper/ to workspace/home/scraper/ (domain alignment)

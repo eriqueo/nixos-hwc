@@ -31,9 +31,6 @@ let
   mediaEnabled = name:
     lib.attrByPath [ "hwc" "media" name "enable" ] false config;
 
-  networkingEnabled = name:
-    lib.attrByPath [ "hwc" "networking" name "enable" ] false config;
-
   mkDirMode = mode: path: "d ${path} ${mode} 1000 100 -";
   mkDir = mkDirMode "0755";
   mkPrivateDir = mkDirMode "0750";
@@ -121,9 +118,6 @@ in
       }))
 
       # Containers with non-standard config layouts
-      (lib.optionals (appsRoot != null && networkingEnabled "gluetun") [
-        (mkDir (appRoot "gluetun"))
-      ])
       (lib.optionals (appsRoot != null && mediaEnabled "soularr") [
         (mkPrivateDir "${(appRoot "soularr")}/data")
       ])

@@ -9,6 +9,8 @@ Self-contained email domain: client UI, accounts, sync, indexing, sending, and b
 
 ## Structure
 
+`notmuch/index.nix` owns the shared identity, root, ignored folders and saved searches. Aerc, afew and mbsync consume that resolved root. Desktop retains its separate arrival tags; generated mail configuration is preserved.
+
 The classifier selects the checked HTTP-framing runtime on owned instances.
 Its separate CPU package graph supplies the same Laya, Torch and model inputs;
 classification policy and the ledger remain with System One.
@@ -123,8 +125,6 @@ mail/
     └── parts/
         ├── config.nix         # notmuch config (database, user, flags)
         ├── hooks.nix          # post-new hook generator
-        ├── paths.nix          # maildirRoot resolution
-        ├── identity.nix       # userName/email/newTags defaults
         ├── folders.nix        # folder→tag clause builder (uses common.rolesFor)
         ├── searches.nix       # One current/history registry for notmuch, aerc and MCP
         └── dashboard.sh       # mail-dashboard script
@@ -170,6 +170,8 @@ client launch facts; it adds no arbitrary-command or mailbox-write endpoint.
 Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers duplicates of "recovered messages" (error code 2501). This causes mbsync to exit non-zero. As of 2026-04-02, sync-mail tolerates mbsync partial failures so that `notmuch new` always runs — this prevents a cascading bug where un-indexed label copies trigger infinite re-copying by the label copy-back loop. The mbsync exit code is still propagated to systemd for monitoring visibility.
 
 ## Changelog
+
+- 2026-11-09: Move common notmuch policy out of duplicate role blocks and remove redundant identity/path helpers.
 
 - 2026-11-04: Select the strict response parser for the classifier launcher
   while retaining its CPU-only dependencies, model and authority contract.

@@ -31,6 +31,9 @@ import json
 import logging
 import argparse
 import subprocess
+import fcntl
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -61,6 +64,10 @@ class Config:
         self.audiobookshelf_url = os.getenv('AUDIOBOOKSHELF_URL', 'http://localhost:13378')
         self.audiobookshelf_api_key = os.getenv('AUDIOBOOKSHELF_API_KEY', '')
         self.dry_run = os.getenv('DRY_RUN', '0') == '1'
+        self.trigger_library_scan = os.getenv('TRIGGER_LIBRARY_SCAN', '1') == '1'
+        self.audio_extensions = tuple('.' + item.lstrip('.') for item in
+                                      os.getenv('AUDIO_EXTENSIONS', ','.join(sorted(AUDIO_EXTENSIONS))).split(','))
+        self.include_hidden = False
 
     @property
     def state_file(self) -> Path:
@@ -85,10 +92,18 @@ class StateManager:
         return {'processed': {}, 'last_scan': None}
 
     def save(self) -> None:
-        """Save state to file."""
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.state_file, 'w') as f:
-            json.dump(self.state, f, indent=2, default=str)
+        fd, pending = tempfile.mkstemp(prefix='.state-', dir=self.state_file.parent)
+        try:
+            with os.fdopen(fd, 'w') as output:
+                os.fchmod(output.fileno(), 0o644)
+                json.dump(self.state, output, indent=2, default=str)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(pending, self.state_file)
+        finally:
+            if os.path.exists(pending):
+                os.unlink(pending)
 
     def mark_processed(self, path: Path, dest_path: Path) -> None:
         """Mark an audiobook as processed."""
@@ -108,7 +123,7 @@ class StateManager:
         self.save()
 
 
-def is_audiobook_directory(path: Path) -> bool:
+def is_audiobook_directory(path: Path, extensions=AUDIO_EXTENSIONS) -> bool:
     """
     Check if a directory contains audiobook files.
 
@@ -122,7 +137,7 @@ def is_audiobook_directory(path: Path) -> bool:
         return False
 
     # Check for audio files in directory or subdirectories
-    for ext in AUDIO_EXTENSIONS:
+    for ext in extensions:
         if list(path.glob(f'*{ext}')) or list(path.glob(f'**/*{ext}')):
             return True
 
@@ -216,6 +231,8 @@ def trigger_library_scan(config: Config) -> bool:
     Returns:
         True if scan triggered successfully
     """
+    if config.dry_run or not config.trigger_library_scan:
+        return False
     if not config.audiobookshelf_api_key:
         logger.warning("No Audiobookshelf API key configured, skipping library scan")
         return False
@@ -290,7 +307,7 @@ def process_audiobook(path: Path, config: Config, state: StateManager) -> bool:
         return False
 
     # Verify it's an audiobook
-    if not is_audiobook_directory(path):
+    if not is_audiobook_directory(path, config.audio_extensions):
         logger.debug(f"Not an audiobook directory: {path}")
         return False
 
@@ -326,7 +343,7 @@ def scan_all(config: Config, state: StateManager) -> int:
 
     # Scan immediate children of source directory
     for item in config.source_dir.iterdir():
-        if item.is_dir() and not item.name.startswith('.'):
+        if item.is_dir() and (config.include_hidden or not item.name.startswith('.')):
             if process_audiobook(item, config, state):
                 processed_count += 1
 
@@ -336,7 +353,8 @@ def scan_all(config: Config, state: StateManager) -> int:
     if processed_count > 0 and config.audiobookshelf_api_key:
         trigger_library_scan(config)
 
-    state.update_last_scan()
+    if not config.dry_run:
+        state.update_last_scan()
     return processed_count
 
 
@@ -369,6 +387,27 @@ def process_single(path: Path, config: Config, state: StateManager) -> bool:
     return result
 
 
+@contextmanager
+def copy_lock(state_dir: Path, dry_run: bool):
+    if dry_run:
+        yield
+        return
+    state_dir.mkdir(parents=True, exist_ok=True)
+    # Both the root-run sweep and user-owned hook may read an empty lock file.
+    # One copier owns state and markers; busy callers fail for the next timer
+    # to recover, rather than running a second copy or waiting without a bound.
+    try:
+        fd = os.open(state_dir / '.copy.lock', os.O_RDONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        os.fchmod(fd, 0o644)
+    except FileExistsError:
+        fd = os.open(state_dir / '.copy.lock', os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield
+    finally:
+        os.close(fd)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Copy audiobooks from downloads to Audiobookshelf library'
@@ -393,6 +432,10 @@ def main():
         action='store_true',
         help='Enable verbose logging'
     )
+    parser.add_argument('--no-library-scan', action='store_true',
+                        help='Copy without asking Audiobookshelf to scan')
+    parser.add_argument('--include-hidden', action='store_true',
+                        help='Include hidden directories when scanning the source')
     args = parser.parse_args()
 
     # Configure logging level
@@ -403,6 +446,19 @@ def main():
     config = Config()
     if args.dry_run:
         config.dry_run = True
+    if args.no_library_scan:
+        config.trigger_library_scan = False
+    config.include_hidden = args.include_hidden
+
+    try:
+        with copy_lock(config.state_dir, config.dry_run):
+            return run(args, config)
+    except BlockingIOError:
+        logger.error('Audiobook copy is already running; retry on the next sweep')
+        return 2
+
+
+def run(args, config):
 
     # Initialize state manager
     state = StateManager(config.state_file)

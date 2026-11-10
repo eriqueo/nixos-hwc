@@ -2,6 +2,30 @@
 { inputs, lib, pkgs, repoRoot, self }:
 {
 
+catalog-export-contract = pkgs.runCommand "catalog-export-contract" {
+  nativeBuildInputs = [ pkgs.python3 pkgs.bash ];
+} ''
+  export PYTHONDONTWRITEBYTECODE=1
+  python3 ${(repoRoot + "/domains/business/verification/test_catalog_export.py")}
+  touch "$out"
+'';
+
+estimator-engine-contract = pkgs.runCommand "estimator-engine-contract" {
+  nativeBuildInputs = [ pkgs.nodejs_22 ];
+} ''
+  cd ${(repoRoot + "/domains/business/estimator")}
+  node test/golden-master.test.js
+  node test/rate-audit.test.js
+  node src/engine/preliminary.js --check
+  for seed in --perturb --nonfinite; do
+    if node test/golden-master.test.js "$seed"; then
+      echo "Golden oracle accepted $seed" >&2
+      exit 1
+    fi
+  done
+  touch "$out"
+'';
+
 estimator-private-api = let
   c = self.nixosConfigurations.hwc-work.config;
   route = lib.findFirst (r: r.name == "estimator") null c.hwc.networking.shared.effectiveRoutes;

@@ -7,9 +7,7 @@ let
 
   render   = import ./parts/render.nix { inherit lib pkgs config; };
   brCfg = config.hwc.mail.bridge or {};
-  maildirRoot =
-    let base = (config.hwc.mail.notmuch or {}).maildirRoot or "";
-    in if base != "" then base else "${config.hwc.paths.user.mail or "${config.home.homeDirectory}/400_mail"}/Maildir";
+  maildirRoot = config.hwc.mail.notmuch.maildirRoot;
   svc      = import ./parts/service.nix {
     inherit lib pkgs;
     source = inputs.system-one;

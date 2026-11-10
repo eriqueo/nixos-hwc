@@ -2,7 +2,6 @@
 let
   inherit (lib) mkEnableOption mkOption types mkIf concatStringsSep;
 
-  tailscaleDomain = config.hwc.networking.shared.tailscaleDomain;
   rootHost        = config.hwc.networking.shared.rootHost;
   # Serving hosts render their own routes plus explicit compatibility entries.
   # XPS retains null mode until its serving role can be deployed and checked.
@@ -104,8 +103,6 @@ let
       assetGlobs    = r.assetGlobs or [ "/css/*" "/js/*" "/assets/*" "/images/*" "/static/*" "/fonts/*" "/webfonts/*" "/favicon.ico" ];
       assetStrategy = r.assetStrategy or "none";
       needsUrlBase  = r.needsUrlBase or false;      # NEW: drives preserve vs strip
-      stripPrefix   = r.stripPrefix or false;       # deprecated; ignored when needsUrlBase = true
-      timeouts      = r.timeouts or { try = "10s"; fail = "5s"; };
 
       # common reverse_proxy block (shared helper)
       proxyBlock = mkProxyBlock r;
@@ -346,7 +343,7 @@ let
   # A work-only vhost host has no legacy tailnet-root routes. Do not publish a
   # root site with an inert /mcp handler and no backend on that host.
   rootBlock = lib.optionalString
-    (subpathRoutes != [ ] || (config.hwc.ai.mcp.proxy.enable or false)) ''
+    (subpathRoutes != [ ] || (config.hwc.ai.mcp.proxy.active or false)) ''
       ${rootHost} {
         tls {
           get_certificate tailscale
@@ -476,8 +473,8 @@ in
     routes = mkOption {
       # New schema keys supported per route:
       # name, mode=("subpath"|"port"|"static"|"vhost"), path, port, upstream,
-      # root (static), needsUrlBase=bool, stripPrefix=bool (deprecated),
-      # headers=attrs, headersIfAbsent=attrs (vhost only), assetGlobs, assetStrategy, ws=bool, timeouts={try,fail}
+      # root (static), needsUrlBase=bool,
+      # headers=attrs, headersIfAbsent=attrs (vhost only), assetGlobs, assetStrategy, ws=bool
       # mode="vhost": served as <name>.<vhostDomain> on :443 (no port field).
       #
       # lazyAttrsOf, not attrsOf (2026-09-16): attrsOf forces EVERY attribute of

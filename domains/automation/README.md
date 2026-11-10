@@ -14,6 +14,8 @@ readme-freshness weekly Law-12 drift report.
 
 ## Structure
 
+Refinery application code and tests live in the pinned `eriqueo/refinery` source. This domain retains its Nix wiring, local pipeline definitions and domain registry; the obsolete embedded engine and gauntlet copies are removed.
+
 `verification/` contains pure flake checks for this capability; production modules do not import it.
 
 n8n declares column-scoped PostgreSQL authority for its shared workflow tables while its own state stays SQLite. The stopped-app credential bridge changes only declared PostgreSQL credential IDs, preserves unrelated state, and stores a runtime password expression.
@@ -101,6 +103,8 @@ workspace/automation/
 ```
 
 ## Changelog
+
+- 2026-11-09: Remove the superseded embedded Refinery engine and recipes; retain pinned source and live local configuration.
 
 - 2026-11-04: Limit the workflow-secret scanner source to its canonical tool and tracked exports; exclude unrelated repository files.
 

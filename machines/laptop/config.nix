@@ -265,7 +265,6 @@ in
 
   # The old broad rsync tree stays disabled. Protect only laptop-specific state;
   # existing synced data, games and prior backups keep their current owners.
-  hwc.data.backup.enable = false;
   hwc.data.borg = {
     enable = true;
     repo = {

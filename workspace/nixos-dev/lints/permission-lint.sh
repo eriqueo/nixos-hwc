@@ -42,7 +42,7 @@ lint_error() {
     echo "  Issue: $message"
     echo "  Fix: $suggestion"
     echo ""
-    ((ERRORS++))
+    ERRORS=$((ERRORS + 1))
 }
 
 lint_warning() {
@@ -54,7 +54,7 @@ lint_warning() {
     echo "  Issue: $message"
     echo "  Suggestion: $suggestion"
     echo ""
-    ((WARNINGS++))
+    WARNINGS=$((WARNINGS + 1))
 }
 
 lint_info() {
@@ -80,7 +80,7 @@ check_container_pgid() {
             # Auto-fix: Replace PGID="1000" with PGID="100"
             sed -i 's/PGID.*=.*"1000"/PGID = "100"/' "$module_file"
             echo -e "${GREEN}  ✓ Auto-fixed PGID${NC}"
-            ((FIXED++))
+            FIXED=$((FIXED + 1))
         fi
     fi
 }

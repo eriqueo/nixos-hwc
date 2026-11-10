@@ -11,13 +11,15 @@ lib.genAttrs (map (law: "charter-law${toString law}") [ 1 2 4 5 7 10 12 14 16 ])
     touch "$out"
   '')
 // {
-  verification-contract = pkgs.runCommand "verification-contract" { nativeBuildInputs = [ python pkgs.git ]; } ''
+  verification-contract = pkgs.runCommand "verification-contract" { nativeBuildInputs = [ python pkgs.git pkgs.ripgrep ]; } ''
     cp ${./charter.py} charter.py
     cp ${./layout.py} layout.py
     cp ${./test_charter.py} test_charter.py
     cp ${./test_layout.py} test_layout.py
     cp ${./release.py} release.py
     cp ${./test_release.py} test_release.py
+    export HWC_PERMISSION_LINTER=${self}/workspace/nixos-dev/lints/permission-lint.sh
+    export HWC_README_GENERATOR=${self}/workspace/nixos-dev/generate-domain-readmes.py
     python3 -m unittest test_charter test_layout test_release
     touch "$out"
   '';

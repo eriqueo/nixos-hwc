@@ -13,10 +13,18 @@ await new Promise((resolve,reject) => {
 });
 let calculatorDev;
 const browser = await chromium.launch({ executablePath:process.env.CHROMIUM_PATH || '/run/current-system/sw/bin/chromium', headless:true });
+async function fixtureContext(options) {
+ const context = await browser.newContext(options);
+ await context.route('**/*', route => {
+   const host = new URL(route.request().url()).hostname;
+   return ['127.0.0.1', 'localhost', '[::1]'].includes(host) ? route.fallback() : route.abort();
+ });
+ return context;
+}
 try {
  if (!process.env.CALCULATOR_TEST_ONLY && !process.env.FLOORING_TEST_ONLY) {
  const prepared=JSON.parse(readFileSync(new URL('../src/data/preparedDraft.json',import.meta.url),'utf8'));
- const fresh=await browser.newContext({viewport:{width:390,height:900}});
+ const fresh=await fixtureContext({viewport:{width:390,height:900}});
  const ready=await fresh.newPage();
  await ready.route('**/webhook/jt-customers?*',r=>r.fulfill({json:{customers:[{id:prepared.state.customerId,name:'Carrie'}]}}));
  await ready.route('**/webhook/jt-jobs?*',r=>r.fulfill({json:{jobs:[{id:prepared.state.jobId,name:prepared.state.jobName,number:411,displayName:'#411'}]}}));
@@ -32,7 +40,7 @@ try {
  console.log('PASS prepared Carrie worksheet boots automatically and preserves answers on reload');
  await fresh.close();
 for (const width of [390,768,1440]) {
- const context = await browser.newContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true, serviceWorkers:'block' });
+ const context = await fixtureContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true, serviceWorkers:'block' });
  const page = await context.newPage();
  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
  await page.route(/\/api\/jobs\/[^/]+\/calculator-intake$/, route => route.fulfill({status:404,contentType:'application/json',body:'{}'}));
@@ -72,7 +80,8 @@ for (const width of [390,768,1440]) {
  const layout = await page.evaluate(() => ({ width:innerWidth,scroll:document.documentElement.scrollWidth,
   columns:getComputedStyle(document.querySelector('.form-grid')).gridTemplateColumns,
   small:[...document.querySelectorAll('input:not([type=file]), select,button')].filter(e=>e.getBoundingClientRect().height>0 && e.getBoundingClientRect().height<44).map(e=>e.outerHTML.slice(0,100)),
-  fonts:[...document.querySelectorAll('input:not([type=file]),select,textarea')].filter(e=>e.getBoundingClientRect().height>0 && parseFloat(getComputedStyle(e).fontSize)<16).length }));
+  fonts:[...document.querySelectorAll('input:not([type=file]),select,textarea')].filter(e=>e.getBoundingClientRect().height>0 && parseFloat(getComputedStyle(e).fontSize)<16).length,
+  overflow:[...document.querySelectorAll('*')].filter(e=>e.getBoundingClientRect().right>innerWidth).map(e=>({tag:e.tagName,label:e.getAttribute('aria-label')||e.textContent.slice(0,60),right:e.getBoundingClientRect().right})) }));
  assert.equal(layout.scroll, width,JSON.stringify(layout)); assert.equal(layout.small.length,0,JSON.stringify(layout));
  if(width<1024) assert.equal(layout.fonts,0);
  await page.getByRole('button',{name:'Details',exact:true}).click();
@@ -206,7 +215,7 @@ for (const width of [390,768,1440]) {
  console.log('PASS',width,JSON.stringify(layout));
  await context.close();
 
- const intakeContext = await browser.newContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true, serviceWorkers:'block' });
+ const intakeContext = await fixtureContext({ viewport:{width,height:900}, ignoreHTTPSErrors:true, serviceWorkers:'block' });
  const intakePage = await intakeContext.newPage();
  const intakeErrors=[]; intakePage.on('pageerror',e=>intakeErrors.push(e.message));
  await intakePage.route('**/webhook/jt-customers?*', r=>r.fulfill({json:{customers:[{id:'c',name:'Calculator customer'}]}}));
@@ -269,7 +278,7 @@ for (const width of [390,768,1440]) {
  }
 
  if (!process.env.CALCULATOR_TEST_ONLY) for (const width of [390, 768, 1440]) {
-   const context = await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});
+   const context = await fixtureContext({viewport:{width,height:900},serviceWorkers:'block'});
    const page = await context.newPage(); const errors=[]; page.on('pageerror',e=>errors.push(e.message));
    const legacy = JSON.stringify({state_version:2,projectType:'bathroom',mode:'existing',jobId:'floor-test',customerId:'floor-customer',jobName:'Flooring fixture',calculator_input_status:'none'});
    await page.addInitScript(legacy=>{
@@ -389,7 +398,7 @@ for (const width of [390,768,1440]) {
    calculatorDev.on('exit',code=>reject(Error(`Calculator dev server exited: ${code}`)));
  });
  for (const width of [390,1440]) for (const kind of ['bathroom','deck']) {
-   const context=await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'});
+   const context=await fixtureContext({viewport:{width,height:900},serviceWorkers:'block'});
    const page=await context.newPage();const errors=[];page.on('pageerror',e=>{errors.push(e.message);process.stderr.write(e.stack+'\n');});
    const data=JSON.parse(readFileSync(`${process.env.HWC_WEBSITE_SITE_DIR}/src/_data/calculator-${kind}.json`,'utf8'));
    await page.route('http://127.0.0.1:5190/',async r=>{
@@ -442,6 +451,17 @@ for (const width of [390,768,1440]) {
      assert.equal(await page.getByLabel('Room Length feet',{exact:true}).inputValue(),'9');
      assert.equal(await page.getByLabel('Room Length inches',{exact:true}).inputValue(),'6');
      assert.equal(await page.getByLabel('Shower finish',{exact:true}).inputValue(),'panel');
+     await page.getByRole('button',{name:'Details',exact:true}).click();
+     await page.getByText(/Floor: \$570/).waitFor();
+     await page.getByText(/Shower: needs shower measurements/).waitFor();
+     await page.evaluate(() => {
+       const draft=JSON.parse(localStorage.getItem('hwc-estimate-state-v3'));
+       draft.bathroom_length_ft=null;
+       localStorage.setItem('hwc-estimate-state-v3',JSON.stringify(draft));
+     });
+     await page.reload();
+     await page.getByRole('button',{name:'Details',exact:true}).click();
+     await page.getByText(/Floor: needs room measurements/).waitFor();
    } else {
      assert.equal(await page.getByLabel('Length feet',{exact:true}).inputValue(),'16');
    }

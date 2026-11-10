@@ -199,7 +199,7 @@ Check root podman socket access:
 
 ### nix eval returns stale data
 
-`nix eval` operates on the git store, not the working tree. Uncommitted changes are invisible. Commit first, or use filesystem-based tools (`list_domains`, `search_options`, `get_port_map`) which read the working tree.
+The gateway uses explicit `path:` references, so `nix eval` reads the configured working tree. Release verification still requires a committed candidate. `hwc_config` evaluates port maps and host settings; browse/search actions inspect source files.
 
 ### Deploying TypeScript changes
 
@@ -271,8 +271,8 @@ removed.
 |------|-------------|
 | `hwc_config_get_option` | Evaluate any NixOS option via `nix eval` (cached). Only sees committed changes. |
 | `hwc_config_list_domains` | Walk `domains/` directory — subdomains, files, index.nix presence. |
-| `hwc_config_get_port_map` | Parse `routes.nix` for complete port allocation. Optional `filter`. |
-| `hwc_config_get_host_profile` | Parse a machine's config.nix for profiles and domain imports. |
+| `hwc_config` (`port_map`) | Evaluate the selected host’s routes, including configured ports. Optional `host` and `filter`. |
+| `hwc_config` (`host_profile`) | Read fleet roles/channel, evaluated host settings and explicit source imports. |
 | `hwc_config_search_options` | Grep `domains/` for `mkOption`/`mkEnableOption` matching a query. |
 | `hwc_config_browse` | Read file or list directory in repo (auto-detects). Supports offset/limit, recursive. |
 | `hwc_config_flake_metadata` | All flake inputs with name, URL, revision, last-modified. |

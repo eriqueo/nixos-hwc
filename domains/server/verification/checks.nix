@@ -1,6 +1,12 @@
 # Pure verification function; not a NixOS or Home Manager module.
 { inputs, lib, pkgs, repoRoot, self }:
 {
+wall-display-client = pkgs.runCommand "wall-display-client" {
+  nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.icalendar p.segno ])) pkgs.nodejs_22 ];
+} ''
+  python3 ${repoRoot}/domains/server/services/wall-display/parts/test_wall_display.py
+  touch "$out"
+'';
 
 brainvec-deployment = let
   service = self.nixosConfigurations.hwc-work.config.systemd.services.brainvec-ingest;

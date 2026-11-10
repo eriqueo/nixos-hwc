@@ -7,6 +7,17 @@ from pathlib import Path
 import re
 
 LAWS = (1, 2, 4, 5, 7, 10, 12, 14, 16)
+README_SECTIONS = ('Purpose', 'Boundaries', 'Structure', 'Changelog')
+
+
+def readme_requirements(root):
+    domains = root / 'domains'
+    directories = list(domains.glob('*/'))
+    directories += list((domains / 'server/containers').glob('*/'))
+    directories += list((domains / 'home/apps').glob('*/'))
+    # The wired law checks module presence and top-level section headings.
+    return {directory: README_SECTIONS if directory.parent == domains else ()
+            for directory in sorted(directories) if directory.name != '_shared'}
 
 
 def files(root, directory):
@@ -56,17 +67,15 @@ def inspect(root, law):
                and p != 'domains/paths/paths.nix' and 'HWC-EXCEPTION(Law 10)' not in s},
               r'^[^#]*=\s*(lib\.)?mk(Option|EnableOption)\b')
     elif law == 12:
-        directories = list((root / 'domains').glob('*/'))
-        directories += list((root / 'domains/server/containers').glob('*/'))
-        directories += list((root / 'domains/home/apps').glob('*/'))
-        for directory in directories:
-            if directory.name != '_shared' and not (directory / 'README.md').is_file():
-                hits.append(f'Missing: {directory.relative_to(root)}/README.md')
-        for path, source in domain.items():
-            if re.fullmatch(r'domains/[^/]+/README\.md', path):
-                for section in ('Purpose', 'Boundaries', 'Structure', 'Changelog'):
-                    if not re.search(r'^## ' + section, source, re.M):
-                        hits.append(f'{path}: missing {section}')
+        for directory, sections in readme_requirements(root).items():
+            readme = directory / 'README.md'
+            if not readme.is_file():
+                hits.append(f'Missing: {readme.relative_to(root)}')
+                continue
+            source = readme.read_text()
+            for section in sections:
+                if not re.search(r'^## ' + section, source, re.M):
+                    hits.append(f'{readme.relative_to(root)}: missing {section}')
     elif law == 14:
         match({'flake.nix': (root / 'flake.nix').read_text()}, r'github:eriqueo/nixos[-]hwc')
     elif law == 16:

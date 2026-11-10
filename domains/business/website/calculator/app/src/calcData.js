@@ -3,7 +3,7 @@
 // engines (assembly + bathroom + deck) and the step-transformation logic
 // that resolves image paths from the JSON's imageBase and per-option image
 // filename.
-import { CALCULATOR_FIELDS } from '../../../../estimator/src/api/crm.js';
+import { CALCULATOR_FIELDS } from '../../../../estimator/src/engine/calculator-contract.js';
 import { evaluateCondition } from '../../../../estimator/src/engine/formulaEngine.js';
 
 // Fixed patterns are shared; stateful uses reset their cursor below.

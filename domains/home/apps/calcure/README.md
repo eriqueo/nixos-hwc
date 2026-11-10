@@ -8,7 +8,10 @@ Installs the calcure TUI calendar/task manager with a fully declarative `~/.conf
 - ❌ No calendar data or sync — event/task backends live elsewhere (Radicale via the mail/calendar stack); does not manage kitty's palette (`domains/home/theme/`).
 
 ## Structure
+The single module owns the package and configuration directly; it has no validation-only output block.
+
 - `index.nix` — enable option, package, desktop entry, generated config.ini with Nord-mapped color slots.
 
 ## Changelog
+- 2026-11-09: Remove empty assertion scaffolding; preserve package and configuration output.
 - 2026-07-06: README added (Law 12 v12.4 hybrid-scope burn-down; content derived from module source).

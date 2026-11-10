@@ -1,7 +1,7 @@
 # domains/home/theme/palettes/gruv.nix
 # Gruvbox Material Dark - Expanded tokens for rich UI theming
 { osConfig ? {} }:
-{
+(import ./common.nix) // rec {
   name = "gruv";
 
   # --- Background Hierarchy (4 shades for rich UI depth) ---
@@ -11,9 +11,9 @@
   bg3      = "504945";  # Highest: active elements, buttons, borders
 
   # Legacy aliases (keep for compatibility during transition)
-  bg       = "282828";  # → bg1
-  bgAlt    = "3c3836";  # → bg2
-  bgDark   = "1d2021";  # → bg0
+  bg       = bg1;  # → bg1
+  bgAlt    = bg2;  # → bg2
+  bgDark   = bg0;  # → bg0
   surface0 = "32302f";  # intermediate shade
   surface1 = "3c3836";  # intermediate shade
   surface2 = "504945";  # intermediate shade
@@ -25,9 +25,9 @@
   fg3      = "665c54";  # Muted: disabled, comments, dividers
 
   # Legacy aliases
-  fg       = "d4be98";  # → fg1
-  fgDim    = "bdae93";  # → fg2
-  muted    = "665c54";  # → fg3
+  fg       = fg1;  # → fg1
+  fgDim    = fg2;  # → fg2
+  muted    = fg3;  # → fg3
 
   # --- Primary Accents (main interaction colors) ---
   accent     = "7daea3"; # Teal: primary accent (tabs, modes, links)
@@ -49,21 +49,21 @@
   info          = "7daea3"; # Teal: info/help
 
   # Legacy aliases
-  good  = "a9b665";  # → success
-  warn  = "d8a657";  # → warning
-  crit  = "ea6962";  # → error
+  good  = success;  # → success
+  warn  = warning;  # → warning
+  crit  = error;  # → error
 
   # --- UI Element Colors (specific roles) ---
   # Selection & Marking
   selection   = "7daea3"; # Primary selection color
   selectionFg = "282828"; # Text on selection
-  selectionBg = "7daea3"; # Selection background
+  selectionBg = selection; # Selection background
   marked      = "d3869b"; # Marked items (magenta)
   markedAlt   = "89b482"; # Alt marked color (green)
 
   # Interactive Elements
   cursorColor = "d4be98"; # Text cursor
-  caret       = "d4be98"; # Caret/insertion point
+  caret       = cursorColor; # Caret/insertion point
   link        = "7daea3"; # Hyperlinks
   linkHover   = "89b482"; # Hovered links
 
@@ -117,12 +117,7 @@
   };
 
   # --- Hyprland helpers (pre-alpha hex chunks when you need rgba) ---
-  alpha = {
-    opaque = "ff";
-    strong = "cc";
-    soft   = "aa";
-    faint  = "66";
-  };
+
 
   # For convenience with Hyprland's "rgba(RRGGBBAA)" border strings.
   hypr = {
@@ -133,19 +128,5 @@
 
   # --- Pointer theme config (palette-driven) ---
   # GTK/Qt use XCursor; Hyprland uses Hyprcursor. Keep them in sync here.
-  cursor = {
-    size = 24;
 
-    # GTK/Qt side (XCursor)
-    xcursor = {
-      name    = "Nordzy-cursors";
-      package = "nordzy-cursor-theme";  # pkgs.<this>
-    };
-
-    # Hyprland side (Hyprcursor)
-    hyprcursor = {
-      name         = "Nordzy-hyprcursors";
-      # The Hyprland-session adapter will link this into ~/.local/share/icons
-    };
-  };
 }

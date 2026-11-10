@@ -4,11 +4,7 @@ let
   accs       = cfg.accounts or {};
   common     = import ../../accounts/helpers.nix { inherit lib; };
   syncContract = config.hwc.mail.classifier.contract.protonSync;
-  # Use notmuch maildirRoot or fallback to default
-  maildirRoot =
-    let nmRoot = cfg.notmuch.maildirRoot or "";
-        fallback = "${config.home.homeDirectory}/Maildir";
-    in if nmRoot != "" then nmRoot else fallback;
+  maildirRoot = cfg.notmuch.maildirRoot;
 
   # ---- Account ordering (left-to-right everywhere that iterates 'vals')
   desiredOrder = [ "proton" "gmail-personal" "gmail-business" ];

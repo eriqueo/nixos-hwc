@@ -31,6 +31,7 @@
   pkgs,
   osConfig ? {},
   captureCommand ? null,
+  workspacePlan ? (import ./hardware.nix { inherit lib pkgs; }).workspacePlan,
   ...
 }: let
   mod = "SUPER";
@@ -86,7 +87,7 @@
   floatingMaxSize = "(monitor_w*0.8) (monitor_h*0.8)";
   filePickerSize = "(monitor_w*0.5) (monitor_h*0.6)";
 
-  wsSlots = [1 2 3 4 5 6 7 8];
+  wsSlots = workspacePlan.slots;
   sendToWs = map (n: {
     mods = "${mod} CTRL"; key = toString n;
     act = "exec,hwc-workspace-switch --move ${toString n}";

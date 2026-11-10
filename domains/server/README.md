@@ -9,6 +9,12 @@
 
 ## Structure
 
+Wall-display phone and voice adapters share Streamable HTTP sessions in
+`services/wall-display/parts/mcp_client.py`. Each adapter keeps its own allowlist,
+confirmation and result handling. The client checks reply IDs, ends allocated
+sessions after initialization failure, and never retries tool actions.
+`verification/checks.nix` runs both adapters against loopback JSON/SSE fixtures.
+
 Meals and the wall display's Piper command select checked Python runtime
 packages on owned instances. Their app assets and native libraries come from
 the existing packages; data and model paths keep their existing owners.
@@ -122,6 +128,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-11-09: Share wall-display MCP session transport while preserving phone/voice policy; test reply correlation, cleanup, refusal details and no replay.
 
 - 2026-11-09: Refine full Tasks with the shared Workbench palette, disclosed creation/repeat fields, list/project/context filters, search and due/priority/title ordering. Keep completion below active tasks and show loaded scope, stale/error and saved states. Wire repeat-only edits through the existing validator; retain foreign schedules and restore dialog focus, including read-only details. Add synthetic browser and production-wiring regressions.
 

@@ -4,7 +4,6 @@ let
   cfg = config.hwc.home.apps.proton-mail;
 
   behavior   = import ./parts/behavior.nix   { inherit lib pkgs config; };
-  appearance = import ./parts/appearance.nix { inherit lib pkgs config; };
   session    = import ./parts/session.nix    { inherit lib pkgs config; };
 
   homeDir = config.home.homeDirectory;
@@ -28,12 +27,8 @@ in
   #==========================================================================
   config = lib.mkIf cfg.enable {
     home.packages = (session.packages or []);
-    home.sessionVariables = (session.env or {});
     systemd.user.services = (session.services or {});
     xdg.desktopEntries = (session.desktopEntries or {});
-    home.file = lib.mkMerge [
-      (appearance.files homeDir)
-      (behavior.files homeDir)
-    ];
+    home.file = behavior.files homeDir;
   };
 }

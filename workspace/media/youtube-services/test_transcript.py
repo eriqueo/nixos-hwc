@@ -8,6 +8,7 @@ import asyncio
 import json
 import os
 import tempfile
+import subprocess
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -403,6 +404,93 @@ class JobDedupAndRetry(unittest.TestCase):
     @staticmethod
     def _ok(url, mode, dest, allow_audio=False, on_stage=None):
         return {"url": url, "title": "t", "filename": str(dest / "f.md"), "transcript": "x", "source": "captions"}
+
+    def test_served_browser_stops_polling_for_terminal_jobs_and_keeps_failures_visible(self):
+        script = run(api.ui()).split("<script>", 1)[1].split("</script>", 1)[0]
+        program = r"""
+const vm = require('node:vm'), fs = require('node:fs'), assert = require('node:assert/strict');
+const {script, jobs} = JSON.parse(fs.readFileSync(0, 'utf8'));
+(async () => {
+ for (const job of jobs) {
+  const elements = new Map(); let tick, stops = 0;
+  const row = {value:'https://youtu.be/aaaaaaaaaaa', focus(){}, addEventListener(){}};
+  const get = id => {
+   if (!elements.has(id)) elements.set(id,{value:id==='xmode'?'post':'', style:{}, checked:false,
+     insertAdjacentHTML(){}, querySelectorAll(){return [row]}, innerHTML:'', textContent:''});
+   return elements.get(id);
+  };
+  const config = {roots:['/fixture'],default_mode:'raw',x_modes:{post:'Post'},x_login_modes:[],x_limit_default:20,x_limit_max:200};
+  const context = {document:{getElementById:get}, setInterval(fn){tick=fn;return 1},clearInterval(){stops++},
+   fetch:async (url, opts) => ({ok:true,json:async()=>url==='/config'?config:url==='/x/session'?{linked:false}:opts?.method==='POST'?{job_id:'fixture'}:job})};
+  vm.createContext(context); vm.runInContext(script,context);
+  await context.run(); await tick();
+  assert.equal(stops,job.terminal?1:0);
+  assert.equal(get('go').disabled,!job.terminal);
+  if (job.error) {assert.equal(get('msg').textContent,job.error);assert.equal(get('msg').className,'msg err');}
+ }
+})().catch(error=>{console.error(error);process.exitCode=1});
+"""
+        jobs = [api.JobStatus(job_id="fixture", status=status, error="Synthetic failure" if status != "running" else "").model_dump()
+                for status in ("failed", "cancelled", "running")]
+        result = subprocess.run(["node", "-e", program], input=json.dumps({"script": script, "jobs": jobs}),
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_active_jobs_are_not_evicted_and_finished_history_is_replaced(self):
+        with mock.patch.dict(api._jobs, {}, clear=True), mock.patch.dict(api._retry_specs, {}, clear=True), mock.patch.object(api, "MAX_JOBS", 2):
+            first, active = api._new_job(self.root), api._new_job(self.root)
+            with self.assertRaises(api.HTTPException) as error:
+                api._new_job(self.root)
+            self.assertEqual(error.exception.status_code, 429)
+            self.assertEqual(list(api._jobs), [first.job_id, active.job_id])
+            first.status = "complete"
+            api._retry_specs[first.job_id] = mock.Mock()
+            newest = api._new_job(self.root)
+            self.assertEqual(list(api._jobs), [active.job_id, newest.job_id])
+            self.assertNotIn(first.job_id, api._retry_specs)
+
+    def test_item_is_reserved_during_pacing_and_cancellation_releases_it(self):
+        async def exercise(cancel):
+            waiting, release = asyncio.Event(), asyncio.Event()
+            calls = []
+            async def pace(_):
+                waiting.set()
+                await release.wait()
+            async def extract(url, *args, **kwargs):
+                calls.append(url)
+                return {"url": url, "title": "fixture"}
+            first, second = api._new_job(self.root), api._new_job(self.root)
+            urls = ["https://youtu.be/aaaaaaaaaaa", "https://youtu.be/bbbbbbbbbbb"]
+            with mock.patch.object(api.asyncio, "sleep", side_effect=pace), mock.patch.object(api, "_extract", side_effect=extract), mock.patch.object(api, "scan_saved", return_value={}):
+                task = asyncio.create_task(api._run_job(first.job_id, urls, [], "raw", self.root, False))
+                await waiting.wait()
+                try:
+                    await api._run_job(second.job_id, [urls[1]], [], "raw", self.root, False)
+                    self.assertEqual(second.results[0].get("status"), "duplicate")
+                finally:
+                    if cancel: task.cancel()
+                    release.set()
+                    if cancel:
+                        with self.assertRaises(asyncio.CancelledError): await task
+                    else: await task
+            self.assertNotIn("bbbbbbbbbbb", api._inflight)
+            expected = ["https://www.youtube.com/watch?v=aaaaaaaaaaa", "https://www.youtube.com/watch?v=bbbbbbbbbbb"]
+            self.assertEqual(calls, expected[:1] if cancel else expected)
+            self.assertTrue(first.model_dump()["terminal"])
+            self.assertEqual(first.status, "cancelled" if cancel else "complete")
+        run(exercise(False))
+        run(exercise(True))
+
+    def test_unexpected_preparation_failure_is_terminal_and_visible(self):
+        job = api._new_job(self.root)
+        with mock.patch.object(api, "scan_saved", side_effect=OSError("fixture read failure")):
+            run(api._run_job(job.job_id, ["https://youtu.be/aaaaaaaaaaa"], [], "raw", self.root, False))
+        status = run(api.get_job(job.job_id))
+        self.assertEqual(status["schema_version"], 1)
+        self.assertEqual(status["status"], "failed")
+        self.assertTrue(status["terminal"])
+        self.assertIn("fixture read failure", status["error"])
+        self.assertEqual(status["current"], {})
 
     def test_saved_video_is_skipped_not_fetched(self):
         (self.root / "old.md").write_text(_md("aaaaaaaaaaa"))

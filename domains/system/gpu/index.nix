@@ -27,18 +27,12 @@
 #       virtualisation.oci-containers.backend = "podman";
 #     (If the backend differs, CDI hint is gated and safe.)
 
-{ config, lib, pkgs, nixosApiVersion ? "unstable", ... }:
+{ config, lib, pkgs, ... }:
 
 let
   cfg   = config.hwc.system.hardware.gpu;
   paths = config.hwc.paths;
   t     = lib.types;
-
-  # Cross-version API compatibility flag
-  # 24.05 uses hardware.opengl, 24.11+ uses hardware.graphics
-  # nixosApiVersion is passed from flake.nix ("stable" for server, "unstable" for laptop)
-  # 24.11 stable now uses hardware.graphics API
-  useStableApi = false;  # 24.11+ uses hardware.graphics
 
   # Derive a neutral acceleration signal for service consumers.
   accelFor = type:
@@ -270,16 +264,7 @@ in
     }
 
     # --- Common graphics stack (all GPU types except 'none') ------------------
-    # Cross-version compatibility: 24.05 uses hardware.opengl, 24.11+ uses hardware.graphics
-    (if useStableApi then {
-      # NixOS 24.05 API
-      hardware.opengl = {
-        enable = true;
-        driSupport = true;
-        driSupport32Bit = true;
-      };
-    } else {
-      # NixOS 24.11+ / unstable API
+    {
       hardware.graphics = {
         enable = true;
         enable32Bit = true;
@@ -287,7 +272,7 @@ in
           pkgs.cudaPackages.cudatoolkit
         ];
       };
-    })
+    }
 
     # --- NVIDIA ---------------------------------------------------------------
     (lib.mkIf (cfg.type == "nvidia" && cfg.nvidia.enable) {
@@ -434,20 +419,13 @@ in
         ];
       }
 
-      # Cross-version compatibility for extra packages
-      (if useStableApi then {
-        hardware.opengl.extraPackages = with pkgs; [
-          intel-media-driver
-          intel-vaapi-driver
-          libvdpau-va-gl
-        ];
-      } else {
+      {
         hardware.graphics.extraPackages = with pkgs; [
           intel-media-driver
           intel-vaapi-driver
           libvdpau-va-gl
         ];
-      })
+      }
     ]))
 
     # --- AMD ------------------------------------------------------------------
@@ -457,16 +435,11 @@ in
         boot.kernelModules = [ "amdgpu" ];
       }
 
-      # Cross-version compatibility for extra packages
-      (if useStableApi then {
-        hardware.opengl.extraPackages = with pkgs; [
-          libvdpau-va-gl
-        ];
-      } else {
+      {
         hardware.graphics.extraPackages = with pkgs; [
           libvdpau-va-gl
         ];
-      })
+      }
     ]))
 
     # --- Laptop helpers (optional) --------------------------------------------

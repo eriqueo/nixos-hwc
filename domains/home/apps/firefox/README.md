@@ -13,6 +13,8 @@ LibreWolf was flagged insecure in nixpkgs (2026-06, no active committer).
   deep-nord fallback; no hardcoded colors outside `parts/theme.nix`.
 
 ## Structure
+
+`parts/launcher.nix` consumes shared Intel render-node/iHD detection from `domains/lib/hm.nix`; Firefox retains its NVIDIA and EGL cleanup.
 ```
 index.nix            # Options + programs.firefox profiles.hwc + desktop entry
 parts/behavior.nix   # Privacy/hardening prefs, web-platform pins, session persistence
@@ -22,6 +24,8 @@ parts/launcher.nix   # firefox-hwc wrapper (Intel iGPU pin, NVIDIA env strip)
 ```
 
 ## Changelog
+
+- 2026-11-09: Share Intel VAAPI setup with Chromium; preserve browser flags and Firefox EGL cleanup.
 - 2026-07-11: index.nix — pinned `programs.firefox.configPath =
   ".mozilla/firefox"` (legacy location, where the live `hwc` profile lives);
   silences the HM legacy-default eval warning without migrating the profile.

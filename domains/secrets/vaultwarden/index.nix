@@ -33,7 +33,7 @@ in
     # access fixes while retaining the password prelogin client route.
     image = lib.mkOption { type = lib.types.str; default = "docker.io/vaultwarden/server@sha256:f8863ab2519364bfc657144006682a830784e0bb501606d5e34516ee76b60b5c"; };
     port = lib.mkOption { type = lib.types.port; default = 8222; };
-    reverseProxy.port = lib.mkOption { type = lib.types.port; default = 15443; };
+    reverseProxy.port = lib.mkOption { type = lib.types.port; default = 15443; description = "Compatibility input; Vaultwarden uses its central HTTPS vhost, not a separate TLS port"; };
     network.mode = lib.mkOption { type = lib.types.enum [ "media" "host" ]; default = "media"; };
   };
 

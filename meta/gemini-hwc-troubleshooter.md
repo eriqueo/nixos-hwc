@@ -66,7 +66,7 @@
 5. journalctl -xeu <service>                         # For runtime service issues
 
 # HWC-specific validation tools:
-./workspace/utilities/docs/generate-domain-readmes.py --check    # Validate domain READMEs
+./workspace/nixos-dev/generate-domain-readmes.py --check    # Validate domain READMEs
 ./workspace/utilities/config-validation/config-extractor.py .    # Extract config metadata
 ```
 
@@ -141,13 +141,13 @@ rg "home\." domains/system/
 find domains/ -name "*.nix" -not -name "options.nix" -exec rg "mkOption|types\." {} \;
 
 # Validate domain documentation
-./workspace/utilities/docs/generate-domain-readmes.py --check --verbose
+./workspace/nixos-dev/generate-domain-readmes.py --check --verbose
 
 # Extract configuration metadata (without deploying)
 ./workspace/utilities/config-validation/config-extractor.py . > config-analysis.json
 
 # Analyze specific domain
-./workspace/utilities/docs/generate-domain-readmes.py --check --domain infrastructure
+./workspace/nixos-dev/generate-domain-readmes.py --check --domain system
 ```
 
 ### Emergency Recovery Procedures
@@ -207,7 +207,7 @@ Each domain has comprehensive README documentation:
 Service-specific documentation in module directories:
 - `domains/server/frigate/README.md` - Complete Frigate NVR setup guide
 - `domains/infrastructure/hardware/README.md` - GPU configuration and troubleshooting
-- See `./workspace/utilities/docs/generate-domain-readmes.py --check` for full list
+- See `./workspace/nixos-dev/generate-domain-readmes.py --check` for full list
 
 #### Templates & Standards
 - `docs/templates/DOMAIN_README_TEMPLATE.md` - Standard domain README structure

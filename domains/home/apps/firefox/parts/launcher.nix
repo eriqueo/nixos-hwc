@@ -1,6 +1,7 @@
 { lib, pkgs, ... }:
 
 let
+  hmLib = import ../../../../lib/hm.nix { inherit lib; };
   # IMPORTANT: Same hybrid-GPU constraint as chromium-hwc — on this laptop
   # Hyprland renders on the Intel iGPU, so Firefox must too. Cross-GPU
   # DMA-BUF imports fail with EGL_BAD_MATCH inside Mesa and can take down
@@ -32,18 +33,7 @@ let
     # nvidia (typical on hybrid laptops where the dGPU is the nominal type)
     # makes Firefox's HW video decode fail because we render on Intel.
     # NO-OP on machines without an Intel iGPU or without the iHD driver.
-    intel_present=0
-    for n in /dev/dri/renderD*; do
-      v=$(cat "/sys/class/drm/$(basename "$n")/device/vendor" 2>/dev/null || true)
-      if [ "$v" = "0x8086" ]; then
-        intel_present=1
-        break
-      fi
-    done
-    if [ "$intel_present" = "1" ] && \
-       [ -r /run/opengl-driver/lib/dri/iHD_drv_video.so ]; then
-      export LIBVA_DRIVER_NAME=iHD
-    fi
+    ${hmLib.intelVaapiEnvironment}
 
     exec ${pkgs.firefox}/bin/firefox "$@"
   '';

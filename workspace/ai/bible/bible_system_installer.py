@@ -1,4 +1,4 @@
-#\!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 AI Bible Documentation System - Installer & Setup Script
 Agent 8: Configuration & Deployment System
@@ -524,4 +524,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-EOF < /dev/null

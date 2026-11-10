@@ -91,7 +91,7 @@ in
       path = lib.mkOption {
         type = lib.types.str;
         default = "/couchdb";
-        description = "Reverse proxy path";
+        description = "Compatibility input; the central route table owns the published LiveSync paths";
       };
     };
   };
@@ -122,30 +122,11 @@ in
 
         # Generate configuration with runtime variable substitution
         cat > ${cfg.settings.dataDir}/local.ini << EOF
-[admins]
-$ADMIN_USERNAME = $ADMIN_PASSWORD
-
-[couchdb]
-single_node=true
-max_document_size = ${toString cfg.settings.maxDocumentSize}
-
-[chttpd]
-require_valid_user = true
-max_http_request_size = ${toString cfg.settings.maxHttpRequestSize}
-
-[chttpd_auth]
-require_valid_user = true
-
-[httpd]
-WWW-Authenticate = Basic realm="couchdb"
-enable_cors = true
-
-[cors]
-origins = ${builtins.concatStringsSep "," cfg.settings.corsOrigins}
-credentials = true
-headers = accept, authorization, content-type, origin, referer
-methods = GET, PUT, POST, HEAD, DELETE
-max_age = 3600
+${lib.removeSuffix "\n" (generateConfig {
+  adminUsername = "$ADMIN_USERNAME";
+  adminPassword = "$ADMIN_PASSWORD";
+  inherit (cfg.settings) maxDocumentSize maxHttpRequestSize corsOrigins;
+})}
 EOF
 
         # Set proper ownership and permissions (eric for simplified permissions)

@@ -99,7 +99,7 @@ in
 
     port = lib.mkOption {
       type = lib.types.port;
-      default = 5000;
+      default = (import ../../networking/ports.nix).frigate.port;
       description = "Frigate internal HTTP port (host networking; fixed at 5000)";
     };
 

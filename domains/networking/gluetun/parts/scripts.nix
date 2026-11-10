@@ -24,16 +24,19 @@
 let
   cfg = config.hwc.networking.gluetun;
   instances = lib.filterAttrs (_: i: i.enable && i.healthCheck.enable) cfg.instances;
-  stateDir = name: "${cfg.stateRoot}/${name}";
+  stateDir = name: cfg.instances.${name}.stateDirectory;
 
   healthCheckScript = name: i:
-    let hc = i.healthCheck; in
+    let
+      hc = i.healthCheck;
+      client = cfg.portForwardingClients.${if i.portForwarding.syncTo == null then "" else i.portForwarding.syncTo} or { check = ""; failureReason = ""; };
+    in
     pkgs.writeShellScript "${name}-health-check" ''
       set -euo pipefail
 
       API="http://127.0.0.1:${toString i.controlPort}"
       STATE_DIR="${stateDir name}"
-      STATUS="$STATE_DIR/status.json"
+      STATUS="${i.statusFile}"
       NOTIFY_URL="${if hc.notifyUrl != null then hc.notifyUrl else ""}"
       ESCALATE_AFTER=${toString hc.escalateAfterRestarts}
       FAILURES_BEFORE_RESTART=${toString hc.failuresBeforeRestart}
@@ -88,12 +91,11 @@ let
         ${lib.optionalString i.portForwarding.enable ''
         elif [ "$PORT" = "0" ]; then
           REASON="no forwarded port"
-        ''}${lib.optionalString (i.portForwarding.syncTo == "slskd") ''
-        elif ! ${pkgs.gnugrep}/bin/grep -q "listen_port: $PORT" /etc/slskd/slskd.yml 2>/dev/null; then
-          # Drift between the forwarded port and the port slskd actually listens
-          # on is invisible from outside: downloads keep working and inbound
-          # silently stops. Treat it as unhealthy so it self-heals.
-          REASON="slskd listen_port does not match forwarded port $PORT"
+        ''}${lib.optionalString (client.check != "") ''
+        elif ! (
+          ${client.check}
+        ); then
+          REASON="${client.failureReason} $PORT"
         ''}
         fi
       fi

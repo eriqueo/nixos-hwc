@@ -15,7 +15,7 @@ in
       gpuEnable = cfg.gpu.enable;
       gpuMode = "intel";
       timeZone = config.time.timeZone or "UTC";
-      ports = [ "127.0.0.1:5055:5055" ];
+      ports = [ "127.0.0.1:${toString cfg.port}:5055" ];
       volumes = [
         "${configPath}:/app/config:rw"
       ];

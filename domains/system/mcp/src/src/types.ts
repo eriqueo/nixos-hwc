@@ -97,6 +97,7 @@ export interface ServerConfig {
   transport: "stdio" | "sse" | "both";
   logLevel: "debug" | "info" | "warn" | "error";
   nixosConfigPath: string;
+  fleet?: Record<string, { channel: string; roles: string[] }>;
   cacheTtl: {
     runtime: number;
     declarative: number;
