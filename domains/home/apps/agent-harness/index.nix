@@ -423,6 +423,13 @@ in
             tokenFile = lib.mkOption { type = lib.types.str; description = "Mounted file holding the shared hub/bot control token."; };
             ingressUrl = lib.mkOption { type = lib.types.str; description = "The control bot's loopback card ingress."; };
             since = lib.mkOption { type = lib.types.str; description = "Cards created before this date never post."; };
+            summary = lib.mkOption {
+              type = lib.types.bool;
+              description = ''
+                Keep one standing message in the projects channel showing the top
+                five of the hub's ranked list. The hub edits it in place and keeps
+                its message id in `~/.local/state/hwc-tracker/summary.json`.'';
+            };
             publicUrl = lib.mkOption {
               type = lib.types.str;
               description = ''
@@ -444,6 +451,7 @@ in
             tokenFile = if on then "/run/agenix/${bot.targets.projects.tokenSecret}" else "";
             ingressUrl = if on then "http://127.0.0.1:${toString bot.targets.projects.cardPort}" else "";
             since = if on then bot.targets.projects.postSince else "";
+            summary = on;
             publicUrl =
               if on then
                 "http://${lib.attrByPath [ "networking" "hostName" ] "localhost" osConfig}.${
@@ -707,6 +715,7 @@ in
           "TRACKER_CARD_INGRESS_URL=${cfg.tracker.discordCards.ingressUrl}"
           "TRACKER_POST_SINCE=${cfg.tracker.discordCards.since}"
           "TRACKER_PUBLIC_URL=${cfg.tracker.discordCards.publicUrl}"
+          "TRACKER_SUMMARY=${if cfg.tracker.discordCards.summary then "1" else "0"}"
         ] ++ lib.optional (workbenchSite != null)
           # Workbench area switcher: the page renders the Nix-produced registry
           # (hwc.business.workbench, the one producer of the area list) from the
@@ -721,7 +730,8 @@ in
     # Each minute: ask the hub to post new open cards to Discord. The work runs
     # inside the hub's single-threaded request loop, so it cannot race Eric's
     # clicks on decisions.json. The hub bounds it (3 sends per call, 30 a day)
-    # and never repeats a card; stopping this timer stops all posting.
+    # and never repeats a card. The same call keeps the standing summary
+    # message current. Stopping this timer stops all posting.
     systemd.user.services.tracker-post-cards = lib.mkIf (cfg.tracker.enable && cfg.tracker.discordCards.enable) {
       Unit = {
         Description = "Post new tracker decision cards to Discord";

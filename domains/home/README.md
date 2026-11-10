@@ -178,6 +178,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-09: `apps/agent-harness/` `tracker.discordCards.summary`: the tracker hub keeps one standing top-five message in `#projects`, edited in place.
 - 2026-11-09: `apps/agent-harness/` gains `tracker.discordCards` and the `tracker-post-cards` user timer: the tracker hub posts open decision cards to Discord and records presses forwarded by the HWC control bot. The values come from the system bot target in both activation lanes.
 - 2026-11-05: Preserve native context-menu positions by removing blanket floating-window centering; keep dialog centering and size limits.
 

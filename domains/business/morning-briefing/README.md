@@ -54,7 +54,7 @@ gather-refinery.mjs    # Step 1c: refinery item store (local .md read) →
 gather-projects.mjs    # Step 1c: tracker hub (loopback :8765) /api/attention, the one
                        #   ranked list, grouped into sections.projects decide /
                        #   inPerson by place / unsorted / agent; /api/portfolio adds
-                       #   overdue and the live-product cap; one `projects` digest
+                       #   overdue and the live-product cap
 gather-research.mjs    # Step 1c: research-scout review lane over loopback REST
                        #   (:8422/api/<tool>) → sections.research (articles
                        #   awaiting review + the standing themes report)
@@ -163,6 +163,8 @@ mail-triage.json contains invalid JSON. Check `logs/run.log` for the specific er
 `systemctl status mbsync-eric.timer`.
 
 ## Changelog
+
+- 2026-11-09: The briefing no longer posts a projects digest to Discord. The tracker hub keeps one standing message in `#projects` current from the same list, so the digest was a second copy.
 
 - 2026-11-09: The Projects section reads the tracker hub's one ranked list (`/api/attention`) and groups it: decide now, in person by place, waits no agent sorted, owed by an agent. The briefing's own wait and card-expiry derivation is deleted.
 

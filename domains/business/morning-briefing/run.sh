@@ -531,9 +531,8 @@ echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
 #    list of what waits on Eric (decide, in person by place, unsorted, owed by an
 #    agent); /api/portfolio adds overdue products and the live-product cap.
 #    gather-projects.mjs groups, it derives nothing, and emits {} on any failure.
-#    The same list is one hwc-notify message on the `projects` topic, so it
-#    reaches Discord as well as this page; the dispatcher dedupes by title
-#    within a day. --
+#    Discord is not this script's job: the hub keeps one standing message in
+#    #projects current from the same list. --
 PROJECTS_JSON=$(TRACKER_URL="${TRACKER_URL:-http://127.0.0.1:8765}" timeout 30 node "${AGENT_DIR}/gather-projects.mjs" 2>>"${LOG_FILE}" || echo '{}')
 echo "${PROJECTS_JSON}" | jq empty 2>/dev/null || PROJECTS_JSON='{}'
 PROJECT_ALERTS=$(echo "${PROJECTS_JSON}" | jq -c '
@@ -549,18 +548,6 @@ PROJECT_ALERTS=$(echo "${PROJECTS_JSON}" | jq -c '
       message:"\(.cap.products) live products exceed the cap of \(.cap.limit); park or finish one"} else empty end) ]' 2>/dev/null || echo '[]')
 ALERTS_JSON=$(echo "${ALERTS_JSON}" | jq --argjson a "${PROJECT_ALERTS}" '. + $a' 2>/dev/null || echo "${ALERTS_JSON}")
 echo "${ALERTS_JSON}" | jq empty 2>/dev/null || ALERTS_JSON='[]'
-if [ "$(echo "${PROJECTS_JSON}" | jq -r '.actionable // false')" = true ] && [ -n "${HWC_NOTIFY_URL:-}" ]; then
-  NOTIFY_PAYLOAD=$(echo "${PROJECTS_JSON}" | jq -c --arg day "$(date +%F)" '
-    {topic:"projects", title:"[tracker] \($day) projects digest", priority:3, source:"morning-briefing", tags:["tracker"],
-     body:(([ (.overdue[] | "overdue \(.days)d: \(.title)"),
-             (.decide[] | "decide: \(.title) \(.card // "") — \(.ask)"),
-             (.inPerson[] | .where as $where | .items[] | "at \($where): \(.title) — \(.ask)"),
-             (.unsorted[] | "waiting on you \(.days // 0)d: \(.title) — \(.ask)"),
-             (if .cap.over then "\(.cap.products) live products over the cap of \(.cap.limit)" else empty end) ]
-           | .[:10] | join("\n")) + "\n" + .url)}')
-  curl -fsS --max-time 10 -X POST -H 'content-type: application/json' -d "${NOTIFY_PAYLOAD}" "${HWC_NOTIFY_URL}/notify" >/dev/null 2>>"${LOG_FILE}" \
-    || log "WARN: projects digest notification failed"
-fi
 
 # -- research: research-scout's review lane. How many articles wait for Eric to
 #    read, the top few, and the standing themes report over the takeaways he has
