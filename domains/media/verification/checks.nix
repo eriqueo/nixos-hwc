@@ -690,9 +690,18 @@ assert lib.hasInfix "test -s ${lib.escapeShellArg "${data}/navidrome.db"}" c.sys
 assert lib.hasInfix (builtins.unsafeDiscardStringContext "podman load --input ${archive}")
   (builtins.unsafeDiscardStringContext c.systemd.services.podman-navidrome.preStart);
 pkgs.runCommand "navidrome-runtime-wiring" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-  python3 - ${archive} ${package} ${pkgs.go_1_27}/bin/go ${ffmpeg} <<'PY'
+  python3 - ${archive} ${package} ${pkgs.go_1_27}/bin/go ${ffmpeg} ${pkgs.writeText "navidrome-environment.json" (builtins.toJSON container.environment)} <<'PY'
   import json, pathlib, subprocess, sys, tarfile
-  archive, package, go, ffmpeg = sys.argv[1:]
+  archive, package, go, ffmpeg, environment = sys.argv[1:]
+  def review_policy(env):
+      assert env.get('ND_AUTOIMPORTPLAYLISTS') == 'false'
+      assert env.get('ND_SCANNER_PURGEMISSING') == 'never'
+  env = json.loads(pathlib.Path(environment).read_text())
+  review_policy(env)
+  for key, value in [('ND_AUTOIMPORTPLAYLISTS', 'true'), ('ND_SCANNER_PURGEMISSING', 'always')]:
+      try: review_policy(dict(env, **{key: value}))
+      except AssertionError: pass
+      else: raise AssertionError('unsafe review policy passed: ' + key)
   with tarfile.open(archive) as t:
       manifest = json.load(t.extractfile('manifest.json'))
       assert len(manifest) == 1

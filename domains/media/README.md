@@ -12,6 +12,11 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Navidrome does not auto-import bundled playlists. Ignored or absent tracks remain
+as missing database entries so their listening history survives library review.
+The library's quarantine uses its own `.ndignore` marker; audio stays on disk
+until its audit assigns an explicit disposition.
+
 The hot-sweep orphan remover handles TV and movies. Music staging stays until its
 downloader, importer or user removes it; cleared transfer history does not prove
 music is safe to delete.
@@ -195,6 +200,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-11: Disable Navidrome playlist auto-import and retain missing records during the music-library audit.
 
 - 2026-11-11: Retain music staging outside age-based orphan deletion so manual Soulseek albums survive until import.
 

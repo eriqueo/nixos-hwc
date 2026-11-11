@@ -26,6 +26,10 @@ in
         # prefix — navidrome 302s root to it, so a stale value would bounce
         # every vhost request to a path the vhost does not route.
         ND_BASEURL = "";
+        # Library review owns playlists; bundled M3U files must not reappear.
+        ND_AUTOIMPORTPLAYLISTS = "false";
+        # Quarantine exclusion must preserve ratings and history for recovery.
+        ND_SCANNER_PURGEMISSING = "never";
       };
       dependsOn = if cfg.network.mode == "vpn" then [ "gluetun" ] else [ ];
     })
