@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+Vhost routes can set privateOnly to admit only loopback, Tailscale and the configured LAN by socket source address. slskd uses this guard for password-free access.
+
 ports.nix is the pure default/option-address table consumed by media modules and their existing route entries. Gluetun owns per-instance forwardedPortFile/statusFile paths and generic follower scheduling; media registers client sync/probe commands through portForwardingClients. Failed client updates stop the follower so its next start retries them. AI MCP route/root selection consumes the AI owner's effective active flags.
 
 `verification/` contains pure flake checks for this capability; production modules do not import it. The briefing route check runs the adapted production route over isolated HTTP without certificate provisioning. It copies only the static module and policy, excluding runtime report symlinks.
@@ -105,6 +107,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-10: Vhost routes can set privateOnly to admit only loopback, Tailscale and the configured LAN by socket source address. slskd uses this guard for password-free access.
 
 - 2026-11-09: Share configured media listeners with existing routes, move VPN client policy into media, remove empty parts and use effective MCP enable state.
 

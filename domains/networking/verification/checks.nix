@@ -2,6 +2,53 @@
 { lib, pkgs, self, repoRoot }:
 {
 
+slskd-private-access = let
+  c = self.nixosConfigurations.hwc-home.config;
+  fixture = pkgs.writeText "slskd-private-access.json" (builtins.toJSON {
+    caddy = c.services.caddy.extraConfig;
+    generator = c.systemd.services.slskd-config-generator.serviceConfig.ExecStart;
+    ports = c.virtualisation.oci-containers.containers.gluetun-slskd.ports;
+  });
+in pkgs.runCommand "slskd-private-access" { nativeBuildInputs = [ pkgs.python3 c.services.caddy.package ]; } ''
+  python3 - ${fixture} <<'PY'
+  import json,pathlib,re,subprocess,time,urllib.request,urllib.error
+  f=json.loads(pathlib.Path(__import__('sys').argv[1]).read_text())
+  block=f['caddy'].split('handle @slskd {',1)[1].split('reverse_proxy',1)[0]
+  assert 'not remote_ip' in block and '403' in block
+  assert '100.64.0.0/10' in block and 'fd7a:115c:a1e0::/48' in block
+  assert '192.168.0.97/24' in block
+  assert '127.0.0.1:5031:5030' in f['ports']
+  generator=pathlib.Path(f['generator']).read_text()
+  assert re.search(r'authentication:\s+disabled: true',generator)
+  assert 'remote_configuration: false' in generator
+  assert 'remote_file_management: false' in generator
+  assert 'api_keys:' in generator
+  def exercise(source,expected):
+      pathlib.Path('Caddyfile').write_text('{\n admin off\n auto_https off\n}\nhttp://127.0.0.1:19234 {\n'+source+'\n respond "allowed" 200\n}\n')
+      with open('runtime.log','w') as log:
+          proc=subprocess.Popen(['caddy','run','--config','Caddyfile','--adapter','caddyfile'],stdout=log,stderr=log)
+          try:
+              for attempt in range(50):
+                  try:
+                      req=urllib.request.Request('http://127.0.0.1:19234',headers={'X-Forwarded-For':'100.77.195.118'})
+                      try: status=urllib.request.urlopen(req,timeout=1).status
+                      except urllib.error.HTTPError as error: status=error.code
+                      assert status==expected,(status,expected)
+                      break
+                  except urllib.error.URLError: time.sleep(.1)
+              else: raise AssertionError('Caddy startup deadline')
+          finally: proc.terminate(); proc.wait(timeout=5)
+  exercise(block,200)
+  denied=block.replace('127.0.0.1/32','127.0.0.2/32')
+  exercise(denied,403)
+  try: exercise("",403)
+  except AssertionError: pass
+  else: raise AssertionError('removed guard passed')
+  print('private access, denied source, spoof rejection and removed-guard failure pass')
+  PY
+  touch $out
+'';
+
 public-webhook-ingress = let
   c = self.nixosConfigurations.hwc-work.config;
   tunnel = c.services.cloudflared.tunnels.${c.hwc.networking.cloudflared.tunnelId};

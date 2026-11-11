@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+slskd uses password-free web access behind its privateOnly proxy route; Soularr API keys and VPN wiring remain configured.
+
 SABnzbd exposes one resolved containerPort. Its application environment and the
 Home tunnel binding consume it. In VPN mode Gluetun publishes webPort to internal
 port8085; direct mode publishes the listener on SABnzbd and omits the tunnel bind.
@@ -189,6 +191,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-10: slskd uses password-free web access behind its privateOnly proxy route; Soularr API keys and VPN wiring remain configured.
 
 - 2026-11-09: Derive SABnzbd's tunnel binding from its configured host and resolved internal ports; exercise VPN and direct mode without duplicate publication.
 

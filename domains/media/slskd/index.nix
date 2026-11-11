@@ -86,6 +86,10 @@ in
       gluetunInstances = config.hwc.networking.gluetun.instances;
     } ++ [
       {
+        assertion = lib.any (route: route.name == "slskd" && (route.privateOnly or false)) config.hwc.networking.shared.routes;
+        message = "Password-free slskd requires its privateOnly reverse-proxy route.";
+      }
+      {
         # The leak, as a build failure.
         assertion = cfg.network.mode == "vpn" || cfg.allowClearnet;
         message = ''

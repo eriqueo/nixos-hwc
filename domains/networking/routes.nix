@@ -161,6 +161,7 @@ in
     {
       name = "slskd";
       mode = "vhost";
+      privateOnly = true;
       upstream = "http://127.0.0.1:5031";
     }
 

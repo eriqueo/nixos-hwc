@@ -34,8 +34,9 @@ web:
     disabled: true
     port: 5031
     force: false
+  # The privateOnly Caddy route admits only LAN/tailnet clients.
   authentication:
-    disabled: false
+    disabled: true
     username: $WEB_USERNAME
     password: $WEB_PASSWORD
     jwt:

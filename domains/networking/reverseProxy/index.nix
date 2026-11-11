@@ -290,6 +290,10 @@ let
         @${r.name}_lan_write not method GET HEAD
         respond @${r.name}_lan_write "LAN display access is read-only" 405
       '';
+      privateGuard = lib.optionalString (r.privateOnly or false) ''
+        @${r.name}_outside_private not remote_ip 127.0.0.1/32 ::1/128 100.64.0.0/10 fd7a:115c:a1e0::/48 ${concatStringsSep " " lanNetworks}
+        respond @${r.name}_outside_private "Private network required" 403
+      '';
       defaultHeaders = lib.optionalString (!remoteOwner) (concatStringsSep "\n"
         (lib.mapAttrsToList (name: value: ''
           @${r.name}_no_${name} not header ${name} *
@@ -298,7 +302,7 @@ let
     in ''
       @${r.name} host ${r.name}.${vhostDomain}
       handle @${r.name} {
-        ${lanGuard}${defaultHeaders}
+        ${lanGuard}${privateGuard}${defaultHeaders}
         ${body}
       }
     '';
@@ -474,6 +478,7 @@ in
       # New schema keys supported per route:
       # name, mode=("subpath"|"port"|"static"|"vhost"), path, port, upstream,
       # root (static), needsUrlBase=bool,
+      # privateOnly=bool (vhost: loopback, tailnet and configured LAN only),
       # headers=attrs, headersIfAbsent=attrs (vhost only), assetGlobs, assetStrategy, ws=bool
       # mode="vhost": served as <name>.<vhostDomain> on :443 (no port field).
       #
