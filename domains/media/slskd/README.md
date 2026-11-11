@@ -2,11 +2,13 @@
 
 **Container Service**: Soulseek P2P file sharing client (music focus)
 
-**Access**: https://hwc-server.ocelot-wahoo.ts.net:8443/ (port mode)
+**Access**: https://slskd.hwc.iheartwoodcraft.com/ (LAN or Tailscale; no web login)
 
 ---
 
 ## Structure
+
+The web UI disables its separate login. Its privateOnly vhost admits loopback, Tailscale and the configured LAN by socket source address. Existing API-key clients remain configured.
 
 index.nix registers the slskd forwarded-port sync/probe commands. sys.nix owns the container and tunnel binding. parts/config.nix reads the selected instance's forwardedPortFile and is the only slskd.yml writer. Gluetun publishes the port before invoking the client-owned generator/restart sequence.
 
@@ -432,5 +434,7 @@ shares.directories = [
 **Module Version**: Container with runtime secret injection
 
 ## Changelog
+
+- 2026-11-10: Allow password-free web access behind the private-network proxy guard.
 
 - 2026-11-09: Move the client followup and consistency probe to slskd; consume the instance-owned port path without changing tunnel or container identity.
