@@ -32,7 +32,11 @@ let
     SAB_INI = "${sabIni}"
     HOT = "${paths.hot.downloads}"
     COLD_AUDIOBOOKS = "${paths.media.audiobooks}"
-    CATEGORIES = ["tv", "movies", "music"]
+    # CRITICAL: retain music staging until its downloader, importer or user
+    # removes it. Manual Soulseek downloads have no durable import acknowledgement;
+    # expired/cleared transfer history cannot prove a file is safe to delete.
+    # Permanent by design: age-based orphan deletion owns only TV and movies.
+    CATEGORIES = ["tv", "movies"]
     EXPECTED = {"incomplete", "complete", "tv", "movies", "music", "books", "scripts", "readarr", "software"}
     MIN_AGE_H = 1  # skip files younger than 1 hour (may still be importing)
 

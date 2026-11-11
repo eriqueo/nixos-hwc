@@ -12,6 +12,10 @@ photo management, and video surveillance services.
 
 ## Structure
 
+The hot-sweep orphan remover handles TV and movies. Music staging stays until its
+downloader, importer or user removes it; cleared transfer history does not prove
+music is safe to delete.
+
 slskd uses password-free web access behind its privateOnly proxy route; Soularr API keys and VPN wiring remain configured.
 
 SABnzbd exposes one resolved containerPort. Its application environment and the
@@ -191,6 +195,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-11: Retain music staging outside age-based orphan deletion so manual Soulseek albums survive until import.
 
 - 2026-11-10: slskd uses password-free web access behind its privateOnly proxy route; Soularr API keys and VPN wiring remain configured.
 

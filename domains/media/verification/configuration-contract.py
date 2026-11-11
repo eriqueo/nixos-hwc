@@ -4,6 +4,7 @@ audiobook-copier.py owns the standalone copier CLI contract. This fixture drives
 generated Nix commands and their actual wiring across several media modules.
 """
 import copy
+import ast
 import json
 import os
 import pathlib
@@ -124,4 +125,34 @@ with patch.object(subprocess, "run", return_value=Mock(returncode=0)) as invoke:
     namespace["sweep_books"]()
 assert invoke.call_count == 1
 assert invoke.call_args.args[0][1:] == [f["wrapper"], "--scan-all", "--no-library-scan", "--include-hidden"]
-print("actual media listeners, config paths, arr bootstrap and copier composition pass")
+def check_music_retention(source):
+    scope = {"__name__": "fixture"}
+    exec(compile(source, "<actual-sweep>", "exec"), scope)
+    with tempfile.TemporaryDirectory() as directory:
+        root = pathlib.Path(directory)
+        for category in ["music", "tv", "movies"]:
+            album = root / category / "old-unclaimed"
+            album.mkdir(parents=True)
+            (album / "file").write_bytes(b"unimported download")
+            os.utime(album, (0, 0))
+        scope.update(HOT=directory, sab_active=lambda: set(),
+                     qbt_active=lambda category: set(), sweep_books=lambda: None,
+                     log_strays=lambda: None, __name__="__main__")
+        # Drive the generated production entry point, including its category loop.
+        entry = ast.Module(body=[ast.parse(source).body[-1]], type_ignores=[])
+        exec(compile(entry, "<actual-sweep-main>", "exec"), scope)
+        assert (root / "music/old-unclaimed/file").read_bytes() == b"unimported download"
+        assert not (root / "tv/old-unclaimed").exists()
+        assert not (root / "movies/old-unclaimed").exists()
+
+
+sweep_source = pathlib.Path(f["sweep"]).read_text()
+check_music_retention(sweep_source)
+try:
+    check_music_retention(sweep_source.replace('CATEGORIES = ["tv", "movies"]',
+                                              'CATEGORIES = ["tv", "movies", "music"]'))
+except FileNotFoundError:
+    pass
+else:
+    raise AssertionError("restored music deletion passed")
+print("actual media listeners, config paths, arr bootstrap, copier and music retention pass")
