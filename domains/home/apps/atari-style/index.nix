@@ -19,7 +19,10 @@ in
         # Permanent by design: setuptools must include the metadata and shader
         # assets used by upstream's installed content discovery.
         postPatch = ''
-          substituteInPlace setup.py --replace-fail 'packages=find_packages(),' 'packages=find_packages(), include_package_data=True,'
+          # nixpkgs supplies the compatible pygame community edition.
+          substituteInPlace setup.py \
+            --replace-fail 'packages=find_packages(),' 'packages=find_packages(), include_package_data=True,' \
+            --replace-fail 'pygame>=2.5.0' 'pygame-ce>=2.5.0'
           printf 'recursive-include atari_style *\nrecursive-include terminal_arcade *\n' > MANIFEST.in
         '';
         nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];
