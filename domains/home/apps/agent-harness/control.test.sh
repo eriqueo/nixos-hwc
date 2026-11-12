@@ -191,15 +191,15 @@ git -C "$SOURCE_REPO" config user.name test
 git -C "$SOURCE_REPO" config user.email test@example.invalid
 git -C "$NIXOS_REPO" config user.name test
 git -C "$NIXOS_REPO" config user.email test@example.invalid
-mkdir -p "$SOURCE_REPO/bin"
-cat > "$SOURCE_REPO/bin/harness-policy-check" <<'EOF'
+mkdir -p "$SOURCE_REPO/checks"
+cat > "$SOURCE_REPO/checks/harness-policy-check" <<'EOF'
 #!/usr/bin/env bash
 [ "$PWD" = "$(git rev-parse --show-toplevel)" ]
 exit 0
 EOF
-chmod +x "$SOURCE_REPO/bin/harness-policy-check"
-mkdir -p "$SOURCE_REPO/hooks/tests"
-cat > "$SOURCE_REPO/hooks/tests/run.sh" <<'EOF'
+chmod +x "$SOURCE_REPO/checks/harness-policy-check"
+mkdir -p "$SOURCE_REPO/guards/tests"
+cat > "$SOURCE_REPO/guards/tests/run.sh" <<'EOF'
 #!/usr/bin/env bash
 [ "$1" = --live ]
 EOF
