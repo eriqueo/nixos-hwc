@@ -108,7 +108,9 @@ let
 
     record = {
       enabled = true;
-      continuous.days = 0;
+      # AUTO-MANAGED: keep all footage for one day so quiet periods and missed
+      # motion detections remain playable; Frigate owns expiry and database rows.
+      continuous.days = 1;
       motion.days = 3;
       alerts.retain = {
         days = 14;

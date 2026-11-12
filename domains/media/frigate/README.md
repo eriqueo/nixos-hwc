@@ -4,7 +4,7 @@
 **Domain**: `hwc.media.frigate`
 **Architecture**: Nix-generated configuration (Charter v12.6)
 **Status**: ✅ Production
-**Last Updated**: 2026-11-03
+**Last Updated**: 2026-11-11
 
 ---
 
@@ -37,7 +37,7 @@ Its fixed listener default comes from networking/ports.nix, shared with the rout
 
 The container uses its explicit NVIDIA CDI grant with no-new-privileges. It does not use privileged mode. The emitted-config contract checks these flags and GPU wiring.
 
-`index.nix` also exports the pinned 0.18.2 runtime recipe with its exact Starlette backport and requires its prebuilt image before startup. The native 0.18 configuration keeps three days of motion and fourteen days of event footage; continuous recording retention is zero.
+`index.nix` also exports the pinned 0.18.2 runtime recipe with its exact Starlette backport and requires its prebuilt image before startup. The native 0.18 configuration keeps one day of continuous footage, three days of motion and fourteen days of event footage.
 
 The generated runtime context supplies eleven signed Debian security archives and fixed Pillow13/certifi wheels. The recipe installs them offline without dependency resolution. Its manifest hashes bind the context to the selected image; `starlette-host-backport-wiring` verifies the emitted context and recipe.
 It also selects a hash-bound stdlib/urllib3 framing pair for streaming model
@@ -67,7 +67,7 @@ Metrics come directly from `/api/metrics`; there is no exporter container. Expec
 
 The recording cache is a bounded 1 GiB RAM mount at `/tmp/cache`. The unused SSD mount at `/tmp/frigate` is removed; its old empty directory may remain on disk. Frigate owns footage retention.
 
-Camera-side settings are separate from Nix. On September 24, both active Cobra substreams were set to 1280×720 at 5 FPS with a 10-frame GOP; their main streams remain 4K at 15 FPS. Reolink's substream is 640×360 with its supported 7 FPS setting (RTSP advertises 22/3); its main stream remains 4K at 25 FPS. Frigate still detects at 3/3/2 FPS and scales the Reolink input to 480×270.
+Camera-side settings are separate from Nix. Both active Cobra substreams use 1280×720 at 5 FPS with a 10-frame GOP. Their main streams use 4K H.264 Main at 15 FPS with a 30-frame GOP. On November 11, their main-stream bitrate limits were lowered from 8192 to 4096 kbps through persistent ONVIF settings after direct and restream tests showed malformed H.264 and recording disconnects. Both restreams then passed two-minute decode probes; longer stability remains unverified. Reolink's substream is 640×360 with its supported 7 FPS setting (RTSP advertises 22/3); its main stream remains 4K at 25 FPS. Frigate still detects at 3/3/2 FPS and scales the Reolink input to 480×270.
 
 Cobra native date/time settings use GMT-7 with one-hour DST from the second Sunday in March to the first Sunday in November, both at 02:00. NTP remains enabled. Image overlays show local time, but the firmware's ONVIF UTC response differs by one hour. Day/night coverage, clock synchronization and a full-day storage comparison remain tracked in [issue #100](https://github.com/eriqueo/nixos-hwc/issues/100). Original camera settings are saved at `~/000_inbox/downloads/agent/tech/nixos-hwc/camera-settings-before.json`.
 
@@ -79,7 +79,7 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 - **Hardware**: NVIDIA GPU with CUDA/NVDEC acceleration
 - **Detection**: ONNX runtime with YOLOv9-s model (~24ms inference)
 - **Cameras**: 4 cameras (3 Cobra PoE + 1 Reolink)
-- **Storage**: Motion-based recording with tiered retention (3d motion, 14d alerts/detections)
+- **Storage**: Tiered retention (1d continuous, 3d motion, 14d alerts/detections)
 - **Streaming**: go2rtc restream for WebRTC and stability
 - **Security**: Agenix-encrypted secrets for RTSP credentials
 
@@ -93,7 +93,7 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 | Substream Detection | ✅ | 720p detect, 4K record (fixes green tint) |
 | go2rtc Restreaming | ✅ | WebRTC live view, stream stability |
 | Detection Zones | ✅ | Per-camera zones with required_zones enforcement |
-| Tiered Retention | ✅ | 3d motion, 14d alerts/detections, 30d person snapshots |
+| Tiered Retention | ✅ | 1d continuous, 3d motion, 14d alerts/detections, 30d person snapshots |
 | Automated Cleanup | ✅ | Frigate native; timer prunes empty directories |
 
 ---
@@ -251,7 +251,7 @@ they cannot be inferred from a camera being offline.
 record:
   enabled: true
   continuous:
-    days: 0           # Do not retain continuous footage
+    days: 1           # Keep all footage for one day
   motion:
     days: 3           # General motion recordings: 3 days
   alerts:
@@ -264,7 +264,7 @@ record:
       mode: active_objects
 ```
 
-Note: All active cameras record motion-based 4K via go2rtc passthrough (no GPU decode).
+All active cameras record 4K via go2rtc passthrough (no GPU decode for recording). One-day continuous retention includes quiet periods; motion and events keep matching footage longer.
 
 #### Snapshots (Images)
 
@@ -448,7 +448,7 @@ sudo nixos-rebuild switch --flake .#hwc-server
 - Consider Borg backup for `/mnt/media/surveillance/frigate/` if needed
 
 **Not Critical**:
-- Recordings expire under 3-day motion/14-day event retention.
+- Recordings expire under 1-day continuous/3-day motion/14-day event retention.
 - Deleted historical footage cannot be regenerated; export evidence before expiry.
 
 ---
@@ -707,6 +707,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-11: Keep one day of continuous footage alongside existing motion/event retention. Record the persistent Cobra bitrate repair and extend the emitted-config contract to require continuous retention.
 
 - 2026-11-09: Share the fixed listener default with routing; preserve runtime recipes, camera policy and the fixed-port assertion.
 

@@ -39,7 +39,7 @@ assert len(native) == 1 and native[0]["metrics_path"] == "/api/metrics"
 
 assert config["version"] == "0.18-0"
 assert "retain" not in config["record"]
-assert config["record"]["continuous"] == {"days": 0}
+assert config["record"]["continuous"] == {"days": 1}
 assert config["record"]["motion"] == {"days": 3}
 assert config["record"]["alerts"]["retain"]["days"] == 14
 assert config["record"]["detections"]["retain"]["days"] == 14

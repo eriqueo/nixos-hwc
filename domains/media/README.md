@@ -178,7 +178,7 @@ media/
 ├── books/                   # Retained app/release marker, guarded native/read-only Calibre inputs, HTTP adapters; private parent in directories.nix
 │
 ├── immich-container/        # Photo management, pinned runtime/library contexts
-├── frigate/                 # NVR, model-derived labels and native camera metrics
+├── frigate/                 # NVR with continuous/motion/event retention, model-derived labels and native camera metrics
 ├── youtube/                 # YouTube services
 │
 ├── orchestration/           # Media pipeline orchestration
@@ -200,6 +200,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-11: Frigate keeps one day of continuous footage alongside three-day motion and fourteen-day event retention; document the camera-side Cobra bitrate repair and check the emitted retention contract.
 
 - 2026-11-11: Disable Navidrome playlist auto-import and retain missing records during the music-library audit.
 
