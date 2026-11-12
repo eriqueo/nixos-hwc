@@ -8,7 +8,7 @@ User application configuration via Home Manager.
 - Does NOT manage: System deps → `system/apps/` (via sys.nix), services → `server/`
 
 ## Structure
-The music menu uses Waybar’s native GTK popup and includes Quit Feishin.
+The music menu uses Waybar’s native GTK popup anchored below its module and includes Quit Feishin.
 `waybar/` replaces the bar process on configuration reload, with a bounded shutdown.
 `hyprland/` owns Super+M for Feishin and Super+Ctrl+M for btop; `waybar/` shows the centered track with a labeled music menu and hover help.
 `mtg/` installs the owned Modern Terminal Games fork, including `mtg frogger`.
@@ -42,7 +42,7 @@ apps/
 ```
 
 ## Changelog
-- 2026-11-12: Replace the separate music picker with a native Waybar menu and add Quit Feishin.
+- 2026-11-12: Replace the separate music picker with a native Waybar menu anchored below its module and add Quit Feishin.
 - 2026-11-12: Replace Waybar on reload to renew music subscriptions; check child replacement and temporary configuration cleanup.
 - 2026-11-12: Add Frogger through the owned MTG source pin; preserve the existing four games and Tetro.
 - 2026-11-12: Add Feishin's shortcut, centered playback menu and hover help; move btop to Super+Ctrl+M.

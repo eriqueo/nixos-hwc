@@ -52,6 +52,9 @@ in
         patches = (old.patches or []) ++ [
           ./patches/bluetooth-null-manager.patch
           ./patches/hyprland-lua-ipc.patch
+          # Anchor menus to their module. Remove when upstream AModule uses
+          # gtk_menu_popup_at_widget instead of gtk_menu_popup_at_pointer.
+          ./patches/menu-widget-anchor.patch
         ];
       });
       settings = behavior;
