@@ -197,10 +197,11 @@ Path("tests.json").write_text(json.dumps({"rule_files":["rules.json"],"evaluatio
 subprocess.run(["promtool","test","rules","tests.json"],check=True)
 print("PASS Frigate emitted config, model regeneration, coverage points and outage rules")
 
-# Browser live decoding must not select incompatible Cobra 4K streams.
-for name, stream in {"cobra_cam_1": "cobra_cam_1_live", "cobra_cam_3": "cobra_cam_3_sub"}.items():
+# Browser live decoding must select only the verified compatible sources.
+for name, stream in {"cobra_cam_1": "cobra_cam_1_live", "cobra_cam_3": "cobra_cam_3_sub", "reolink": "reolink_live"}.items():
     camera = config["cameras"][name]
     assert camera["live"]["streams"] == {"Live": stream}
     assert next(i for i in camera["ffmpeg"]["inputs"] if "record" in i["roles"])["path"].endswith("/" + name)
 
-assert config["go2rtc"]["streams"]["cobra_cam_1_live"] == ["ffmpeg:cobra_cam_1_sub#video=h264#raw=-threads 2"]
+for target, source in {"cobra_cam_1_live": "cobra_cam_1_sub", "reolink_live": "reolink"}.items():
+    assert config["go2rtc"]["streams"][target] == [f"ffmpeg:{source}#video=h264#width=1280#raw=-threads 2"]

@@ -48,6 +48,9 @@ let
     };
   };
 
+  # Shared on-demand browser encoding: 1280px, two threads per active stream.
+  browserH264 = source: [ "ffmpeg:${source}#video=h264#width=1280#raw=-threads 2" ];
+
   # Full config structure
   frigateConfig = {
     version = "0.18-0";
@@ -238,6 +241,7 @@ let
 
       # Reolink (front yard) — fence defines property boundary, driveway on left
       reolink = {
+        live.streams.Live = "reolink_live";
         enabled = true;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {
@@ -273,10 +277,11 @@ let
     };
 
     go2rtc.streams = {
-      # Permanent by design: carport H.264 fails Chromium even at 720p.
-      # One on-demand shared encoder, two threads; no queue or preloading.
+      # Permanent by design: these native H.264 feeds can fail Chromium.
+      # At most two shared on-demand encoders, two threads each; no queue or preloading.
       # go2rtc stops it when viewers disconnect; recording stays stream-copy.
-      cobra_cam_1_live = [ "ffmpeg:cobra_cam_1_sub#video=h264#raw=-threads 2" ];
+      cobra_cam_1_live = browserH264 "cobra_cam_1_sub";
+      reolink_live = browserH264 "reolink";
       # Cobra cameras - main streams (4K) for recording
       # #video=copy ensures no color space conversion during IR mode transitions
       cobra_cam_1 = [ "${rtspUrl "CAM1_IP"}#video=copy" ];

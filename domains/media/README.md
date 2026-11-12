@@ -205,7 +205,7 @@ workspace/media/
 
 ## Changelog
 
-- 2026-11-12: Use browser-tested 720p live sources for both Cobra cameras, with bounded on-demand H.264 encoding for carport. Preserve 4K recording and test the source mappings.
+- 2026-11-12: Use browser-compatible live sources, with bounded on-demand 1280px H.264 encoding for carport and Reolink. Preserve original recording streams and test the source mappings.
 
 - 2026-11-11: Check finalized recording age, recovered gaps and sampled decode failures independently of detection FPS; alert on checker failure through existing Prometheus.
 
