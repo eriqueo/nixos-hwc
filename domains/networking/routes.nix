@@ -127,6 +127,7 @@ in
     {
       name = "frigate";
       mode = "vhost";
+      tailnetOnly = true;
       upstream = "http://127.0.0.1:${listener "frigate"}";  # GPU-accelerated with CUDA/TensorRT support
     }
 

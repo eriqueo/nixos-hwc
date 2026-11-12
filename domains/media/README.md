@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+Frigate metrics use the HTTPS vhost so internal listeners can be restricted without losing central monitoring.
+
 Navidrome does not auto-import bundled playlists. Ignored or absent tracks remain
 as missing database entries so their listening history survives library review.
 The library's quarantine uses its own `.ndignore` marker; audio stays on disk
@@ -202,6 +204,7 @@ workspace/media/
 ## Changelog
 
 - 2026-11-12: Jellyseerr declares Recyclarr-managed HD-1080p defaults for movie, TV and anime requests instead of Any; cover reconciliation and bootstrap in the existing settings check.
+- 2026-11-11: Frigate metrics use the HTTPS vhost so internal listeners can be restricted without losing central monitoring.
 
 - 2026-11-11: Reolink records camera-native 1440p H.264 for browser playback; Cobra recording stays 4K.
 

@@ -18,6 +18,8 @@ Provides network infrastructure that other domains depend on:
 
 ## Structure
 
+Frigate uses a tailnetOnly vhost guard based on the socket peer, excluding LAN and forged forwarded headers.
+
 Vhost routes can set privateOnly to admit only loopback, Tailscale and the configured LAN by socket source address. slskd uses this guard for password-free access.
 
 ports.nix is the pure default/option-address table consumed by media modules and their existing route entries. Gluetun owns per-instance forwardedPortFile/statusFile paths and generic follower scheduling; media registers client sync/probe commands through portForwardingClients. Failed client updates stop the follower so its next start retries them. AI MCP route/root selection consumes the AI owner's effective active flags.
@@ -107,6 +109,8 @@ networking/
 ```
 
 ## Changelog
+
+- 2026-11-11: Frigate uses a tailnetOnly vhost guard based on the socket peer, excluding LAN and forged forwarded headers.
 
 - 2026-11-10: Vhost routes can set privateOnly to admit only loopback, Tailscale and the configured LAN by socket source address. slskd uses this guard for password-free access.
 

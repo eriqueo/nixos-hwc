@@ -36,6 +36,12 @@ assert not any(v.endswith(":/tmp/frigate") for v in fixture["volumes"])
 assert not fixture["exporterPresent"]
 native = [s for s in fixture["scrapes"] if s["job_name"] == "frigate"]
 assert len(native) == 1 and native[0]["metrics_path"] == "/api/metrics"
+assert native[0]["scheme"] == "https"
+assert native[0]["static_configs"][0]["targets"] == ["frigate.hwc.iheartwoodcraft.com:443"]
+guard = fixture["caddy"].split("handle @frigate {", 1)[1].split("reverse_proxy", 1)[0]
+assert "not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48" in guard
+assert '"Tailscale required" 403' in guard
+assert "192.168." not in guard and "127.0.0.1" not in guard
 
 assert config["version"] == "0.18-0"
 assert "retain" not in config["record"]
