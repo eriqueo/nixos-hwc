@@ -21,7 +21,7 @@ let
     "${lib.replaceStrings [ " " ] [ "+" ] dictateBind.mods}+${dictateBind.key}";
   powerHubEnabled = config.hwc.home.apps.waybar.powerHub.enable;
   musicPlayer = "Feishin";
-  musicCall = method: "${pkgs.glib}/bin/gdbus call --session --dest org.mpris.MediaPlayer2.${musicPlayer} --object-path /org/mpris/MediaPlayer2 --method org.mpris.MediaPlayer2.${method}";
+  musicCall = method: "${pkgs.glib.bin}/bin/gdbus call --session --dest org.mpris.MediaPlayer2.${musicPlayer} --object-path /org/mpris/MediaPlayer2 --method org.mpris.MediaPlayer2.${method}";
 
   commonModules = {
     # GTK computes a 37 px minimum from the shared 16 px text and 8 px padding.
