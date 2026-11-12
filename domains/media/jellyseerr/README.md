@@ -22,11 +22,17 @@ jellyseerr/
 ├── README.md       # This file
 └── parts/
     ├── config.nix    # Systemd dependencies and private config directory
-    ├── settings.nix  # App-owned request flags and preserved settings
+    ├── settings.nix  # HD-1080p request defaults, app-owned request flags and preserved settings
     └── setup.nix     # Shared mask, additive user grants and private settings
 ```
 
 ## Configuration
+
+Startup declares the Recyclarr-managed `HD-1080p` profile for all requests:
+Radarr profile ID 7 for movies, and Sonarr profile ID 8 for TV and anime.
+These IDs refer to the existing arr databases. If a profile is recreated, update
+its ID here in `parts/settings.nix`; web-only default changes are reset on startup.
+Existing library entries keep their assigned profiles.
 
 ### Module Options
 
@@ -95,6 +101,8 @@ Seerr depends on:
 - `/opt/apps/jellyseerr/config:/app/config` - Configuration and database
 
 ## Changelog
+
+- 2026-11-12: Declare managed HD-1080p defaults for movie, TV and anime requests; verify reconciliation and first-start settings.
 
 - 2026-11-09: Share the configured host listener with routing; retain the pinned runtime and settings contracts.
 
