@@ -201,6 +201,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-11: Reolink records camera-native 1440p H.264 for browser playback; Cobra recording stays 4K.
+
 - 2026-11-11: Frigate keeps one day of continuous footage alongside three-day motion and fourteen-day event retention; document the camera-side Cobra bitrate repair and check the emitted retention contract.
 
 - 2026-11-11: Disable Navidrome playlist auto-import and retain missing records during the music-library audit.

@@ -67,7 +67,7 @@ Metrics come directly from `/api/metrics`; there is no exporter container. Expec
 
 The recording cache is a bounded 1 GiB RAM mount at `/tmp/cache`. The unused SSD mount at `/tmp/frigate` is removed; its old empty directory may remain on disk. Frigate owns footage retention.
 
-Camera-side settings are separate from Nix. Both active Cobra substreams use 1280×720 at 5 FPS with a 10-frame GOP. Their main streams use 4K H.264 Main at 15 FPS with a 30-frame GOP. On November 11, their main-stream bitrate limits were lowered from 8192 to 4096 kbps through persistent ONVIF settings after direct and restream tests showed malformed H.264 and recording disconnects. Both restreams then passed two-minute decode probes; longer stability remains unverified. Reolink's substream is 640×360 with its supported 7 FPS setting (RTSP advertises 22/3); its main stream remains 4K at 25 FPS. Frigate still detects at 3/3/2 FPS and scales the Reolink input to 480×270.
+Camera-side settings are separate from Nix. Both active Cobra substreams use 1280×720 at 5 FPS with a 10-frame GOP. Their main streams use 4K H.264 Main at 15 FPS with a 30-frame GOP. On November 11, their main-stream bitrate limits were lowered from 8192 to 4096 kbps through persistent ONVIF settings after direct and restream tests showed malformed H.264 and recording disconnects. Both restreams then passed two-minute decode probes; longer stability remains unverified. Reolink's substream is 640×360 with its supported 7 FPS setting (RTSP advertises 22/3). Its main stream now uses 2560×1440 H.264 at 25 FPS and 6144 kbps; its former 4K mode required HEVC. Frigate still detects at 3/3/2 FPS and scales the Reolink input to 480×270.
 
 Cobra native date/time settings use GMT-7 with one-hour DST from the second Sunday in March to the first Sunday in November, both at 02:00. NTP remains enabled. Image overlays show local time, but the firmware's ONVIF UTC response differs by one hour. Day/night coverage, clock synchronization and a full-day storage comparison remain tracked in [issue #100](https://github.com/eriqueo/nixos-hwc/issues/100). Original camera settings are saved at `~/000_inbox/downloads/agent/tech/nixos-hwc/camera-settings-before.json`.
 
@@ -78,7 +78,7 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 - **Container**: Podman with GPU passthrough
 - **Hardware**: NVIDIA GPU with CUDA/NVDEC acceleration
 - **Detection**: ONNX runtime with YOLOv9-s model (~24ms inference)
-- **Cameras**: 4 cameras (3 Cobra PoE + 1 Reolink)
+- **Cameras**: 4 configured cameras (3 Cobra PoE + 1 Reolink); side yard disabled
 - **Storage**: Tiered retention (1d continuous, 3d motion, 14d alerts/detections)
 - **Streaming**: go2rtc restream for WebRTC and stability
 - **Security**: Agenix-encrypted secrets for RTSP credentials
@@ -90,7 +90,7 @@ Frigate is a complete local NVR with AI-powered object detection. This implement
 | GPU Object Detection | ✅ | ONNX + CUDA, ~24ms inference |
 | Hardware Video Decode | ✅ | NVIDIA decoding through FFmpeg's CUDA hwaccel interface |
 | Motion-Based Recording | ✅ | Savings depend on measured motion; no fixed percentage |
-| Substream Detection | ✅ | 720p detect, 4K record (fixes green tint) |
+| Substream Detection | ✅ | Cobra: 720p detect/4K record; Reolink: 480×270 detect/1440p record |
 | go2rtc Restreaming | ✅ | WebRTC live view, stream stability |
 | Detection Zones | ✅ | Per-camera zones with required_zones enforcement |
 | Tiered Retention | ✅ | 1d continuous, 3d motion, 14d alerts/detections, 30d person snapshots |
@@ -264,7 +264,7 @@ record:
       mode: active_objects
 ```
 
-All active cameras record 4K via go2rtc passthrough (no GPU decode for recording). One-day continuous retention includes quiet periods; motion and events keep matching footage longer.
+All active cameras record via go2rtc passthrough (no GPU decode for recording): Cobra at 4K, Reolink at 1440p H.264. One-day continuous retention includes quiet periods; motion and events keep matching footage longer.
 
 #### Snapshots (Images)
 
@@ -368,10 +368,10 @@ Each camera uses **two separate streams** to optimize for both detection and rec
 ```
 Camera Hardware
     │
-    ├─► Main Stream (4K, Cobra 15fps / Reolink 25fps) ─► go2rtc ─► Frigate Record
+    ├─► Main Stream (Cobra 4K 15fps / Reolink 1440p 25fps) ─► go2rtc ─► Frigate Record
     │   - High quality for recordings
-    │   - H.264 (Cobra) / HEVC (Reolink)
-    │   - All active cameras record via 4K passthrough
+    │   - H.264 on all active cameras
+    │   - All active cameras record via passthrough
     │
     └─► Sub Stream ─► go2rtc ─► Frigate Detect
         - Cobra source: 720p @ 5fps; Frigate detects at 3fps
@@ -390,7 +390,7 @@ go2rtc:
   streams:
     cobra_cam_1:     [rtsp://...@192.168.0.201:554/ch01/0#video=copy]  # 4K main
     cobra_cam_1_sub: [rtsp://...@192.168.0.201:554/ch01/1#video=copy]  # 720p sub
-    reolink:         [rtsp://...@192.168.0.204:554/main#video=copy]    # 4K HEVC
+    reolink:         [rtsp://...@192.168.0.204:554/h264Preview_01_main#video=copy] # 1440p H.264
     reolink_sub:     [rtsp://...@192.168.0.204:554/sub#video=copy]     # 640x360
     # Recording and live view share reolink; no second upstream connection.
 ```
@@ -707,6 +707,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-11: Set Reolink's camera-side main stream to 2560×1440 H.264 at 25 FPS for browser playback. Its 4K mode requires HEVC, which the test browser rejected. Keep direct recording without a server transcoder.
 
 - 2026-11-11: Keep one day of continuous footage alongside existing motion/event retention. Record the persistent Cobra bitrate repair and extend the emitted-config contract to require continuous retention.
 

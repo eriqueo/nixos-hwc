@@ -271,7 +271,7 @@ let
       cobra_cam_1_sub = [ "${rtspUrlSub "CAM1_IP"}#video=copy" ];
       cobra_cam_2_sub = [ "${rtspUrlSub "CAM2_IP"}#video=copy" ];
       cobra_cam_3_sub = [ "${rtspUrlSub "CAM3_IP"}#video=copy" ];
-      # Reolink - main (4K HEVC), sub (640x360 H264) for detection
+      # Reolink - main (1440p H264), sub (640x360 H264) for detection
       # Record uses main stream directly (no transcode) — transcode was unstable
       # with kernel/driver mismatch and poisoned go2rtc, killing all camera streams.
       reolink = [ "${reolinkUrl "h264Preview_01_main"}#video=copy" ];
