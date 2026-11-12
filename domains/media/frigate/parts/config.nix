@@ -52,6 +52,15 @@ let
   frigateConfig = {
     version = "0.18-0";
 
+    networking = {
+      listen.internal = "127.0.0.1:5000";
+      listen.external = "127.0.0.1:8971";
+      ipv6 = false;
+    };
+    go2rtc.api.listen = "127.0.0.1:1984";
+    go2rtc.rtsp.listen = "127.0.0.1:8554";
+    go2rtc.webrtc.listen = "${config.hwc.networking.hosts.ips.${config.hwc.networking.hosts.self}}:8555";
+
     # MQTT for event publishing to n8n workflows
     # Frigate uses --network=host so 127.0.0.1 reaches host mosquitto
     mqtt = {
@@ -283,13 +292,13 @@ let
 
     # Stationary object handling - reduces noise from parked cars
     detect.stationary = {
-      interval = 50;  # Check stationary objects every 50 frames (10 seconds at 5fps)
+      interval = 50;  # Frames: 25 seconds on the 2 FPS Reolink stream.
       threshold = 50;  # Frames without movement to be considered stationary
       max_frames = {
-        default = 3000;  # Stop tracking stationary objects after ~10 minutes
+        default = 3000;  # Frame counts; elapsed time depends on camera FPS.
         objects = {
-          car = 300;    # Stop tracking stationary cars after ~1 minute
-          truck = 300;  # Stop tracking stationary trucks after ~1 minute
+          car = 300;
+          truck = 300;
         };
       };
     };

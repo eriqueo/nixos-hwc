@@ -224,7 +224,6 @@
     firewall.extraTcpPorts = [
       22000 # Syncthing sync
       # Media services
-      5000 # Frigate
       8080 # qBittorrent (via Gluetun)
       7878 # Radarr
       8989 # Sonarr
@@ -253,7 +252,6 @@
       21027 # Syncthing local discovery
       7359 # Jellyfin discovery
       50300 # SLSKD
-      8555 # Frigate
       # Game streaming (Sunshine)
       47998
       47999

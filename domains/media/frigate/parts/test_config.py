@@ -42,6 +42,16 @@ guard = fixture["caddy"].split("handle @frigate {", 1)[1].split("reverse_proxy",
 assert "not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48" in guard
 assert '"Tailscale required" 403' in guard
 assert "192.168." not in guard and "127.0.0.1" not in guard
+assert fixture["configRemain"] is False
+assert fixture["mountDependencies"] == ["mnt-media.mount"]
+assert fixture["mediaPath"] in fixture["privateMedia"]
+assert fixture["snapshot"]["source"].endswith("/frigate.db")
+assert fixture["snapshot"]["maxBytes"] == 536870912
+assert config["networking"]["listen"] == {"internal":"127.0.0.1:5000", "external":"127.0.0.1:8971"}
+assert config["networking"]["ipv6"] is False
+assert config["go2rtc"]["api"]["listen"] == "127.0.0.1:1984"
+assert config["go2rtc"]["rtsp"]["listen"] == "127.0.0.1:8554"
+assert config["go2rtc"]["webrtc"]["listen"] == fixture["tailnetIp"] + ":8555"
 
 assert config["version"] == "0.18-0"
 assert "retain" not in config["record"]

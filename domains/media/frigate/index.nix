@@ -13,6 +13,12 @@
 { lib, config, pkgs, ... }:
 let
   cfg = config.hwc.media.frigate;
+  mediaMount = builtins.head (lib.sort (a: b: builtins.stringLength a > builtins.stringLength b)
+    (lib.filter (p: lib.hasPrefix "${lib.removeSuffix "/" p}/" cfg.storage.mediaPath)
+      (builtins.attrNames config.fileSystems)));
+  mediaMountUnit = "${lib.escapeSystemdPath mediaMount}.mount";
+  credentialNames = [ "frigate-rtsp-username" "frigate-rtsp-password" "frigate-camera-ips"
+    "frigate-reolink-username" "frigate-reolink-password" ];
   labelPython = pkgs.python3.withPackages (p: [ p.onnx ]);
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   runtimeDebs = builtins.fromJSON ''
@@ -148,15 +154,13 @@ in
       before = [ "podman-frigate.service" ];
       serviceConfig = {
         Type = "oneshot";
-        RemainAfterExit = true;
+        # Run again for every container start, including a secret-only restart.
+        RemainAfterExit = false;
         User = lib.mkForce "eric";
         Group = "users";
         # PID 1 reads root-only agenix mounts; the service receives private,
         # read-only copies without broadening permissions on the source files.
-        LoadCredential = map (name: "${name}:${config.age.secrets.${name}.path}") [
-          "frigate-rtsp-username" "frigate-rtsp-password" "frigate-camera-ips"
-          "frigate-reolink-username" "frigate-reolink-password"
-        ];
+        LoadCredential = map (name: "${name}:${config.age.secrets.${name}.path}") credentialNames;
         UMask = "0077";
       };
 
@@ -212,11 +216,21 @@ in
           exit 1
         }
       '');
-      after = [ "mosquitto.service" "frigate-config.service" ]
+      bindsTo = [ mediaMountUnit ];
+      after = [ "mosquitto.service" "frigate-config.service" mediaMountUnit ]
         ++ lib.optional cfg.gpu.enable "nvidia-container-toolkit-cdi-generator.service";
       wants = [ "mosquitto.service" ];
       requires = [ "frigate-config.service" ] ++ lib.optionals cfg.gpu.enable [ "nvidia-container-toolkit-cdi-generator.service" ];
-      restartTriggers = [ cfg._configTemplate ./parts/labelmap.py ];
+      restartTriggers = [ cfg._configTemplate ./parts/labelmap.py ]
+        ++ map (name: config.age.secrets.${name}.file) credentialNames;
+      serviceConfig.BindPaths = [ cfg.storage.mediaPath ];
+      serviceConfig.ExecStartPre = lib.mkBefore [
+        "${pkgs.writeShellScript "frigate-media-mount-check" ''
+          actual=$(${pkgs.util-linux}/bin/findmnt -n -o SOURCE --target ${lib.escapeShellArg cfg.storage.mediaPath})
+          expected=$(${pkgs.coreutils}/bin/readlink -f ${lib.escapeShellArg config.fileSystems.${mediaMount}.device})
+          test "$actual" = "$expected" || { echo 'FRIGATE_MEDIA_MOUNT: wrong filesystem' >&2; exit 1; }
+        ''}"
+      ];
       # Report startup only after the API health check passes. Bound a failed
       # initialization instead of inheriting the container module's infinity.
       serviceConfig.TimeoutStartSec = lib.mkForce 120;
@@ -273,10 +287,22 @@ in
     networking.firewall = {
       interfaces."lo".allowedTCPPorts = [ cfg.port ];
       interfaces."tailscale0" = lib.mkIf cfg.firewall.tailscaleOnly {
-        allowedTCPPorts = [ cfg.port 8554 8555 ];
+        allowedTCPPorts = [ 8555 ];
         allowedUDPPorts = [ 8555 ];
       };
     };
+
+    # CRITICAL state: existing Borg producer makes a consistent online snapshot.
+    hwc.data.borg.sqliteSnapshots.frigate = lib.mkIf config.hwc.data.borg.enable {
+      source = "${cfg.storage.configPath}/frigate.db";
+      user = "eric";
+      maxBytes = 536870912;
+      timeoutSeconds = 120;
+    };
+    hwc.data.borg.sources = lib.mkIf config.hwc.data.borg.enable [
+      "${cfg.storage.configPath}/go2rtc_homekit.yml"
+      "${cfg.storage.configPath}/models"
+    ];
 
     # Frigate owns its metrics. The former sidecar duplicated /api/metrics.
     hwc.monitoring.prometheus.scrapeConfigs = [{

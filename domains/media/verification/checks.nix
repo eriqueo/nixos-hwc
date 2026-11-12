@@ -2185,6 +2185,12 @@ frigate-contract = let
   frigate = server.hwc.media.frigate;
   fixture = pkgs.writeText "frigate-contract.json" (builtins.toJSON {
     caddy = server.services.caddy.extraConfig;
+    configRemain = server.systemd.services.frigate-config.serviceConfig.RemainAfterExit;
+    mountDependencies = server.systemd.services.podman-frigate.bindsTo;
+    privateMedia = server.systemd.services.podman-frigate.serviceConfig.BindPaths;
+    snapshot = server.hwc.data.borg.sqliteSnapshots.frigate;
+    mediaPath = frigate.storage.mediaPath;
+    tailnetIp = server.hwc.networking.hosts.ips.${server.hwc.networking.hosts.self};
     settings = frigate._settings;
     inherit (frigate) port;
     configTemplate = frigate._configTemplate;

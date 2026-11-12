@@ -203,6 +203,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-11: Bind Frigate administration and RTSP to loopback, WebRTC to Tailscale; regenerate config on container start; require the media filesystem and register consistent Borg state backup.
+
 - 2026-11-12: Jellyseerr declares Recyclarr-managed HD-1080p defaults for movie, TV and anime requests instead of Any; cover reconciliation and bootstrap in the existing settings check.
 - 2026-11-11: Frigate metrics use the HTTPS vhost so internal listeners can be restricted without losing central monitoring.
 
