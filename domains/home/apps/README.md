@@ -40,6 +40,8 @@ apps/
 
 ## Changelog
 
+- 2026-11-11: Patch Atari-style to retain input mode across menu and game frames; verify terminal restoration.
+
 - 2026-11-11: Add the upstream Atari-style terminal arcade package and laptop opt-in.
 
 - 2026-11-03: Remove the unused Aider module, package, generated config and shell setup.

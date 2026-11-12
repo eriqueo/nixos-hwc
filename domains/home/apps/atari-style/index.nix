@@ -13,6 +13,9 @@ in
         pname = "atari-style";
         version = "0.1.0";
         src = inputs.atari-style;
+        # Upstream enables echo between key reads. Remove when its entry point
+        # holds cbreak for the session and test_terminal_session passes unpatched.
+        patches = [ ./terminal-session.patch ];
         pyproject = true;
         build-system = [ pkgs.python3Packages.setuptools ];
         dependencies = with pkgs.python3Packages; [ pygame blessed pillow moderngl numpy ];
@@ -26,7 +29,7 @@ in
           printf 'recursive-include atari_style *\nrecursive-include terminal_arcade *\n' > MANIFEST.in
         '';
         nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];
-        pytestFlags = [ "tests/test_registry.py" "tests/test_claugger.py" "tests/test_scripted_input.py" ];
+        pytestFlags = [ "tests/test_registry.py" "tests/test_claugger.py" "tests/test_scripted_input.py" "tests/test_terminal_session.py" ];
         pythonImportsCheck = [ "atari_style.main" "atari_style.demos.games" ];
         meta = {
           description = "Terminal arcade games including Breakout, Galaga, Pac-Man and Grand Prix";

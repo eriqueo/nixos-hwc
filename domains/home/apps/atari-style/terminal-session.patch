@@ -1,0 +1,72 @@
+--- a/atari_style/main.py
++++ b/atari_style/main.py
+@@ -145,7 +145,9 @@
+     menu = Menu("ATARI-STYLE TERMINAL DEMOS", menu_items)
+ 
+     try:
+-        menu.run()
++        # Keep keys private between reads, rendering and game transitions.
++        with menu.input_handler.term.cbreak():
++            menu.run()
+     except KeyboardInterrupt:
+         print("\nExiting...")
+     finally:
+--- /dev/null
++++ b/tests/test_terminal_session.py
+@@ -0,0 +1,56 @@
++"""Exercise real input and terminal restoration through the public entry point."""
++import fcntl
++import os
++import pty
++import select
++import signal
++import struct
++import subprocess
++import sys
++import termios
++import time
++
++
++def test_terminal_session():
++    for interrupted in (False, True):
++        master, slave = pty.openpty()
++        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 50, 120, 0, 0))
++        original = termios.tcgetattr(slave)
++        command = sys.argv[1:] if __name__ == '__main__' else [sys.executable, '-m', 'atari_style.main']
++        child = subprocess.Popen(command, stdin=slave, stdout=slave, stderr=slave,
++                                 env={**os.environ, 'TERM': 'xterm-256color', 'SDL_AUDIODRIVER': 'dummy'})
++        output = bytearray()
++        def drain(duration, check_mode=False):
++            deadline = time.monotonic() + duration
++            while time.monotonic() < deadline:
++                if select.select([master], [], [], 0.001)[0]:
++                    output.extend(os.read(master, 65536))
++                if check_mode:
++                    assert not termios.tcgetattr(slave)[3] & (termios.ECHO | termios.ICANON), 'Input echo/canonical mode leaked between frames'
++        try:
++            deadline = time.monotonic() + 5
++            while b'ATARI-STYLE TERMINAL DEMOS' not in output and time.monotonic() < deadline:
++                drain(0.01)
++            assert b'ATARI-STYLE TERMINAL DEMOS' in output, bytes(output[-2000:])
++            for key in (b's', b'w', b'\r', b'd', b'a', b'q'):
++                os.write(master, key)
++                drain(0.25, check_mode=True)
++            if interrupted:
++                child.send_signal(signal.SIGTERM)
++            else:
++                os.write(master, b'x')
++            child.wait(timeout=3)
++            assert child.returncode == 0
++            assert termios.tcgetattr(slave) == original, 'Terminal settings were not restored'
++            assert b'Traceback' not in output, bytes(output[-2000:])
++        finally:
++            if child.poll() is None:
++                child.kill()
++                child.wait(timeout=2)
++            os.close(master)
++            os.close(slave)
++
++
++if __name__ == '__main__':
++    test_terminal_session()
++    print('Key input stays private in menu/game; terminal restored after exit and SIGTERM')
