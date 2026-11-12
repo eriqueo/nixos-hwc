@@ -13,8 +13,8 @@ in
         pname = "atari-style";
         version = "0.1.0";
         src = inputs.atari-style;
-        # Upstream re-enables echo and reads gameplay keys multiple times.
-        # Remove when terminal-session and game-control tests pass unpatched.
+        # Upstream leaks terminal modes/keys, accepts one-axis keyboard devices,
+        # and auto-launches Breakout. Remove when all input tests pass unpatched.
         patches = [ ./terminal-session.patch ];
         pyproject = true;
         build-system = [ pkgs.python3Packages.setuptools ];
@@ -29,7 +29,7 @@ in
           printf 'recursive-include atari_style *\nrecursive-include terminal_arcade *\n' > MANIFEST.in
         '';
         nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];
-        pytestFlags = [ "tests/test_registry.py" "tests/test_claugger.py" "tests/test_scripted_input.py" "tests/test_terminal_session.py" "tests/test_game_controls.py" ];
+        pytestFlags = [ "tests/test_registry.py" "tests/test_claugger.py" "tests/test_scripted_input.py" "tests/test_terminal_session.py" "tests/test_game_controls.py" "tests/test_input_devices.py" ];
         pythonImportsCheck = [ "atari_style.main" "atari_style.demos.games" ];
         meta = {
           description = "Terminal arcade games including Breakout, Galaga, Pac-Man and Grand Prix";
