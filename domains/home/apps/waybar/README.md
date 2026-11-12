@@ -11,6 +11,7 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - ❌ Does not provide gpu-toggle/gpu-launch (infrastructure GPU module) or the acpid lid handler (`machines/laptop/config.nix`); requires swaync enabled (asserted)
 
 ## Structure
+The center holds Feishin's native MPRIS track display. One click opens a small Wofi menu below the bar with Play, Pause, Next and Open. Hover lists those actions and Super+M. One action table supplies both the menu and its help; Open uses Hyprland's Feishin launch command. Calendar stays on the left; clock and weather sit on the right. The tray keeps hidden applications accessible.
 `parts/packages.nix` owns script runtime packages and additional interactive tools. Workspace IDs and labels derive from Hyprland’s workspace plan.
 Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
@@ -27,6 +28,9 @@ Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Works
 - `patches/bluetooth-null-manager.patch` — bluetooth module throws (module dropped, bar survives) when the org.bluez manager is unavailable
 
 ## Changelog
+- 2026-11-12: Replace direct playback clicks with one labeled action menu and derive hover help from its action table.
+- 2026-11-12: Bind player actions to GLib's executable output so they work without gdbus on the session PATH.
+- 2026-11-12: Center Feishin track metadata and playback actions while retaining calendar, clock, weather and the application tray.
 - 2026-11-09: Share workspace identities with Hyprland and derive installed packages and script PATH from one dependency catalog.
 - 2026-11-04: Repair declarative desktop cursor, mouse bindings, physical-output selection and Waybar reload supervision; extend generated desktop checks.
 - 2026-11-04: Fix built-in Waybar workspace switching under Lua and escape calendar markup.

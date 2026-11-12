@@ -1,4 +1,4 @@
-{ config, lib, pkgs, osConfig ? {}, workspacePlan ? (import ../../hyprland/parts/hardware.nix { inherit lib pkgs; }).workspacePlan, ... }:
+{ config, lib, pkgs, osConfig ? {}, musicActions ? [], workspacePlan ? (import ../../hyprland/parts/hardware.nix { inherit lib pkgs; }).workspacePlan, ... }:
 
 let
   ollamaEnabled = lib.attrByPath [ "hwc" "ai" "ollama" "enable" ] false osConfig;
@@ -20,15 +20,17 @@ let
   dictateShortcut = if dictateBind == null then "" else
     "${lib.replaceStrings [ " " ] [ "+" ] dictateBind.mods}+${dictateBind.key}";
   powerHubEnabled = config.hwc.home.apps.waybar.powerHub.enable;
+  musicPlayer = "Feishin";
 
   commonModules = {
     # GTK computes a 37 px minimum from the shared 16 px text and 8 px padding.
     # Both bars already render at this height; declare it to avoid ignored
     # per-output requests and Waybar's warning on every start.
     height = 37;
-    modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];
-    modules-center = [ "custom/khal" "clock" "custom/weather" ];
+    modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" "custom/khal" ];
+    modules-center = [ "mpris" ];
     modules-right = [
+      "clock" "custom/weather"
       "custom/sep-pre"
     ] ++ lib.optionals ollamaEnabled [ "custom/ollama" ]
       ++ lib.optionals dtEnabled [ "custom/dt" ]
@@ -133,6 +135,18 @@ let
   };
 
   commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // dictateWidget // courierWidget // powerHubWidget // {
+    mpris = {
+      player = musicPlayer;
+      format = "{status_icon} {dynamic}";
+      dynamic-order = [ "artist" "title" ];
+      dynamic-len = 38;
+      max-length = 40;
+      status-icons = { playing = "▶"; paused = "⏸"; stopped = "♪"; };
+      tooltip-format = "{artist} — {title}\n{status}\nClick for: ${lib.concatMapStringsSep " / " (action: action.label) musicActions}\nSuper+M: Open Feishin";
+      on-click = "waybar-music-menu";
+      on-click-middle = "";
+      on-click-right = "";
+    };
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";

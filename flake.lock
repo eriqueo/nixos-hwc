@@ -84,22 +84,6 @@
         "type": "github"
       }
     },
-    "atari-style": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1773973335,
-        "narHash": "sha256-njAOnYeX6flkJDEIULmSbrXdjvQPPetbW1awr2+ND98=",
-        "owner": "jcaldwell-labs",
-        "repo": "atari-style",
-        "rev": "3e62b37149448f6882eedc6575ec0629c14d9a1b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "jcaldwell-labs",
-        "repo": "atari-style",
-        "type": "github"
-      }
-    },
     "bloxels-cv": {
       "inputs": {
         "nixpkgs": [
@@ -561,6 +545,22 @@
         "type": "github"
       }
     },
+    "mtg": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783773452,
+        "narHash": "sha256-wWwK0cJFCntFDyboFYKFH1y8HSThf8mdEEiUTRrw6wk=",
+        "owner": "modern-terminal-games",
+        "repo": "mtg",
+        "rev": "47ccb30caab0cae5ade3a9d2d56b4178435361b1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "modern-terminal-games",
+        "repo": "mtg",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1793540411,
@@ -723,7 +723,6 @@
         "agenix": "agenix",
         "agenix-stable": "agenix-stable",
         "agent-harness": "agent-harness",
-        "atari-style": "atari-style",
         "bloxels-cv": "bloxels-cv",
         "brainvec": "brainvec",
         "claude-cowork": "claude-cowork",
@@ -735,6 +734,7 @@
         "hwc-dictation": "hwc-dictation",
         "khalt": "khalt",
         "meals": "meals",
+        "mtg": "mtg",
         "nixpkgs": "nixpkgs",
         "nixpkgs-stable": "nixpkgs-stable",
         "nixvirt": "nixvirt",

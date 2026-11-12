@@ -8,7 +8,8 @@ User application configuration via Home Manager.
 - Does NOT manage: System deps → `system/apps/` (via sys.nix), services → `server/`
 
 ## Structure
-`atari-style/` installs the upstream terminal arcade collection as `atari-style`.
+`hyprland/` owns Super+M for Feishin and Super+Ctrl+M for btop; `waybar/` shows the centered track with a labeled music menu and hover help.
+`mtg/` installs Modern Terminal Games as `mtg`.
 
 `claude-desktop/` uses the shared supported Electron44.10.1 runtime. `onlyoffice-desktopeditors/` drops its unused GTK2 build input while retaining strict ELF resolution and the existing launcher.
 
@@ -39,6 +40,9 @@ apps/
 ```
 
 ## Changelog
+- 2026-11-12: Add Feishin's shortcut, centered playback menu and hover help; move btop to Super+Ctrl+M.
+
+- 2026-11-12: Replace Atari-style with MTG and remove nSnake, nInvaders and Curse of War from the laptop; retain Tetro.
 
 - 2026-11-12: Exclude one-axis keyboard devices from Atari-style controllers and make Breakout wait for launch input.
 

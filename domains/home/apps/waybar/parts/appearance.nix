@@ -68,7 +68,7 @@ window#waybar {
 }
 
 /* === CLOCK & WEATHER — palette accent underline === */
-#clock, #custom-weather, #custom-khal {
+#clock, #custom-weather, #custom-khal, #mpris {
   padding: 8px 10px;
   min-height: 0;
   background-color: #${colors.bg3};
@@ -187,7 +187,7 @@ window#waybar {
 
 /* === HOVER — universal === */
 #cpu:hover, #memory:hover, #temperature:hover, #custom-network:hover, #pulseaudio:hover,
-#custom-battery:hover, #clock:hover, #custom-power-hub:hover, #custom-ollama:hover, #custom-dt:hover,
+#custom-battery:hover, #clock:hover, #mpris:hover, #custom-power-hub:hover, #custom-ollama:hover, #custom-dt:hover,
 #idle_inhibitor:hover, #mpd:hover, #tray:hover, #custom-notification:hover,
 #custom-power:hover, #custom-disk-space:hover, #backlight:hover, #bluetooth:hover,
 #custom-weather:hover, #custom-khal:hover, #custom-proton-auth:hover,

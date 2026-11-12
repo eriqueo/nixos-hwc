@@ -57,6 +57,7 @@
   dictateCancelCommand = "hwc-dictation record cancel";
   workbenchClass = "hwc-workbench";
   workbenchCommand = "kitty --class ${workbenchClass} -e wb-reload";
+  musicCommand = "${pkgs.feishin}/bin/feishin";
   # Same command as the Zellij and Workbench mail panes; local where no alias exists.
   mailCommand = (config.hwc.home.core.shell.aliases or {}).aerc or "aerc";
 
@@ -115,7 +116,8 @@
           {mods = mod;            key = "Y";      act = "exec,kitty -e yazi";           desc = "File manager (yazi)";}
           {mods = mod;            key = "E";      act = "exec,kitty -e ${mailCommand}"; desc = "Mail (aerc)";}
           {mods = mod;            key = "O";      act = "exec,gpu-launch obsidian";     desc = "Obsidian";}
-          {mods = mod;            key = "M";      act = "exec,kitty -e btop";           desc = "Process monitor (btop)";}
+          {mods = mod;            key = "M";      act = "exec,${musicCommand}";         desc = "Music (Feishin)";}
+          {mods = "${mod} CTRL";  key = "M";      act = "exec,kitty -e btop";           desc = "Process monitor (btop)";}
           {mods = mod;            key = "C";      act = "exec,kitty -e fend";           desc = "Calculator (fend)";}
           {mods = mod;            key = "A";      act = "exec,proton-authenticator-toggle"; desc = "Proton Authenticator";}
           # `kitty -e` execs its arg directly, so this MUST be a binary on PATH —
@@ -284,7 +286,7 @@
 in {
   # Waybar uses the same commands as these compositor bindings; session.nix
   # autostarts Workbench with the SUPER+W command.
-  inherit keybinds dictateCommand dictateCancelCommand workbenchCommand courierCommand;
+  inherit keybinds dictateCommand dictateCancelCommand workbenchCommand courierCommand musicCommand;
 
   submaps = lib.listToAttrs (map mkSubmap submapGroups);
 
