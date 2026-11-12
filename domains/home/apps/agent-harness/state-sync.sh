@@ -108,10 +108,26 @@ on_error() {
 }
 trap on_error ERR
 
+# Copy each memory file in $1 into $2; a differing name is kept as .from-<host>.md.
+import_memories() {
+  local from=$1 into=$2 file conflict
+  mkdir -p "$into"
+  for file in "$from"/*; do
+    [ -f "$file" ] || continue
+    if [ -e "$into/${file##*/}" ] && ! cmp -s "$file" "$into/${file##*/}"; then
+      conflict="$into/${file##*/}.from-$HOST.md"
+      cp -p "$file" "$conflict"
+      log "kept conflicting import as $conflict"
+    else
+      cp -p "$file" "$into/"
+    fi
+  done
+}
+
 link_memories() {
   [ -d "$STATE/.git" ] || { log "missing git clone at $STATE"; return 1; }
   mkdir -p "$STATE/projects"
-  local config project slug source target file conflict
+  local config project slug source target old
   IFS=: read -r -a dirs <<< "$CONFIG_DIRS"
 
   for config in "${dirs[@]}"; do
@@ -122,26 +138,23 @@ link_memories() {
       [[ "$slug" == *-tmp-* ]] && continue
       source="$project/memory"
       target="$STATE/projects/$slug/memory"
+      # A link left from an older layout: Claude writes through it to a place
+      # nothing syncs. Import what it holds (the old copy stays), then relink.
+      # Found 2026-11-11: two hwc-laptop links into ~/.claude-config/projects
+      # survived because their projects had no memory in the store yet.
+      if [ -L "$source" ] && [ "$(readlink "$source")" != "$target" ]; then
+        old=$(readlink -f "$source" 2>/dev/null || true)
+        if [ -n "$old" ] && [ -d "$old" ]; then import_memories "$old" "$target"; else mkdir -p "$target"; fi
+        unlink "$source"
+        log "relinked $source from ${old:-a missing target} to $target"
+      fi
       if [ -d "$source" ] && [ ! -L "$source" ]; then
-        mkdir -p "$target"
-        for file in "$source"/*; do
-          [ -f "$file" ] || continue
-          if [ -e "$target/${file##*/}" ] && ! cmp -s "$file" "$target/${file##*/}"; then
-            conflict="$target/${file##*/}.from-$HOST.md"
-            cp -p "$file" "$conflict"
-            log "kept conflicting import as $conflict"
-          else
-            cp -p "$file" "$target/"
-          fi
-        done
+        import_memories "$source" "$target"
         find "$source" -mindepth 1 -maxdepth 1 -type f -delete
         rmdir "$source" 2>/dev/null || true
       fi
       if [ -d "$target" ]; then
-        if [ -L "$source" ] && [ "$(readlink "$source")" != "$target" ]; then
-          unlink "$source"
-        fi
-        [ -e "$source" ] || ln -s "$target" "$source"
+        [ -e "$source" ] || [ -L "$source" ] || ln -s "$target" "$source"
       fi
     done
 

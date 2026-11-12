@@ -53,6 +53,18 @@ AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
   bash "$(dirname "$0")/state-sync.sh" link
 test "$(readlink "$ROOT/config/projects/demo/memory")" = "$ROOT/state/projects/demo/memory"
 
+# A link from an older layout, for a project the store does not have yet, is
+# imported and relinked; the old copy is kept.
+mkdir -p "$ROOT/retired/projects/older/memory" "$ROOT/config/projects/older"
+printf -- '---\nname: older\ndescription: d\nmetadata:\n  type: project\n---\nold\n' > "$ROOT/retired/projects/older/memory/older.md"
+ln -s "$ROOT/retired/projects/older/memory" "$ROOT/config/projects/older/memory"
+AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+  bash "$(dirname "$0")/state-sync.sh" link
+test "$(readlink "$ROOT/config/projects/older/memory")" = "$ROOT/state/projects/older/memory"
+rg -q '^old$' "$ROOT/state/projects/older/memory/older.md"
+test -f "$ROOT/retired/projects/older/memory/older.md"
+rm -r "$ROOT/state/projects/older" "$ROOT/config/projects/older" "$ROOT/retired/projects/older"
+
 AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
   bash "$(dirname "$0")/state-sync.sh" sync
 test -z "$(git -C "$ROOT/state" status --porcelain)"
