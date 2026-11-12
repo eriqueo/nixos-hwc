@@ -17,7 +17,11 @@ let
     if lib.attrByPath [ "hwc" "business" "workbench" "enable" ] false osConfig
     then lib.attrByPath [ "hwc" "business" "workbench" "site" ] null osConfig
     else null;
-  contract = import ./contract.nix { inherit revision; };
+  # The harness manifest: programs feed the ownership contract; the matrix and
+  # outside-skill lists feed `agent-harness matrix` and the doctor.
+  manifest = builtins.fromTOML (builtins.readFile "${harness}/manifest.toml");
+  contract = import ./contract.nix { inherit revision manifest; };
+  matrixJson = pkgs.writeText "agent-harness-matrix.json" (builtins.toJSON { inherit (manifest) matrix outside; });
   expectedManifest = pkgs.writeText "agent-harness-manifest.json" (builtins.toJSON contract);
   configDirs = map (name: "${home}/${name}") ([ ".claude" ] ++ cfg.claudeConfigDirs);
   stateValidator = pkgs.writeShellApplication {
@@ -109,6 +113,7 @@ let
       export AGENT_HARNESS_SKILL_ROOTS=${lib.escapeShellArg (lib.concatMapStringsSep ":" (r: "${home}/${r}") skillRoots)}
       export AGENT_HARNESS_NOTIFY_URL=${lib.escapeShellArg cfg.notifyUrl}
       export AGENT_HARNESS_EXPECTED_MANIFEST=${expectedManifest}
+      export AGENT_HARNESS_MATRIX=${matrixJson}
       export AGENT_HARNESS_SYSTEM_MANIFEST=/etc/agent-harness-manifest.json
       export AGENT_HARNESS_SOURCE=${lib.escapeShellArg cfg.editableSource}
       export AGENT_HARNESS_NIXOS=${lib.escapeShellArg cfg.nixosRepo}

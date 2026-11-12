@@ -8,7 +8,10 @@
 let
   cfg = config.hwc.system.apps.agent-harness;
   revision = inputs.agent-harness.rev or "dirty";
-  contract = import ./contract.nix { inherit revision; };
+  contract = import ./contract.nix {
+    inherit revision;
+    manifest = builtins.fromTOML (builtins.readFile "${inputs.agent-harness}/manifest.toml");
+  };
   managedClaudeSettings =
     pkgs.runCommand "claude-managed-settings.json" { nativeBuildInputs = [ pkgs.jq ]; }
       ''
@@ -16,7 +19,6 @@ let
           .hooks.UserPromptSubmit[]?.hooks |= map(select((.command | contains("standing-instructions.sh")) | not))
           | walk(if type == "string" then
               gsub("/home/eric/.claude-config"; "/etc/agent-harness")
-              | gsub("/home/eric/.claude/hooks/principles"; "/etc/agent-harness/hooks/principles")
             else . end)
         ' ${inputs.agent-harness}/settings.json > "$out"
       '';

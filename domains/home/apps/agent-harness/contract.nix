@@ -1,4 +1,5 @@
-{ revision }:
+# `manifest` is the harness manifest.toml, parsed.
+{ revision, manifest }:
 {
   schemaVersion = 1;
 
@@ -33,29 +34,14 @@
     ];
   };
 
-  providers = {
-    claude = {
-      policyOwner = "nix";
-      stateOwner = "agent-state";
-    };
-    codex = {
-      policyOwner = "nix";
-      stateOwner = "agent-state";
-    };
-    pi = {
-      policyOwner = "nix";
-      stateOwner = "agent-state";
-      model = "dx2/llm";
-    };
-    t3 = {
-      policyOwner = "nix";
-      role = "launcher";
-    };
-    herdr = {
-      policyOwner = "nix";
-      role = "status-integration";
-    };
-  };
+  # Agent programs and launchers come from the harness manifest ([programs]);
+  # `kind`, `note` and `adds` describe the matrix, not ownership.
+  providers = builtins.listToAttrs (
+    map (name: {
+      inherit name;
+      value = builtins.removeAttrs manifest.programs.${name} [ "kind" "note" "adds" ];
+    }) (builtins.filter (name: manifest.programs.${name} ? policyOwner) (builtins.attrNames manifest.programs))
+  );
 
   invariants = [
     "runtime-static-policy-never-references-authoring-repo"

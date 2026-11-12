@@ -25,6 +25,15 @@ ln -s "$SKILLS" "$HOME_T/.claude/skills"
 ln -s "$SKILLS" "$HOME_T/.agents/skills"
 printf '{"skills":["%s/.claude/skills"]}\n' "$HOME_T" > "$HOME_T/.pi/agent/settings.json"
 
+# The manifest's matrix and outside-skill lists, as Nix renders them.
+cat > "$ROOT/matrix.json" <<'EOF'
+{"matrix":{"rules":{"claude":"provided","codex":"missing","pi":"provided"},
+           "skills":{"claude":"provided","codex":"provided","pi":"provided"},
+           "guards":{"claude":"unsupported","codex":"missing","pi":"provided"}},
+ "outside":{"codex":{"system":["listed"]}}}
+EOF
+mkdir "$HOME_T/.codex/skills/.system/listed"
+
 for command in claude codex pi herdr agent-state-validate codex-hooks-trust; do
   cat > "$BIN/$command" <<'EOF'
 #!/usr/bin/env bash
@@ -59,6 +68,10 @@ run_doctor() {
   AGENT_HARNESS_SKILL_SET="$SKILLS" \
   AGENT_HARNESS_SKILL_ROOTS="$HOME_T/.claude/skills:$HOME_T/.agents/skills" \
   AGENT_HARNESS_CODEX_SKILLS="$HOME_T/.codex/skills" \
+  AGENT_HARNESS_MATRIX="${MATRIX_FILE:-$ROOT/matrix.json}" \
+  AGENT_HARNESS_CLAUDE_HOME="$HOME_T/.claude" \
+  AGENT_HARNESS_CLAUDE_MCP="$HOME_T/.mcp.json" \
+  AGENT_HARNESS_CODEX_INSTRUCTIONS="$HOME_T/.codex/AGENTS.md" \
   AGENT_HARNESS_SOURCE="$ROOT/source" \
   AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
   bash "$(dirname "$0")/control.sh" "${1:-doctor}"
@@ -97,6 +110,33 @@ if run_doctor >/dev/null 2>&1; then
   exit 1
 fi
 printf '{"skills":["%s/.claude/skills"]}\n' "$HOME_T" > "$HOME_T/.pi/agent/settings.json"
+run_doctor >/dev/null
+
+# The matrix: provided cells are probed; a cell with no probe, a failing probe,
+# or an undeclared program fails. Missing and unsupported cells pass as declared.
+run_doctor matrix >/dev/null
+for seed in '.matrix.mcp = {"codex":"provided"}' '.matrix.rules.codex = "provided"' '.matrix.skills.extra = "maybe"'; do
+  jq "$seed" "$ROOT/matrix.json" > "$ROOT/matrix-seed.json"
+  if MATRIX_FILE="$ROOT/matrix-seed.json" run_doctor >/dev/null 2>&1; then
+    echo "control.test: matrix seed unexpectedly passed: $seed" >&2
+    exit 1
+  fi
+done
+rm "$ROOT/matrix-seed.json"
+
+# A skill a program loads from outside the harness must be listed.
+mkdir "$HOME_T/.codex/skills/.system/unlisted"
+if run_doctor >/dev/null 2>&1; then
+  echo 'control.test: unlisted Codex system skill unexpectedly passed' >&2
+  exit 1
+fi
+rmdir "$HOME_T/.codex/skills/.system/unlisted"
+mkdir -p "$HOME_T/.claude/plugins/synced/bucket/synced-plugin" "$HOME_T/.claude/plugins/synced/bucket/synced-plugin~g2"
+if run_doctor >/dev/null 2>&1; then
+  echo 'control.test: unlisted claude.ai synced plugin unexpectedly passed' >&2
+  exit 1
+fi
+rm -r "$HOME_T/.claude/plugins"
 run_doctor >/dev/null
 
 # A Pi bridge failure in the last hour fails the doctor; an older one does not.
