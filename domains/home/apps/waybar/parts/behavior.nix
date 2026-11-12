@@ -1,4 +1,4 @@
-{ config, lib, pkgs, osConfig ? {}, workspacePlan ? (import ../../hyprland/parts/hardware.nix { inherit lib pkgs; }).workspacePlan, ... }:
+{ config, lib, pkgs, osConfig ? {}, musicActions ? [], workspacePlan ? (import ../../hyprland/parts/hardware.nix { inherit lib pkgs; }).workspacePlan, ... }:
 
 let
   ollamaEnabled = lib.attrByPath [ "hwc" "ai" "ollama" "enable" ] false osConfig;
@@ -21,7 +21,6 @@ let
     "${lib.replaceStrings [ " " ] [ "+" ] dictateBind.mods}+${dictateBind.key}";
   powerHubEnabled = config.hwc.home.apps.waybar.powerHub.enable;
   musicPlayer = "Feishin";
-  musicCall = method: "${pkgs.glib.bin}/bin/gdbus call --session --dest org.mpris.MediaPlayer2.${musicPlayer} --object-path /org/mpris/MediaPlayer2 --method org.mpris.MediaPlayer2.${method}";
 
   commonModules = {
     # GTK computes a 37 px minimum from the shared 16 px text and 8 px padding.
@@ -143,9 +142,10 @@ let
       dynamic-len = 38;
       max-length = 40;
       status-icons = { playing = "▶"; paused = "⏸"; stopped = "♪"; };
-      tooltip-format = "{artist} — {title}\n{status}\nClick: Open Feishin\nMiddle-click: Play/pause\nRight-click: Next track";
-      on-click = musicCall "Raise";
-      on-click-middle = musicCall "Player.PlayPause";
+      tooltip-format = "{artist} — {title}\n{status}\nClick for: ${lib.concatMapStringsSep " / " (action: action.label) musicActions}\nSuper+M: Open Feishin";
+      on-click = "waybar-music-menu";
+      on-click-middle = "";
+      on-click-right = "";
     };
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {

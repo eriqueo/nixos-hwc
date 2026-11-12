@@ -7,10 +7,21 @@ let
 
   scriptPathBin = lib.makeBinPath packages.runtime;
 
-  behavior  = import ./parts/behavior.nix  { inherit config lib pkgs osConfig; };
+  # HELPERS: one action vocabulary supplies the menu and its hover help.
+  hyprlandBehavior = import ../hyprland/parts/behavior.nix { inherit config lib pkgs; };
+  musicPlayer = (builtins.head behavior).mpris.player;
+  musicCall = method: "${pkgs.glib.bin}/bin/gdbus call --session --dest org.mpris.MediaPlayer2.${musicPlayer} --object-path /org/mpris/MediaPlayer2 --method org.mpris.MediaPlayer2.Player.${method}";
+  musicActions = [
+    { label = "Play"; command = musicCall "Play"; }
+    { label = "Pause"; command = musicCall "Pause"; }
+    { label = "Next"; command = musicCall "Next"; }
+    { label = "Open"; command = "${pkgs.hyprland}/bin/hyprctl dispatch ${lib.escapeShellArg "hl.dsp.exec_cmd(${builtins.toJSON hyprlandBehavior.musicCommand})"}"; }
+  ];
+
+  behavior  = import ./parts/behavior.nix  { inherit config lib pkgs osConfig musicActions; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
-  scripts   = import ./parts/scripts.nix   { inherit pkgs lib; pathBin = scriptPathBin; };
+  scripts   = import ./parts/scripts.nix   { inherit pkgs lib musicActions; pathBin = scriptPathBin; };
   launchPkg = scripts.launch;
 in
 {
