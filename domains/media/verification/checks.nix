@@ -838,6 +838,7 @@ pkgs.runCommand "frigate-http-framing" { nativeBuildInputs = [ pkgs.python3 ]; }
   # Exercise the emitted nginx backport guard and pin its production call.
   nginx_command = 'RUN python3 /tmp/nginx-auth-patch.py /usr/local/nginx/conf/auth_location.conf && rm /tmp/nginx-auth-patch.py'
   assert nginx_command in recipe
+  assert '# Nginx backport input /nix/store/' in recipe
   assert 'COPY nginx-auth-patch.py /tmp/nginx-auth-patch.py' in recipe
   with tempfile.TemporaryDirectory() as folder:
     target = pathlib.Path(folder) / 'auth.conf'

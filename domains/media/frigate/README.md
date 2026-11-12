@@ -712,7 +712,7 @@ hwc.media.frigate = {
 
 ## Changelog
 
-- 2026-11-12: Backport upstream Frigate #24682 inside the pinned runtime image with source/result checksum guards; suppress only the internal auth-location variable warning.
+- 2026-11-12: Backport upstream Frigate #24682 inside the pinned runtime image with source/result checksum guards and a content-bound image identity; suppress only the internal auth-location variable warning.
 
 - 2026-11-12: Use browser-compatible live sources, with two bounded, preloaded 1280px H.264 encoders for carport and Reolink. Preserve original recording streams and test the source mappings.
 

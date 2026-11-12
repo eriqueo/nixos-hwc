@@ -76,6 +76,7 @@ let
     recipe = ''
       FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c
       # Fixed runtime inputs ${builtins.hashString "sha256" (builtins.toJSON runtimeInputs)}
+      # Nginx backport input ${nginxAuthPatch}
       COPY nginx-auth-patch.py /tmp/nginx-auth-patch.py
       RUN python3 /tmp/nginx-auth-patch.py /usr/local/nginx/conf/auth_location.conf && rm /tmp/nginx-auth-patch.py
       COPY debian/ /tmp/hwc-frigate-debs/
