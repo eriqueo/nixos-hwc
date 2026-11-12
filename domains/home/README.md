@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+`apps/atari-style/` packages the upstream terminal arcade collection; the laptop enables it.
 Floating size limits preserve native menu positions; centering applies only to explicit dialog and utility rules.
 
 The shared shell package list takes native yt-dlp from the checked HTTP runtime
@@ -180,6 +181,8 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+
+- 2026-11-11: Add the upstream Atari-style terminal arcade package and laptop opt-in.
 
 - 2026-11-09: Consolidate shared home facts and rendered consumers; remove inactive Claude sync, empty app parts and unused keymap knobs; add consumer and dt export regressions.
 
