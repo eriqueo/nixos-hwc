@@ -10,13 +10,13 @@
 #   - hwc.secrets (for RTSP credentials)
 #   - virtualisation.oci-containers.backend = "podman"
 #
-{ lib, config, pkgs, ... }:
+{ lib, config, pkgs, utils, ... }:
 let
   cfg = config.hwc.media.frigate;
   mediaMount = builtins.head (lib.sort (a: b: builtins.stringLength a > builtins.stringLength b)
     (lib.filter (p: lib.hasPrefix "${lib.removeSuffix "/" p}/" cfg.storage.mediaPath)
       (builtins.attrNames config.fileSystems)));
-  mediaMountUnit = "${lib.escapeSystemdPath mediaMount}.mount";
+  mediaMountUnit = "${utils.escapeSystemdPath mediaMount}.mount";
   credentialNames = [ "frigate-rtsp-username" "frigate-rtsp-password" "frigate-camera-ips"
     "frigate-reolink-username" "frigate-reolink-password" ];
   healthState = "${config.hwc.paths.state}/frigate-recording-health";
