@@ -84,6 +84,22 @@
         "type": "github"
       }
     },
+    "atari-style": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1773973335,
+        "narHash": "sha256-njAOnYeX6flkJDEIULmSbrXdjvQPPetbW1awr2+ND98=",
+        "owner": "jcaldwell-labs",
+        "repo": "atari-style",
+        "rev": "3e62b37149448f6882eedc6575ec0629c14d9a1b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jcaldwell-labs",
+        "repo": "atari-style",
+        "type": "github"
+      }
+    },
     "bloxels-cv": {
       "inputs": {
         "nixpkgs": [
@@ -707,6 +723,7 @@
         "agenix": "agenix",
         "agenix-stable": "agenix-stable",
         "agent-harness": "agent-harness",
+        "atari-style": "atari-style",
         "bloxels-cv": "bloxels-cv",
         "brainvec": "brainvec",
         "claude-cowork": "claude-cowork",
