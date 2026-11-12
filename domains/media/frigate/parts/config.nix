@@ -48,6 +48,14 @@ let
     };
   };
 
+  # Shared browser encoding: 1280px, two threads per stream.
+  browserH264 = source: [ "ffmpeg:${source}#video=h264#width=1280#raw=-threads 2" ];
+
+  browserStreams = {
+    cobra_cam_1_live = browserH264 "cobra_cam_1_sub";
+    reolink_live = browserH264 "reolink";
+  };
+
   # Full config structure
   frigateConfig = {
     version = "0.18-0";
@@ -163,6 +171,7 @@ let
       # cobra_cam_1: Carport — road at top, driveway/yard below
       # Motion retention, with road-only motion excluded above the sidewalk.
       cobra_cam_1 = {
+        live.streams.Live = "cobra_cam_1_live";
         enabled = true;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {
@@ -206,8 +215,6 @@ let
 
       # cobra_cam_3: Front porch — mask street beyond fence, detect only in yard
       cobra_cam_3 = {
-        # Permanent by design: browser-compatible live stream; retain 4K recording.
-        # The porch main stream fails Chromium MSE decoding; its substream passes.
         live.streams.Live = "cobra_cam_3_sub";
         enabled = true;
         audio.enabled = false;
@@ -239,6 +246,7 @@ let
 
       # Reolink (front yard) — fence defines property boundary, driveway on left
       reolink = {
+        live.streams.Live = "reolink_live";
         enabled = true;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {
@@ -273,7 +281,11 @@ let
       };
     };
 
-    go2rtc.streams = {
+    # Permanent by design: native H.264 can fail Chromium, and cold encoding
+    # exceeds Frigate's three-second live startup budget. Keep exactly these
+    # two bounded encoders ready; viewers share them, with no queue or fan-out.
+    go2rtc.preload = lib.mapAttrs (_: _: "video=h264") browserStreams;
+    go2rtc.streams = browserStreams // {
       # Cobra cameras - main streams (4K) for recording
       # #video=copy ensures no color space conversion during IR mode transitions
       cobra_cam_1 = [ "${rtspUrl "CAM1_IP"}#video=copy" ];

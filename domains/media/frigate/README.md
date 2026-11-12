@@ -712,7 +712,7 @@ hwc.media.frigate = {
 
 ## Changelog
 
-- 2026-11-12: Route porch live viewing to its browser-tested 720p substream; preserve 4K recording. Pin both mappings in the emitted-config contract.
+- 2026-11-12: Use browser-compatible live sources, with two bounded, preloaded 1280px H.264 encoders for carport and Reolink. Preserve original recording streams and test the source mappings.
 
 - 2026-11-11: Normalize timestamps only in the disposable null decode output, avoiding false decode alarms from muxer timestamp collisions; saved footage stays untouched.
 

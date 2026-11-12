@@ -205,7 +205,7 @@ workspace/media/
 
 ## Changelog
 
-- 2026-11-12: Route porch live viewing to its browser-tested 720p substream; preserve 4K recording. Pin both mappings in the emitted-config contract.
+- 2026-11-12: Use browser-compatible live sources, with two bounded, preloaded 1280px H.264 encoders for carport and Reolink. Preserve original recording streams and test the source mappings.
 
 - 2026-11-11: Check finalized recording age, recovered gaps and sampled decode failures independently of detection FPS; alert on checker failure through existing Prometheus.
 
