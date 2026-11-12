@@ -18,7 +18,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
 
 ## Structure
 Waybar centers Feishin's MPRIS track display; one click opens Play, Pause, Next and Open, with the same choices in hover help. Super+M opens Feishin; Super+Ctrl+M opens btop. The tray keeps the hidden player accessible.
-`apps/mtg/` packages Modern Terminal Games; the laptop enables it alongside Tetro.
+`apps/mtg/` packages the owned Modern Terminal Games fork with Frogger; the laptop enables it alongside Tetro.
 Floating size limits preserve native menu positions; centering applies only to explicit dialog and utility rules.
 
 The shared shell package list takes native yt-dlp from the checked HTTP runtime
@@ -182,6 +182,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-12: Add Frogger through the owned MTG source pin; preserve the existing four games and Tetro.
 - 2026-11-12: Add the music action menu and hover help; bind Feishin to Super+M and btop to Super+Ctrl+M.
 - 2026-11-12: Use GLib's executable output for Waybar player actions without relying on the session PATH.
 - 2026-11-12: Center Feishin metadata and playback controls in Waybar, retaining calendar, clock, weather and the tray.

@@ -8,18 +8,18 @@ in
     enable = lib.mkEnableOption "Modern Terminal Games arcade collection";
     package = lib.mkOption {
       type = lib.types.package;
-      description = "MTG launcher and its four terminal arcade games.";
+      description = "MTG launcher and its five terminal arcade games.";
       default = pkgs.rustPlatform.buildRustPackage {
         pname = "modern-terminal-games";
-        version = "0.7.0";
+        version = "0.7.0-frogger1";
         src = inputs.mtg;
         cargoLock.lockFile = inputs.mtg + "/Cargo.lock";
         nativeBuildInputs = [ pkgs.pkg-config ];
         buildInputs = [ pkgs.alsa-lib ];
         cargoTestFlags = [ "--workspace" ];
         meta = {
-          description = "Terminal Breaker, Paddle Battle, Snek and Alien Raid";
-          homepage = "https://github.com/modern-terminal-games/mtg";
+          description = "Terminal Frogger, Breaker, Paddle Battle, Snek and Alien Raid";
+          homepage = "https://github.com/eriqueo/mtg";
           license = lib.licenses.mit;
           mainProgram = "mtg";
         };
