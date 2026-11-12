@@ -346,11 +346,15 @@ publish_preflight() {
   git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
   git -C "$SOURCE" merge-base --is-ancestor github/main HEAD || { printf 'agent-harness: static policy is behind github/main\n' >&2; return 1; }
 
+  # Other sessions push to nixos-hwc while the suites above run (eight minutes);
+  # behind-only is safe to fast-forward. Local commits not on origin still stop.
   git -C "$NIXOS" fetch origin refs/heads/main:refs/remotes/origin/main
-  [ "$(git -C "$NIXOS" rev-parse HEAD)" = "$(git -C "$NIXOS" rev-parse origin/main)" ] || {
-    printf 'agent-harness: nixos-hwc main must equal origin/main before publication\n' >&2
+  if git -C "$NIXOS" merge-base --is-ancestor HEAD origin/main; then
+    git -C "$NIXOS" merge --ff-only --quiet origin/main
+  else
+    printf 'agent-harness: nixos-hwc main has commits not on origin/main; push or drop them first\n' >&2
     return 1
-  }
+  fi
 
   static_revision=$(git -C "$SOURCE" rev-parse HEAD)
   locked=$(jq -r '.nodes."agent-harness".locked.rev' "$NIXOS/flake.lock")
@@ -398,7 +402,12 @@ publish() {
         "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
     fi
   done
-  git -C "$NIXOS" push origin main
+  # A push that lost a race to another session: the pin commit touches only
+  # flake.lock, so replay it on the new origin and push once more.
+  if ! git -C "$NIXOS" push origin main; then
+    git -C "$NIXOS" pull --rebase --quiet origin main
+    git -C "$NIXOS" push origin main
+  fi
 
   # A host whose checkout holds another session's unpushed commits cannot
   # fast-forward. Skip it and switch the rest: before 2026-11-12 the first such
