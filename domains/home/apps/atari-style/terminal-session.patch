@@ -13,11 +13,12 @@
      finally:
 --- /dev/null
 +++ b/tests/test_terminal_session.py
-@@ -0,0 +1,56 @@
+@@ -0,0 +1,60 @@
 +"""Exercise real input and terminal restoration through the public entry point."""
 +import fcntl
 +import os
 +import pty
++import re
 +import select
 +import signal
 +import struct
@@ -41,13 +42,16 @@
 +            while time.monotonic() < deadline:
 +                if select.select([master], [], [], 0.001)[0]:
 +                    output.extend(os.read(master, 65536))
++                    del output[:-1048576]
 +                if check_mode:
 +                    assert not termios.tcgetattr(slave)[3] & (termios.ECHO | termios.ICANON), 'Input echo/canonical mode leaked between frames'
 +        try:
 +            deadline = time.monotonic() + 5
-+            while b'ATARI-STYLE TERMINAL DEMOS' not in output and time.monotonic() < deadline:
++            def menu_visible():
++                return b'ATARI-STYLE TERMINAL DEMOS' in re.sub(rb'\x1b\[[0-?]*[ -/]*[@-~]', b'', output)
++            while not menu_visible() and time.monotonic() < deadline:
 +                drain(0.01)
-+            assert b'ATARI-STYLE TERMINAL DEMOS' in output, bytes(output[-2000:])
++            assert menu_visible(), bytes(output[-2000:])
 +            for key in (b's', b'w', b'\r', b'd', b'a', b'q'):
 +                os.write(master, key)
 +                drain(0.25, check_mode=True)
