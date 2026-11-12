@@ -10,6 +10,7 @@ FLEET=${AGENT_HARNESS_FLEET_HOSTS:?fleet hosts are not configured}
 FLEET_HOSTS=()
 STORE_PREFIX=${AGENT_HARNESS_STORE_PREFIX:-/nix/store}
 SYSTEM_POLICY=${AGENT_HARNESS_SYSTEM_POLICY:-/etc/agent-harness/rules/AGENTS.md}
+HARNESS_ROOT=${AGENT_HARNESS_ROOT:-/etc/agent-harness}
 CLAUDE_INSTRUCTIONS=${AGENT_HARNESS_CLAUDE_INSTRUCTIONS:-$HOME/.claude/CLAUDE.md}
 CODEX_HOOKS=${AGENT_HARNESS_CODEX_HOOKS:-$HOME/.codex/hooks.json}
 PI_INSTRUCTIONS=${AGENT_HARNESS_PI_INSTRUCTIONS:-$HOME/.pi/agent/AGENTS.md}
@@ -163,8 +164,8 @@ probe() {
       [ "$found" = 1 ] ;;
     # Codex and Pi read the same store: memory-recall, run by the installed
     # bridge (Codex table) or from the settings.json registry (Pi).
-    memory/codex) rg -qF '"memory-recall"' "${SYSTEM_POLICY%/*}/codex/hook-bridge.py" && probe memory claude ;;
-    memory/pi) rg -qF 'hooks/memory-recall.sh' "${SYSTEM_POLICY%/*}/settings.json" && probe memory claude ;;
+    memory/codex) rg -qF '"memory-recall"' "$HARNESS_ROOT/adapters/codex/hook-bridge.py" && probe memory claude ;;
+    memory/pi) rg -qF 'guards/memory-recall.sh' "$HARNESS_ROOT/adapters/claude/settings.json" && probe memory claude ;;
     *) return 2 ;;
   esac
 }
