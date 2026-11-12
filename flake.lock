@@ -548,11 +548,11 @@
     "mtg": {
       "flake": false,
       "locked": {
-        "lastModified": 1794513262,
-        "narHash": "sha256-fWLSL0sFw2a3wFrR9xPvK3ViGaD8qiqXB6JS/G6Cxno=",
+        "lastModified": 1794513596,
+        "narHash": "sha256-8Ct8V4lSjQLkCsBaayyYm1iN7grQDZrzr1taR/8sgRI=",
         "ref": "main",
-        "rev": "f20d0de789493c5fe9b4bc570c3ec3fbceedbde1",
-        "revCount": 21,
+        "rev": "5d8e5891d7346e2f2a55ff4cca46d118b889fd20",
+        "revCount": 22,
         "type": "git",
         "url": "ssh://git@github.com/eriqueo/mtg.git"
       },
