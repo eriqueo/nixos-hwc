@@ -21,7 +21,7 @@ in
     pkgs.callPackage ../../domains/home/apps/blender/parts/package.nix { };
 
   # Extra applications selected for this laptop.
-  home.packages = with pkgs; [ nsnake ninvaders curseofwar feishin ];
+  home.packages = with pkgs; [ feishin ];
 
   # Apps enabled on this machine specifically
   hwc.home.apps = {
