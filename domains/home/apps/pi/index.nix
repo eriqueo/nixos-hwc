@@ -202,10 +202,17 @@ in
 
     contextFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
-      default = pkgs.writeText "pi-agent-harness.md" ''
-        ${builtins.readFile (inputs.agent-harness + "/pi/AGENTS.md")}
-        ${builtins.readFile (inputs.agent-harness + "/standing-instructions.md")}
-      '';
+      # The harness manifest's [budget].pi lists these files; its word-budget
+      # check counts the same list. TEMPORARY fallback for a pin older than S4
+      # (no [budget]); remove in agent-harness S6b's nixos batch.
+      default = pkgs.writeText "pi-agent-harness.md" (
+        lib.concatMapStringsSep "\n" (f: builtins.readFile (inputs.agent-harness + "/${f}")) (
+          (builtins.fromTOML (builtins.readFile (inputs.agent-harness + "/manifest.toml"))).budget.pi or [
+            "pi/AGENTS.md"
+            "standing-instructions.md"
+          ]
+        )
+      );
       description = ''
         Global instructions, installed as ~/.pi/agent/AGENTS.md. Set to null to
         install none.

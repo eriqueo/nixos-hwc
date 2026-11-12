@@ -62,19 +62,11 @@ let
       exec ${pkgs.bash}/bin/bash ${./state-sync.sh} "$@"
     '';
   };
-  # claimcheck validates against JSON schemas, so its interpreter carries
-  # jsonschema. The commit gate runs claimcheck's suite, so it uses the same one.
+  # The commit gate's skill checks parse frontmatter with pyyaml. claimcheck,
+  # which needed jsonschema, was retired 2026-11-12 (agent-harness C1).
   harnessPython = pkgs.python3.withPackages (p: [
-    p.jsonschema
     p.pyyaml
   ]);
-  # The verifier claimcheck-artifact-gate.sh calls, from the pinned revision.
-  # Until 2026-10-11 the only wrapper sat behind claude-code's shareConfig,
-  # which no host enables, so the gate fell back to a bare python3 without
-  # jsonschema and blocked every textual Artifact with DEPENDENCY-MISSING.
-  claimcheck = pkgs.writeShellScriptBin "claimcheck" ''
-    exec ${harnessPython}/bin/python3 ${harness}/claimcheck/bin/claimcheck "$@"
-  '';
   policyHook = pkgs.writeShellScriptBin "pre-commit" ''
     export PATH=${
       lib.makeBinPath [
@@ -93,7 +85,7 @@ let
     runtimeInputs = [
       stateSync
       stateValidator
-      # publish runs the live hook tier, which includes claimcheck's suite.
+      # publish runs the commit gate's skill checks.
       harnessPython
     ]
     ++ (with pkgs; [
@@ -548,7 +540,6 @@ in
       stateSync
       stateValidator
       (pkgs.writeShellScriptBin "log-mistake" ''exec ${pkgs.python3}/bin/python3 ${harness}/bin/log-mistake "$@"'')
-      claimcheck
       # Fire counts per blocking guard from hooks/lib/fire-log.sh; names the
       # guards with no fire in the window (the removal budget).
       (pkgs.writeShellApplication {
