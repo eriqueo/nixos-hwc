@@ -712,6 +712,8 @@ hwc.media.frigate = {
 
 ## Changelog
 
+- 2026-11-12: Route porch live viewing to its browser-tested 720p substream; preserve 4K recording. Pin both mappings in the emitted-config contract.
+
 - 2026-11-11: Normalize timestamps only in the disposable null decode output, avoiding false decode alarms from muxer timestamp collisions; saved footage stays untouched.
 
 - 2026-11-11: Use the pinned runtime IPv6 enabled field in generated listener configuration.

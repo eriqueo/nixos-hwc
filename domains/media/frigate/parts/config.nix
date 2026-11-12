@@ -206,6 +206,9 @@ let
 
       # cobra_cam_3: Front porch — mask street beyond fence, detect only in yard
       cobra_cam_3 = {
+        # Permanent by design: browser-compatible live stream; retain 4K recording.
+        # The porch main stream fails Chromium MSE decoding; its substream passes.
+        live.streams.Live = "cobra_cam_3_sub";
         enabled = true;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {

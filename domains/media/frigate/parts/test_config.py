@@ -196,3 +196,8 @@ tests = [
 Path("tests.json").write_text(json.dumps({"rule_files":["rules.json"],"evaluation_interval":"1m","tests":tests}))
 subprocess.run(["promtool","test","rules","tests.json"],check=True)
 print("PASS Frigate emitted config, model regeneration, coverage points and outage rules")
+
+# Browser live decoding must not select the incompatible porch 4K stream.
+porch = config["cameras"]["cobra_cam_3"]
+assert porch["live"]["streams"] == {"Live": "cobra_cam_3_sub"}
+assert next(i for i in porch["ffmpeg"]["inputs"] if "record" in i["roles"])["path"].endswith("/cobra_cam_3")

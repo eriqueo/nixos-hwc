@@ -205,6 +205,8 @@ workspace/media/
 
 ## Changelog
 
+- 2026-11-12: Route porch live viewing to its browser-tested 720p substream; preserve 4K recording. Pin both mappings in the emitted-config contract.
+
 - 2026-11-11: Check finalized recording age, recovered gaps and sampled decode failures independently of detection FPS; alert on checker failure through existing Prometheus.
 
 - 2026-11-11: Bind Frigate administration and RTSP to loopback, WebRTC to Tailscale; regenerate config on container start; require the media filesystem and register consistent Borg state backup.
