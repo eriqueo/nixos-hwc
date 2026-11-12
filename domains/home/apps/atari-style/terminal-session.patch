@@ -13,7 +13,7 @@
      finally:
 --- /dev/null
 +++ b/tests/test_terminal_session.py
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,63 @@
 +"""Exercise real input and terminal restoration through the public entry point."""
 +import fcntl
 +import os
@@ -59,7 +59,10 @@
 +                child.send_signal(signal.SIGTERM)
 +            else:
 +                os.write(master, b'x')
-+            child.wait(timeout=3)
++            deadline = time.monotonic() + 3
++            while child.poll() is None and time.monotonic() < deadline:
++                drain(0.01)
++            assert child.poll() is not None, "Process did not exit while terminal output was drained"
 +            assert child.returncode == 0
 +            assert termios.tcgetattr(slave) == original, 'Terminal settings were not restored'
 +            assert b'Traceback' not in output, bytes(output[-2000:])
