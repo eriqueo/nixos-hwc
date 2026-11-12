@@ -24,7 +24,7 @@ let
       '';
 
   # The pinned hooks pass their own suites or the system does not build.
-  # hooks/tests/run.sh is the one list of hermetic suites and the coverage
+  # guards/tests/run.sh is the one list of hermetic suites and the coverage
   # manifest (every wired guard names its suite). Added 2026-10-11, after a live
   # probe found shipped guards that leaked and suites that had never run.
   # TMPDIR sits beside HOME, not above it: write-guard exempts $TMPDIR, and its
