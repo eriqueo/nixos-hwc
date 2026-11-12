@@ -5,6 +5,7 @@ Install the upstream terminal arcade collection. Run `atari-style` to choose a g
 
 ## Boundaries
 Owns Nix packaging and installation. Game behavior stays in the upstream flake input, with a terminal-input lifecycle patch until upstream keeps cbreak active for the full session.
+The public entry point owns terminal input mode for menu-launched games.
 Enabled only on the laptop. No services or automatic game launches.
 
 ## Structure
