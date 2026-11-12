@@ -48,8 +48,13 @@ let
     };
   };
 
-  # Shared on-demand browser encoding: 1280px, two threads per active stream.
+  # Shared browser encoding: 1280px, two threads per stream.
   browserH264 = source: [ "ffmpeg:${source}#video=h264#width=1280#raw=-threads 2" ];
+
+  browserStreams = {
+    cobra_cam_1_live = browserH264 "cobra_cam_1_sub";
+    reolink_live = browserH264 "reolink";
+  };
 
   # Full config structure
   frigateConfig = {
@@ -276,12 +281,11 @@ let
       };
     };
 
-    go2rtc.streams = {
-      # Permanent by design: these native H.264 feeds can fail Chromium.
-      # At most two shared on-demand encoders, two threads each; no queue or preloading.
-      # go2rtc stops it when viewers disconnect; recording stays stream-copy.
-      cobra_cam_1_live = browserH264 "cobra_cam_1_sub";
-      reolink_live = browserH264 "reolink";
+    # Permanent by design: native H.264 can fail Chromium, and cold encoding
+    # exceeds Frigate's three-second live startup budget. Keep exactly these
+    # two bounded encoders ready; viewers share them, with no queue or fan-out.
+    go2rtc.preload = lib.mapAttrs (_: _: "video=h264") browserStreams;
+    go2rtc.streams = browserStreams // {
       # Cobra cameras - main streams (4K) for recording
       # #video=copy ensures no color space conversion during IR mode transitions
       cobra_cam_1 = [ "${rtspUrl "CAM1_IP"}#video=copy" ];

@@ -205,3 +205,5 @@ for name, stream in {"cobra_cam_1": "cobra_cam_1_live", "cobra_cam_3": "cobra_ca
 
 for target, source in {"cobra_cam_1_live": "cobra_cam_1_sub", "reolink_live": "reolink"}.items():
     assert config["go2rtc"]["streams"][target] == [f"ffmpeg:{source}#video=h264#width=1280#raw=-threads 2"]
+
+assert config["go2rtc"]["preload"] == {"cobra_cam_1_live": "video=h264", "reolink_live": "video=h264"}
