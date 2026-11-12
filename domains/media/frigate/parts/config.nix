@@ -48,6 +48,10 @@ let
     };
   };
 
+  # Permanent by design: Cobra main streams can fail Chromium MSE decoding.
+  # Live uses their proven substream; recording keeps the original 4K source.
+  cobraLive = camera: { streams.Live = "${camera}_sub"; };
+
   # Full config structure
   frigateConfig = {
     version = "0.18-0";
@@ -163,6 +167,7 @@ let
       # cobra_cam_1: Carport — road at top, driveway/yard below
       # Motion retention, with road-only motion excluded above the sidewalk.
       cobra_cam_1 = {
+        live = cobraLive "cobra_cam_1";
         enabled = true;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {
@@ -206,9 +211,7 @@ let
 
       # cobra_cam_3: Front porch — mask street beyond fence, detect only in yard
       cobra_cam_3 = {
-        # Permanent by design: browser-compatible live stream; retain 4K recording.
-        # The porch main stream fails Chromium MSE decoding; its substream passes.
-        live.streams.Live = "cobra_cam_3_sub";
+        live = cobraLive "cobra_cam_3";
         enabled = true;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {
