@@ -149,6 +149,7 @@ probe() {
     guards/codex) in_store "$CODEX_HOOKS" && rg -qF 'hook-bridge.py' "$CODEX_HOOKS" ;;
     guards/pi) in_store "$PI_HOOK_BRIDGE" ;;
     mcp/claude) in_store "$CLAUDE_MCP" ;;
+    mcp/codex) command -v codex-mcp-sync >/dev/null && codex-mcp-sync --check >/dev/null 2>&1 ;;
     commands/claude) in_store "$CLAUDE_HOME/commands" ;;
     subagents/claude) in_store "$CLAUDE_HOME/agents" ;;
     memory/claude)

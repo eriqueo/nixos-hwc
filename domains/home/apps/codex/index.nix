@@ -69,6 +69,23 @@ let
       exec python3 ${./hooks-trust.py} "$@" "$HOME/.npm-global/bin/codex" ${codexPkg}/bin/codex
     '';
   };
+
+  # Codex gets the MCP servers in agent-harness's generated ~/.mcp.json, the one
+  # list Claude Code reads. config.toml holds per-host hook trust, so it is not a
+  # store link; `codex mcp add/remove` edit only their own table (measured: an
+  # add and remove leave the rest of the file byte-identical).
+  mcpSync = pkgs.writeShellApplication {
+    name = "codex-mcp-sync";
+    runtimeInputs = [
+      pkgs.python3
+      pkgs.nodejs
+    ];
+    text = ''
+      args=()
+      [ "''${1:-}" = --check ] && args=(--check)
+      exec python3 ${./mcp-sync.py} "''${args[@]}" "$HOME/.mcp.json" ${codexPkg}/bin/codex
+    '';
+  };
 in
 {
   #==========================================================================
@@ -126,6 +143,7 @@ in
         home.packages = [
           agentsRender
           hooksTrust
+          mcpSync
         ];
 
         # One hooks.json for every host. herdr's own entry is in it, so
@@ -142,6 +160,9 @@ in
             run env CODEX_HOME="$HOME/.codex_p" ${hooksTrust}/bin/codex-hooks-trust \
               || echo "codex: T3 profile hooks are not all trusted — run CODEX_HOME=$HOME/.codex_p codex-hooks-trust" >&2
           fi
+          # ~/.codex_p links config.toml to ~/.codex, so one run covers T3 too.
+          run ${mcpSync}/bin/codex-mcp-sync \
+            || echo "codex: MCP servers not mirrored from ~/.mcp.json — run codex-mcp-sync" >&2
         '';
 
       })
