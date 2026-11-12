@@ -400,17 +400,26 @@ publish() {
   done
   git -C "$NIXOS" push origin main
 
+  # A host whose checkout holds another session's unpushed commits cannot
+  # fast-forward. Skip it and switch the rest: before 2026-11-12 the first such
+  # host stopped the loop, and every host after it stayed on the old revision.
+  local skipped=()
   for host in "${FLEET_HOSTS[@]}"; do
     if [ "$host" = "$(hostname)" ]; then
-      sudo nixos-rebuild switch --flake "$NIXOS#$host"
+      sudo nixos-rebuild switch --flake "$NIXOS#$host" || skipped+=("$host")
     else
-      ssh -t "$host" "git -C ~/.claude-config pull --ff-only && cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host"
+      ssh -t "$host" "git -C ~/.claude-config pull --ff-only && cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host" \
+        || skipped+=("$host")
     fi
   done
+  if [ "${#skipped[@]}" -gt 0 ]; then
+    printf 'agent-harness: not switched: %s. Push or rebase that host'"'"'s checkout, then publish again.\n' "${skipped[*]}" >&2
+  fi
   # The CLI now on PATH, not "$0": this process is the pre-switch store copy,
   # whose expected manifest still names the old revision, so re-running it
   # reported every freshly switched host as a mismatch (2026-09-30).
-  exec agent-harness doctor --fleet
+  agent-harness doctor --fleet
+  [ "${#skipped[@]}" -eq 0 ]
 }
 
 # The hourly timer: the doctor's FAIL lines are the case, and an alert goes out
