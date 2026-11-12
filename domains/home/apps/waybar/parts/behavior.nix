@@ -20,15 +20,18 @@ let
   dictateShortcut = if dictateBind == null then "" else
     "${lib.replaceStrings [ " " ] [ "+" ] dictateBind.mods}+${dictateBind.key}";
   powerHubEnabled = config.hwc.home.apps.waybar.powerHub.enable;
+  musicPlayer = "Feishin";
+  musicCall = method: "${pkgs.glib}/bin/gdbus call --session --dest org.mpris.MediaPlayer2.${musicPlayer} --object-path /org/mpris/MediaPlayer2 --method org.mpris.MediaPlayer2.${method}";
 
   commonModules = {
     # GTK computes a 37 px minimum from the shared 16 px text and 8 px padding.
     # Both bars already render at this height; declare it to avoid ignored
     # per-output requests and Waybar's warning on every start.
     height = 37;
-    modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" ];
-    modules-center = [ "custom/khal" "clock" "custom/weather" ];
+    modules-left = [ "custom/ws-enter" "hyprland/workspaces" "hyprland/submap" "custom/workspace-link" "custom/khal" ];
+    modules-center = [ "mpris" ];
     modules-right = [
+      "clock" "custom/weather"
       "custom/sep-pre"
     ] ++ lib.optionals ollamaEnabled [ "custom/ollama" ]
       ++ lib.optionals dtEnabled [ "custom/dt" ]
@@ -133,6 +136,17 @@ let
   };
 
   commonWidgetsBase = ollamaWidget // dtWidget // gsrWidget // dictateWidget // courierWidget // powerHubWidget // {
+    mpris = {
+      player = musicPlayer;
+      format = "{status_icon} {dynamic}";
+      dynamic-order = [ "artist" "title" ];
+      dynamic-len = 38;
+      max-length = 40;
+      status-icons = { playing = "▶"; paused = "⏸"; stopped = "♪"; };
+      tooltip-format = "{artist} — {title}\n{status}\nClick: Open Feishin\nMiddle-click: Play/pause\nRight-click: Next track";
+      on-click = musicCall "Raise";
+      on-click-middle = musicCall "Player.PlayPause";
+    };
     "hyprland/submap" = { format = "mode: {}"; max-length = 12; tooltip = false; };
     "hyprland/window" = {
       format = "{title}";
