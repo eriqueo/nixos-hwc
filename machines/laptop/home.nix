@@ -20,6 +20,9 @@ in
   hwc.home.apps.blender.package =
     pkgs.callPackage ../../domains/home/apps/blender/parts/package.nix { };
 
+  # Terminal arcade games selected for this laptop.
+  home.packages = with pkgs; [ nsnake ninvaders curseofwar ];
+
   # Apps enabled on this machine specifically
   hwc.home.apps = {
     eden.enable = true;
