@@ -12,16 +12,17 @@ let
   musicPlayer = (builtins.head behavior).mpris.player;
   musicCall = method: "${pkgs.glib.bin}/bin/gdbus call --session --dest org.mpris.MediaPlayer2.${musicPlayer} --object-path /org/mpris/MediaPlayer2 --method org.mpris.MediaPlayer2.Player.${method}";
   musicActions = [
-    { label = "Play"; command = musicCall "Play"; }
-    { label = "Pause"; command = musicCall "Pause"; }
-    { label = "Next"; command = musicCall "Next"; }
-    { label = "Open"; command = "${pkgs.hyprland}/bin/hyprctl dispatch ${lib.escapeShellArg "hl.dsp.exec_cmd(${builtins.toJSON hyprlandBehavior.musicCommand})"}"; }
+    { id = "play"; label = "Play"; command = musicCall "Play"; }
+    { id = "pause"; label = "Pause"; command = musicCall "Pause"; }
+    { id = "next"; label = "Next"; command = musicCall "Next"; }
+    { id = "open"; label = "Open"; command = "${pkgs.hyprland}/bin/hyprctl dispatch ${lib.escapeShellArg "hl.dsp.exec_cmd(${builtins.toJSON hyprlandBehavior.musicCommand})"}"; }
+    { id = "quit"; label = "Quit Feishin"; command = "${pkgs.glib.bin}/bin/gdbus call --session --dest org.mpris.MediaPlayer2.${musicPlayer} --object-path /org/mpris/MediaPlayer2 --method org.mpris.MediaPlayer2.Quit"; }
   ];
 
   behavior  = import ./parts/behavior.nix  { inherit config lib pkgs osConfig musicActions; };
   appearance= import ./parts/appearance.nix { inherit config lib pkgs; };
   packages  = import ./parts/packages.nix  { inherit lib pkgs; };
-  scripts   = import ./parts/scripts.nix   { inherit pkgs lib musicActions; pathBin = scriptPathBin; };
+  scripts   = import ./parts/scripts.nix   { inherit pkgs lib; pathBin = scriptPathBin; };
   launchPkg = scripts.launch;
 in
 {

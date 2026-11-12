@@ -1,5 +1,5 @@
 # domains/home/apps/waybar/parts/scripts.nix
-{ pkgs, lib, pathBin, osConfig ? {}, musicActions ? [] }:
+{ pkgs, lib, pathBin, osConfig ? {} }:
 let
   sh = name: text: pkgs.writeShellScriptBin name ''
     set -euo pipefail
@@ -8,16 +8,6 @@ let
   '';
 in
 {
-  "music-menu" = sh "waybar-music-menu" ''
-    # Play/Pause/Open are idempotent. Next is non-retriable: one selection,
-    # one command; this dispatcher never retries a playback effect.
-    choice=$(printf '%s\n' ${lib.escapeShellArgs (map (action: action.label) musicActions)} | ${pkgs.wofi}/bin/wofi --dmenu --no-custom-entry --hide-search --cache-file /dev/null --prompt Music --location top --yoffset 48 --width 280 --lines 4) || exit 0
-    case "$choice" in
-      ${lib.concatMapStringsSep "\n" (action: "${lib.escapeShellArg action.label}) ${action.command} ;;") musicActions}
-      *) exit 64 ;;
-    esac
-  '';
-
   "bitwarden-open" = sh "waybar-bitwarden-open" ''
     window() {
       hyprctl clients -j | jq -r '[.[] | select(.class == "bitwarden") | .address] | first // empty'

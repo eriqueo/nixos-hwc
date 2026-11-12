@@ -82,6 +82,23 @@ window#waybar {
   transition: all 0.2s ease;
 }
 
+/* Native bar menus keep the shared palette and single-click GTK behavior. */
+menu {
+  background-color: #${colors.bg1};
+  color: #${colors.fg1};
+  border: 1px solid #${colors.accent};
+  border-radius: 3px;
+  padding: 0;
+}
+menuitem {
+  padding: 6px 12px;
+  min-height: 22px;
+}
+menuitem:hover {
+  background-color: #${colors.accent};
+  color: #${colors.bg1};
+}
+
 /* === BASE MODULE STYLE === */
 #cpu, #memory, #temperature, #custom-network, #pulseaudio,
 #custom-battery, #custom-power-hub, #custom-ollama, #custom-dt, #idle_inhibitor, #mpd, #tray,

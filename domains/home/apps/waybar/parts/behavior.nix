@@ -143,7 +143,23 @@ let
       max-length = 40;
       status-icons = { playing = "▶"; paused = "⏸"; stopped = "♪"; };
       tooltip-format = "{artist} — {title}\n{status}\nClick for: ${lib.concatMapStringsSep " / " (action: action.label) musicActions}\nSuper+M: Open Feishin";
-      on-click = "waybar-music-menu";
+      # Native GTK popup shares Waybar's input grab. An empty override also
+      # prevents MPRIS's built-in left-click PlayPause action.
+      on-click = "";
+      menu = "on-click";
+      menu-file = "${pkgs.writeText "waybar-music-menu.xml" ''
+        <?xml version="1.0" encoding="UTF-8"?>
+        <interface><object class="GtkMenu" id="menu">
+          ${lib.concatMapStringsSep "\n" (action: ''
+            <child><object class="GtkMenuItem" id="${action.id}">
+              <property name="label">${action.label}</property>
+            </object></child>
+          '') musicActions}
+        </object></interface>
+      ''}";
+      menu-actions = builtins.listToAttrs (map (action: {
+        name = action.id; value = action.command;
+      }) musicActions);
       on-click-middle = "";
       on-click-right = "";
     };
