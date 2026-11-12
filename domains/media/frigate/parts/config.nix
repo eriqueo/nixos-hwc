@@ -48,10 +48,6 @@ let
     };
   };
 
-  # Permanent by design: Cobra main streams can fail Chromium MSE decoding.
-  # Live uses their proven substream; recording keeps the original 4K source.
-  cobraLive = camera: { streams.Live = "${camera}_sub"; };
-
   # Full config structure
   frigateConfig = {
     version = "0.18-0";
@@ -167,7 +163,7 @@ let
       # cobra_cam_1: Carport — road at top, driveway/yard below
       # Motion retention, with road-only motion excluded above the sidewalk.
       cobra_cam_1 = {
-        live = cobraLive "cobra_cam_1";
+        live.streams.Live = "cobra_cam_1_live";
         enabled = true;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {
@@ -211,7 +207,7 @@ let
 
       # cobra_cam_3: Front porch — mask street beyond fence, detect only in yard
       cobra_cam_3 = {
-        live = cobraLive "cobra_cam_3";
+        live.streams.Live = "cobra_cam_3_sub";
         enabled = true;
         audio.enabled = false;
         ffmpeg = ffmpegDefaults // {
@@ -277,6 +273,10 @@ let
     };
 
     go2rtc.streams = {
+      # Permanent by design: carport H.264 fails Chromium even at 720p.
+      # One on-demand shared encoder, two threads; no queue or preloading.
+      # go2rtc stops it when viewers disconnect; recording stays stream-copy.
+      cobra_cam_1_live = [ "ffmpeg:cobra_cam_1_sub#video=h264#raw=-threads 2" ];
       # Cobra cameras - main streams (4K) for recording
       # #video=copy ensures no color space conversion during IR mode transitions
       cobra_cam_1 = [ "${rtspUrl "CAM1_IP"}#video=copy" ];

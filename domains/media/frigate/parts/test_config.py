@@ -198,7 +198,9 @@ subprocess.run(["promtool","test","rules","tests.json"],check=True)
 print("PASS Frigate emitted config, model regeneration, coverage points and outage rules")
 
 # Browser live decoding must not select incompatible Cobra 4K streams.
-for name in ("cobra_cam_1", "cobra_cam_3"):
+for name, stream in {"cobra_cam_1": "cobra_cam_1_live", "cobra_cam_3": "cobra_cam_3_sub"}.items():
     camera = config["cameras"][name]
-    assert camera["live"]["streams"] == {"Live": name + "_sub"}
+    assert camera["live"]["streams"] == {"Live": stream}
     assert next(i for i in camera["ffmpeg"]["inputs"] if "record" in i["roles"])["path"].endswith("/" + name)
+
+assert config["go2rtc"]["streams"]["cobra_cam_1_live"] == ["ffmpeg:cobra_cam_1_sub#video=h264#raw=-threads 2"]
