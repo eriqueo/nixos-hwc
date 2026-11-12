@@ -7,6 +7,18 @@
 let
   cfg = config.hwc.home.apps.herdr;
   herdrPkg = if cfg.package != null then cfg.package else pkgs.callPackage ./parts/package.nix { };
+
+  # The agent-harness Codex hooks.json calls ~/.codex/herdr-agent-state.sh, but
+  # `herdr integration install codex` also edits hooks.json, which is a
+  # read-only link here. Generate in a scratch home and keep only the script, so
+  # it is pinned to this Herdr version. Before this, hwc-laptop and hwc-home had
+  # hand copies from 2026-09-17 and hwc-work had none, so every Codex Stop hook
+  # there failed.
+  codexHook = pkgs.runCommand "herdr-codex-agent-state" { } ''
+    mkdir -p home/.codex
+    HOME=$PWD/home ${herdrPkg}/bin/herdr integration install codex >/dev/null
+    install -m 755 home/.codex/herdr-agent-state.sh $out
+  '';
 in
 {
   # OPTIONS
@@ -22,6 +34,8 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages = [ herdrPkg ];
+
+    home.file.".codex/herdr-agent-state.sh".source = codexHook;
 
     # Herdr owns the Claude and Pi runtime status hooks. Codex's Nix-owned
     # hooks.json already contains Herdr and is read-only by design.
