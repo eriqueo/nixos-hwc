@@ -548,17 +548,18 @@
     "mtg": {
       "flake": false,
       "locked": {
-        "lastModified": 1783773452,
-        "narHash": "sha256-wWwK0cJFCntFDyboFYKFH1y8HSThf8mdEEiUTRrw6wk=",
-        "owner": "modern-terminal-games",
-        "repo": "mtg",
-        "rev": "47ccb30caab0cae5ade3a9d2d56b4178435361b1",
-        "type": "github"
+        "lastModified": 1794513596,
+        "narHash": "sha256-8Ct8V4lSjQLkCsBaayyYm1iN7grQDZrzr1taR/8sgRI=",
+        "ref": "main",
+        "rev": "5d8e5891d7346e2f2a55ff4cca46d118b889fd20",
+        "revCount": 22,
+        "type": "git",
+        "url": "ssh://git@github.com/eriqueo/mtg.git"
       },
       "original": {
-        "owner": "modern-terminal-games",
-        "repo": "mtg",
-        "type": "github"
+        "ref": "main",
+        "type": "git",
+        "url": "ssh://git@github.com/eriqueo/mtg.git"
       }
     },
     "nixpkgs": {
