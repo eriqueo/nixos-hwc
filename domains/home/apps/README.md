@@ -40,6 +40,8 @@ apps/
 
 ## Changelog
 
+- 2026-11-12: Exclude one-axis keyboard devices from Atari-style controllers and make Breakout wait for launch input.
+
 - 2026-11-11: Repair swallowed Atari-style gameplay keys and add game-loop control regressions.
 
 - 2026-11-11: Patch Atari-style to retain input mode across menu and game frames; verify terminal restoration.

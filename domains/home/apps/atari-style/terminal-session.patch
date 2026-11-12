@@ -425,3 +425,203 @@
 +
 +if __name__ == '__main__':
 +    unittest.main(verbosity=2)
+--- a/atari_style/core/input_handler.py
++++ b/atari_style/core/input_handler.py
+@@ -85,2 +85,13 @@
+-            if pygame.joystick.get_count() > 0:
+-                self.joystick = pygame.joystick.Joystick(0)
++            # This input interface needs both X and Y axes. Keyboard system-
++            # control devices may expose one axis permanently at -1; skip them.
++            self.joystick = None
++            self.joystick_initialized = False
++            for index in range(pygame.joystick.get_count()):
++                candidate = pygame.joystick.Joystick(index)
++                if candidate.get_numaxes() < 2:
++                    candidate.quit()
++                    continue
++                self.joystick = candidate
++                break
++
++            if self.joystick is not None:
+@@ -170,5 +181,3 @@
+-                # Check if joystick is now available
+-                if pygame.joystick.get_count() > 0:
+-                    self.joystick = pygame.joystick.Joystick(0)
+-                    self.joystick.init()
+-                    self.joystick_initialized = True
++                # Use the same capability check on startup and reconnect.
++                self._init_joystick(silent=True)
++                if self.joystick_initialized:
+@@ -176,2 +184,0 @@
+-
+-                    # Show reconnection message (throttled to once per 5 seconds)
+@@ -182,7 +188,0 @@
+-
+-                    # Initialize button tracking
+-                    time.sleep(0.1)
+-                    pygame.event.pump()
+-                    self.previous_buttons = {}
+-                    for i in range(self.joystick.get_numbuttons()):
+-                        self.previous_buttons[i] = self.joystick.get_button(i)
+--- a/terminal_arcade/engine/input_handler.py
++++ b/terminal_arcade/engine/input_handler.py
+@@ -85,2 +85,13 @@
+-            if pygame.joystick.get_count() > 0:
+-                self.joystick = pygame.joystick.Joystick(0)
++            # This input interface needs both X and Y axes. Keyboard system-
++            # control devices may expose one axis permanently at -1; skip them.
++            self.joystick = None
++            self.joystick_initialized = False
++            for index in range(pygame.joystick.get_count()):
++                candidate = pygame.joystick.Joystick(index)
++                if candidate.get_numaxes() < 2:
++                    candidate.quit()
++                    continue
++                self.joystick = candidate
++                break
++
++            if self.joystick is not None:
+@@ -170,5 +181,3 @@
+-                # Check if joystick is now available
+-                if pygame.joystick.get_count() > 0:
+-                    self.joystick = pygame.joystick.Joystick(0)
+-                    self.joystick.init()
+-                    self.joystick_initialized = True
++                # Use the same capability check on startup and reconnect.
++                self._init_joystick(silent=True)
++                if self.joystick_initialized:
+@@ -176,2 +184,0 @@
+-
+-                    # Show reconnection message (throttled to once per 5 seconds)
+@@ -182,7 +188,0 @@
+-
+-                    # Initialize button tracking
+-                    time.sleep(0.1)
+-                    pygame.event.pump()
+-                    self.previous_buttons = {}
+-                    for i in range(self.joystick.get_numbuttons()):
+-                        self.previous_buttons[i] = self.joystick.get_button(i)
+--- a/atari_style/demos/games/breakout.py
++++ b/atari_style/demos/games/breakout.py
+@@ -164,2 +163,0 @@
+-        # Auto-launch timer
+-        self.auto_launch_timer = 0
+@@ -226,10 +224 @@
+-        if self.state == self.STATE_SERVING:
+-            # Auto-launch after 3 seconds
+-            self.auto_launch_timer += dt
+-            if self.auto_launch_timer >= 3.0:
+-                for ball in self.balls:
+-                    if ball.on_paddle:
+-                        ball.launch()
+-                self.state = self.STATE_PLAYING
+-
+-        elif self.state == self.STATE_PLAYING:
++        if self.state == self.STATE_PLAYING:
+@@ -254 +242,0 @@
+-                    self.auto_launch_timer = 0
+@@ -477 +464,0 @@
+-                    self.auto_launch_timer = 0
+--- a/terminal_arcade/games/breakout/game.py
++++ b/terminal_arcade/games/breakout/game.py
+@@ -165,2 +164,0 @@
+-        # Auto-launch timer
+-        self.auto_launch_timer = 0
+@@ -228,10 +226 @@
+-        if self.state == self.STATE_SERVING:
+-            # Auto-launch after 3 seconds
+-            self.auto_launch_timer += dt
+-            if self.auto_launch_timer >= 3.0:
+-                for ball in self.balls:
+-                    if ball.on_paddle:
+-                        ball.launch()
+-                self.state = self.STATE_PLAYING
+-
+-        elif self.state == self.STATE_PLAYING:
++        if self.state == self.STATE_PLAYING:
+@@ -256 +244,0 @@
+-                    self.auto_launch_timer = 0
+@@ -479 +466,0 @@
+-                    self.auto_launch_timer = 0
+--- /dev/null
++++ b/tests/test_input_devices.py
+@@ -0,0 +1,79 @@
++"""Input devices must satisfy the X/Y contract; Breakout waits for launch."""
++import importlib
++import unittest
++from types import SimpleNamespace
++from unittest.mock import MagicMock, patch
++
++HANDLERS = ['atari_style.core.input_handler', 'terminal_arcade.engine.input_handler']
++GAMES = ['atari_style.demos.games.breakout', 'terminal_arcade.games.breakout.game']
++
++
++def device(axes):
++    result = MagicMock()
++    result.get_numaxes.return_value = axes
++    result.get_numbuttons.return_value = 2
++    result.get_button.return_value = 0
++    result.get_axis.return_value = -1.0
++    return result
++
++
++class InputDevices(unittest.TestCase):
++    def test_system_keyboard_is_not_a_game_controller(self):
++        for path in HANDLERS:
++            with self.subTest(module=path):
++                module = importlib.import_module(path)
++                fake = MagicMock()
++                keyboard = device(1)
++                fake.joystick.get_count.return_value = 1
++                fake.joystick.Joystick.return_value = keyboard
++                with patch.object(module, 'pygame', fake):
++                    handler = module.InputHandler()
++                    try:
++                        self.assertFalse(handler.joystick_initialized)
++                        for _ in range(60):
++                            handler._attempt_joystick_reconnection()
++                            self.assertFalse(handler.joystick_initialized)
++                        self.assertEqual(handler.get_joystick_state(), (0.0, 0.0))
++                    finally:
++                        handler.cleanup()
++
++    def test_compatible_controller_after_system_keyboard_is_selected(self):
++        for path in HANDLERS:
++            with self.subTest(module=path):
++                module = importlib.import_module(path)
++                fake = MagicMock()
++                keyboard, controller = device(1), device(2)
++                fake.joystick.get_count.return_value = 2
++                fake.joystick.Joystick.side_effect = [keyboard, controller]
++                with patch.object(module, 'pygame', fake):
++                    handler = module.InputHandler()
++                    try:
++                        self.assertIs(handler.joystick, controller)
++                        self.assertTrue(handler.joystick_initialized)
++                        keyboard.quit.assert_called_once()
++                    finally:
++                        handler.cleanup()
++
++    def test_breakout_does_not_start_during_idle(self):
++        for path in GAMES:
++            with self.subTest(module=path):
++                module = importlib.import_module(path)
++                handler = MagicMock()
++                handler.get_joystick_state.return_value = (0.0, 0.0)
++                handler.get_joystick_buttons.return_value = {}
++                with patch.object(module, 'Renderer', return_value=SimpleNamespace(width=120, height=40)), patch.object(module, 'InputHandler', return_value=handler):
++                    game = module.Breakout()
++                initial = game.paddle_x
++                for _ in range(50):
++                    game.update_paddle(0.1, module.InputType.NONE)
++                    game.update(0.1)
++                self.assertEqual(game.state, game.STATE_SERVING)
++                self.assertEqual(game.paddle_x, initial)
++                self.assertTrue(game.balls[0].on_paddle)
++                game.update_paddle(0.1, module.InputType.SELECT)
++                self.assertEqual(game.state, game.STATE_PLAYING)
++                self.assertFalse(game.balls[0].on_paddle)
++
++
++if __name__ == '__main__':
++    unittest.main()
