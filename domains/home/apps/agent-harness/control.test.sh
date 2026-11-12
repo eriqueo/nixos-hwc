@@ -115,7 +115,7 @@ run_doctor >/dev/null
 # The matrix: provided cells are probed; a cell with no probe, a failing probe,
 # or an undeclared program fails. Missing and unsupported cells pass as declared.
 run_doctor matrix >/dev/null
-for seed in '.matrix.commands = {"codex":"provided"}' '.matrix.mcp = {"codex":"provided"}' '.matrix.rules.codex = "provided"' '.matrix.skills.extra = "maybe"'; do
+for seed in '.matrix.subagents.codex = "provided"' '.matrix.memory = {"codex":"provided"}' '.matrix.commands = {"codex":"provided"}' '.matrix.mcp = {"codex":"provided"}' '.matrix.rules.codex = "provided"' '.matrix.skills.extra = "maybe"'; do
   jq "$seed" "$ROOT/matrix.json" > "$ROOT/matrix-seed.json"
   if MATRIX_FILE="$ROOT/matrix-seed.json" run_doctor >/dev/null 2>&1; then
     echo "control.test: matrix seed unexpectedly passed: $seed" >&2

@@ -581,6 +581,14 @@ in
 
     home.file = lib.mkMerge (
       [ (lib.genAttrs skillRoots (_: { source = agentSkills; })) ]
+      # The same commands for Codex (/prompts:<name>, measured on 0.167) and Pi
+      # (prompt templates in ~/.pi/agent/prompts). Both expand $ARGUMENTS.
+      ++ [
+        {
+          ".codex/prompts".source = harness + "/commands";
+          ".pi/agent/prompts".source = harness + "/commands";
+        }
+      ]
       ++ map (dir: {
         "${dir}/agents".source = harness + "/agents";
         "${dir}/commands".source = harness + "/commands";
