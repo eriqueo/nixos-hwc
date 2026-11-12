@@ -4,7 +4,7 @@ set -euo pipefail
 EXPECTED=${AGENT_HARNESS_EXPECTED_MANIFEST:?expected manifest is not configured}
 SYSTEM_MANIFEST=${AGENT_HARNESS_SYSTEM_MANIFEST:-/etc/agent-harness-manifest.json}
 STATE=${AGENT_STATE_DIR:-$HOME/800_agents/state}
-SOURCE=${AGENT_HARNESS_SOURCE:-$HOME/.claude-config}
+SOURCE=${AGENT_HARNESS_SOURCE:-$HOME/800_agents/harness}
 NIXOS=${AGENT_HARNESS_NIXOS:-$HOME/.nixos}
 FLEET=${AGENT_HARNESS_FLEET_HOSTS:?fleet hosts are not configured}
 FLEET_HOSTS=()
@@ -366,6 +366,25 @@ publish_preflight() {
   fi
 }
 
+# S6d (2026-11-12): the working copy moved from ~/.claude-config to
+# ~/800_agents/harness and the repo was renamed agent-harness. A host migrates
+# the first time publish reaches it: move the checkout, leave the old path as a
+# link, repair its worktrees, point both remotes at the new name. Idempotent.
+# TEMPORARY: remove with the old-path link once every host has moved (S6e).
+source_migration() {
+  cat <<'MIGRATE'
+n=$HOME/800_agents/harness; o=$HOME/.claude-config
+# Repair before linking the old path: while it resolves, git sees nothing to fix.
+if [ ! -e "$n" ] && [ -d "$o" ] && [ ! -L "$o" ]; then
+  mv "$o" "$n" && git -C "$n" worktree list --porcelain | awk '/^worktree /{print $2}' | xargs -r git -C "$n" worktree repair
+  ln -s "$n" "$o"
+fi
+git -C "$n" remote set-url github git@github.com:eriqueo/agent-harness.git 2>/dev/null || true
+u=$(git -C "$n" remote get-url origin 2>/dev/null) && git -C "$n" remote set-url origin "${u/claude-config.git/agent-harness.git}"
+true
+MIGRATE
+}
+
 publish() {
   case "${1:-}" in
     ''|--check) ;;
@@ -422,7 +441,7 @@ publish() {
     if [ "$host" = "$(hostname)" ]; then
       sudo nixos-rebuild switch --flake "$NIXOS#$host" || skipped+=("$host")
     else
-      ssh -t "$host" "git -C ~/.claude-config pull --ff-only && cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host" \
+      ssh -t "$host" "$(source_migration) && git -C ~/800_agents/harness pull --ff-only && cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host" \
         || skipped+=("$host")
     fi
   done

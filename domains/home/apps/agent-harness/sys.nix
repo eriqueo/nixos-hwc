@@ -17,9 +17,6 @@ let
       ''
         jq '
           .hooks.UserPromptSubmit[]?.hooks |= map(select((.command | contains("standing-instructions.sh")) | not))
-          | walk(if type == "string" then
-              gsub("/home/eric/.claude-config"; "/etc/agent-harness")
-            else . end)
         ' ${inputs.agent-harness}/adapters/claude/settings.json > "$out"
       '';
 

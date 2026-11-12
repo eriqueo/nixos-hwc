@@ -176,7 +176,7 @@ let
     T3CODE_BIN = "${lib.attrByPath [ "hwc" "home" "apps" "t3code" "repo" ] "${home}/600_apps/t3code" config}/apps/server/dist/bin.mjs";
   };
 
-  # The agent-workspace allocator. Its code is static policy (claude-config
+  # The agent-workspace allocator. Its code is static policy (the harness
   # bin/ws); the dependencies are declared here so it also runs from the
   # state-sync unit, whose PATH is systemd's alone.
   # Only inspection is elevated. Existing sudo authority is required; no new
@@ -325,7 +325,7 @@ in
     };
     editableSource = lib.mkOption {
       type = lib.types.str;
-      default = "${home}/.claude-config";
+      default = "${home}/800_agents/harness";
     };
     nixosRepo = lib.mkOption {
       type = lib.types.str;
@@ -350,7 +350,7 @@ in
     };
     tracker = {
       enable = lib.mkEnableOption ''
-        the project tracker hub (claude-config tracker/server.py): every agent
+        the project tracker hub (harness lifecycle/tracker/server.py): every agent
         project's roadmap, plan and Eric's decision cards, on one tailnet page.
         Run it on ONE host; project data syncs through the deliverables folder'';
       lifecycle = {

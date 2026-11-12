@@ -6,7 +6,7 @@
   staticPolicy = {
     owner = "nix-input:agent-harness";
     inherit revision;
-    authoringRepo = "~/.claude-config";
+    authoringRepo = "~/800_agents/harness";
     runtimeRoot = "/etc/agent-harness";
     publishCommand = "agent-harness publish";
   };

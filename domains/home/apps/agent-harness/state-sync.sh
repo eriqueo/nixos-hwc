@@ -140,7 +140,7 @@ link_memories() {
       target="$STATE/projects/$slug/memory"
       # A link left from an older layout: Claude writes through it to a place
       # nothing syncs. Import what it holds (the old copy stays), then relink.
-      # Found 2026-11-11: two hwc-laptop links into ~/.claude-config/projects
+      # Found 2026-11-11: two hwc-laptop links into the old harness projects/ folder
       # survived because their projects had no memory in the store yet.
       if [ -L "$source" ] && [ "$(readlink "$source")" != "$target" ]; then
         old=$(readlink -f "$source" 2>/dev/null || true)

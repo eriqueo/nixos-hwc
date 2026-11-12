@@ -50,7 +50,7 @@ let
     };
   };
 
-  # The shared hooks for Pi: claude-config's adapter, with the pinned python
+  # The shared hooks for Pi: the harness adapter, with the pinned python
   # and bridge substituted so a headless unit's bare PATH cannot break it.
   hookBridge = pkgs.runCommand "pi-hook-bridge.ts" { } ''
     substitute ${inputs.agent-harness}/adapters/pi/hook-bridge.ts "$out" \
@@ -225,7 +225,7 @@ in
       type = lib.types.bool;
       default = true;
       description = ''
-        Install claude-config's pi/hook-bridge.ts as a pi extension: Pi runs
+        Install the harness adapters/pi/hook-bridge.ts as a pi extension: Pi runs
         the shared Claude hooks (settings.json, minus the Claude-only ones)
         through codex/hook-bridge.py, the adapter Codex uses. A bridge failure
         blocks bash, write and edit calls and is logged to

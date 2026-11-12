@@ -3,7 +3,7 @@
 // pi extension: the one Pi-only tool rule. Everything Claude Code enforces —
 // rg not grep, no sed, write-guard, the destructive-git and nixos-rebuild
 // confirmations, the workspace guard — now reaches Pi through the shared hooks
-// (claude-config pi/hook-bridge.ts, installed as hwc-hook-bridge.ts). This file
+// (harness adapters/pi/hook-bridge.ts, installed as hwc-hook-bridge.ts). This file
 // used to carry hand ports of those; they were a second producer of the same
 // policy and were removed on 2026-10-01.
 //

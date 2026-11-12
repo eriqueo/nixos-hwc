@@ -3,7 +3,7 @@
 
 Codex refuses to run a hook until its definition hash is recorded under
 hooks.state in config.toml ("1 hook needs review before it can run"). Trust
-state is per host, while ~/.codex/hooks.json is linked from ~/.claude-config,
+state is per host, while ~/.codex/hooks.json is linked from the pinned harness,
 so every host must record the hashes after the file changes. This asks the
 Codex app-server for the hooks it sees (hooks/list), and writes trust through
 the same server (config/value/write) only for hooks whose source is the user
@@ -62,7 +62,7 @@ def rpc_session(binary):
 def main(binaries, check_only=False):
     home = os.environ.get("CODEX_HOME", os.path.expanduser("~/.codex"))
     link = os.path.join(home, "hooks.json")
-    # hooks.json is a symlink into ~/.claude-config; accept either spelling of its source.
+    # hooks.json is a symlink into the pinned harness; accept either spelling of its source.
     sources = tuple({link + ":", os.path.realpath(link) + ":"})
     for binary in binaries:
         if not (os.path.isfile(binary) and os.access(binary, os.X_OK)):

@@ -74,13 +74,13 @@
         "lastModified": 1794525582,
         "narHash": "sha256-r5XvNXUcuX9JbuibAbRYXTcNOZL0Y1Qr1FupX95sI2E=",
         "owner": "eriqueo",
-        "repo": "claude-config",
+        "repo": "agent-harness",
         "rev": "d41ef9012880d7083c7064888a772600438e3434",
         "type": "github"
       },
       "original": {
         "owner": "eriqueo",
-        "repo": "claude-config",
+        "repo": "agent-harness",
         "type": "github"
       }
     },

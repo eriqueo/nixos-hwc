@@ -112,12 +112,12 @@ in
     # agent-harness module links to the one skill set every runtime loads. The
     # per-skill allowlists that used to live here were the cause of the drift.
 
-    # Hooks and instructions follow the claude-config share: a host that does
+    # Hooks and instructions follow the harness share: a host that does
     # not carry the repo gets neither, instead of dangling links.
     shareHarness = lib.mkOption {
       type = lib.types.bool;
       default = config.hwc.home.apps.agent-harness.enable;
-      description = "Link ~/.codex/hooks.json from sharedConfigRepo, render ~/.codex/AGENTS.md, and trust the shared hooks on activation and after each claude-config sync merge.";
+      description = "Link ~/.codex/hooks.json from sharedConfigRepo, render ~/.codex/AGENTS.md, and trust the shared hooks on activation and after each harness publish.";
     };
   };
 

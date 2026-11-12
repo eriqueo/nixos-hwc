@@ -563,7 +563,7 @@
   };
   systemd.tmpfiles.rules = [ "z /mnt/backup 0751 root root -" ];
 
-  # hwc-work's eric key. It clones and syncs the brain vault and claude-config
+  # hwc-work's eric key. It clones and syncs the brain vault and the agent harness
   # hubs on this host and pulls the app checkouts the service split moved
   # there (vault-sync, t3-update, nightly-builds all use SSH remotes). mkAfter
   # keeps the fleet keys from hwc.system.users; same shape as the laptop.

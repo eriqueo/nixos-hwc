@@ -474,7 +474,7 @@ _TOMBSTONE = re.compile(
 # the shared agent config cite agent/ output too, and a cleanup decision made
 # without them keeps nothing those places depend on. The dangling report keeps
 # its original four roots so its daily output does not change underneath it.
-_EXPORT_ROOTS = _CITE_ROOTS + ["600_apps", ".claude-config"]
+_EXPORT_ROOTS = _CITE_ROOTS + ["600_apps", "800_agents/harness"]
 
 # Folder-or-file form: no extension required, so `downloads/agent/<x>/` counts.
 _CITE_ANY = r"downloads/agent/[A-Za-z0-9_./+()-]+"

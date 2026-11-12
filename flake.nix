@@ -50,7 +50,7 @@
     # Static agent policy and adapters. Mutable memories and the mistakes
     # ledger live in ~/800_agents/state and never enter this Nix input.
     agent-harness = {
-      url = "github:eriqueo/claude-config";
+      url = "github:eriqueo/agent-harness";
       flake = false;
     };
     # Third-party Agent Skills adopted into the one shared skill set

@@ -111,6 +111,8 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-12: The harness repo is `eriqueo/agent-harness` (flake input renamed; same revision and hash) and its working copy is `~/800_agents/harness` (`editableSource`, `control.sh` SOURCE, the ownership contract). Publish migrates a host the first time it reaches it: moves `~/.claude-config`, repairs its worktrees, leaves the old path as a link and renames both remotes (TEMPORARY until S6e). Managed Claude settings no longer rewrite the authoring path: the harness names `/etc/agent-harness/guards/` itself.
+
 - 2026-11-12: Read the harness at its new homes (S6b batch 1): `lifecycle/tracker/` (hub, relay, `ws`, release checks, the Rust check), `guards/` (`log-mistake`, `guard-audit`), `checks/`, `rules/` (the Claude instruction links), `adapters/` (Claude agents and commands, Codex hooks, the Pi bridge), `packs/`. The two `[budget]` fallbacks are gone. Publish also skips an unreachable host, fast-forwards a behind nixos-hwc and replays a raced pin push.
 
 - 2026-11-12: Codex and Pi get the harness commands (`~/.codex/prompts`, used as `/prompts:<name>`; `~/.pi/agent/prompts`) and the shared project memory (the harness `memory-recall` hook, run by the bridge). `agent-harness matrix` now probes `commands` and `memory` for both, and `mcp/codex` through `codex-mcp-sync --check`.
