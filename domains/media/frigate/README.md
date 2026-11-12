@@ -33,6 +33,8 @@ Owns Frigate and its generated configuration. Prometheus owns alert evaluation; 
 
 ## Structure
 
+Central metrics use the tailnet HTTPS vhost; the proxy rejects non-tailnet peers before serving Frigate.
+
 Its fixed listener default comes from networking/ports.nix, shared with the route. The existing assertion still rejects changing the host-networked application's fixed port.
 
 The container uses its explicit NVIDIA CDI grant with no-new-privileges. It does not use privileged mode. The emitted-config contract checks these flags and GPU wiring.
@@ -707,6 +709,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-11: Central metrics use the tailnet HTTPS vhost; the proxy rejects non-tailnet peers before serving Frigate.
 
 - 2026-11-11: Set Reolink's camera-side main stream to 2560×1440 H.264 at 25 FPS for browser playback. Its 4K mode requires HEVC, which the test browser rejected. Keep direct recording without a server transcoder.
 

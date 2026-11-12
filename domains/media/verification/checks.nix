@@ -2179,6 +2179,7 @@ frigate-contract = let
   server = self.nixosConfigurations.hwc-home.config;
   frigate = server.hwc.media.frigate;
   fixture = pkgs.writeText "frigate-contract.json" (builtins.toJSON {
+    caddy = server.services.caddy.extraConfig;
     settings = frigate._settings;
     inherit (frigate) port;
     configTemplate = frigate._configTemplate;

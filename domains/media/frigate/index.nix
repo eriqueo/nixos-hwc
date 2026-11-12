@@ -281,8 +281,9 @@ in
     # Frigate owns its metrics. The former sidecar duplicated /api/metrics.
     hwc.monitoring.prometheus.scrapeConfigs = [{
       job_name = "frigate";
+      scheme = "https";
       metrics_path = "/api/metrics";
-      static_configs = [{ targets = [ "127.0.0.1:${toString cfg.port}" ]; }];
+      static_configs = [{ targets = [ "frigate.${config.hwc.networking.shared.vhostDomain}:443" ]; }];
       scrape_interval = "30s";
       # Process command lines are unnecessary high-cardinality labels.
       metric_relabel_configs = [{ action = "labeldrop"; regex = "cmdline"; }];

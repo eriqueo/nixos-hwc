@@ -294,6 +294,10 @@ let
         @${r.name}_outside_private not remote_ip 127.0.0.1/32 ::1/128 100.64.0.0/10 fd7a:115c:a1e0::/48 ${concatStringsSep " " lanNetworks}
         respond @${r.name}_outside_private "Private network required" 403
       '';
+      tailnetGuard = lib.optionalString (r.tailnetOnly or false) ''
+        @${r.name}_outside_tailnet not remote_ip 100.64.0.0/10 fd7a:115c:a1e0::/48
+        respond @${r.name}_outside_tailnet "Tailscale required" 403
+      '';
       defaultHeaders = lib.optionalString (!remoteOwner) (concatStringsSep "\n"
         (lib.mapAttrsToList (name: value: ''
           @${r.name}_no_${name} not header ${name} *
@@ -302,7 +306,7 @@ let
     in ''
       @${r.name} host ${r.name}.${vhostDomain}
       handle @${r.name} {
-        ${lanGuard}${privateGuard}${defaultHeaders}
+        ${tailnetGuard}${lanGuard}${privateGuard}${defaultHeaders}
         ${body}
       }
     '';
