@@ -145,7 +145,7 @@ probe() {
     skills/pi)
       path=$(jq -r '.skills[0] // empty' "$PI_SETTINGS" 2>/dev/null) || return 1
       [ -n "$path" ] && [ "$(readlink -f "${path/#\~/$HOME}")" = "$SKILL_SET" ] ;;
-    guards/claude) jq -e '[.. | .command? // empty | select(contains("/etc/agent-harness/hooks/"))] | length > 0' "$CLAUDE_SETTINGS" >/dev/null 2>&1 ;;
+    guards/claude) jq -e '[.. | .command? // empty | select(contains("/etc/agent-harness/guards/"))] | length > 0' "$CLAUDE_SETTINGS" >/dev/null 2>&1 ;;
     guards/codex) in_store "$CODEX_HOOKS" && rg -qF 'hook-bridge.py' "$CODEX_HOOKS" ;;
     guards/pi) in_store "$PI_HOOK_BRIDGE" ;;
     mcp/claude) in_store "$CLAUDE_MCP" ;;
