@@ -443,6 +443,26 @@
 +                break
 +
 +            if self.joystick is not None:
+@@ -170,5 +181,3 @@
+-                # Check if joystick is now available
+-                if pygame.joystick.get_count() > 0:
+-                    self.joystick = pygame.joystick.Joystick(0)
+-                    self.joystick.init()
+-                    self.joystick_initialized = True
++                # Use the same capability check on startup and reconnect.
++                self._init_joystick(silent=True)
++                if self.joystick_initialized:
+@@ -176,2 +184,0 @@
+-
+-                    # Show reconnection message (throttled to once per 5 seconds)
+@@ -182,7 +188,0 @@
+-
+-                    # Initialize button tracking
+-                    time.sleep(0.1)
+-                    pygame.event.pump()
+-                    self.previous_buttons = {}
+-                    for i in range(self.joystick.get_numbuttons()):
+-                        self.previous_buttons[i] = self.joystick.get_button(i)
 --- a/terminal_arcade/engine/input_handler.py
 +++ b/terminal_arcade/engine/input_handler.py
 @@ -85,2 +85,13 @@
@@ -461,6 +481,26 @@
 +                break
 +
 +            if self.joystick is not None:
+@@ -170,5 +181,3 @@
+-                # Check if joystick is now available
+-                if pygame.joystick.get_count() > 0:
+-                    self.joystick = pygame.joystick.Joystick(0)
+-                    self.joystick.init()
+-                    self.joystick_initialized = True
++                # Use the same capability check on startup and reconnect.
++                self._init_joystick(silent=True)
++                if self.joystick_initialized:
+@@ -176,2 +184,0 @@
+-
+-                    # Show reconnection message (throttled to once per 5 seconds)
+@@ -182,7 +188,0 @@
+-
+-                    # Initialize button tracking
+-                    time.sleep(0.1)
+-                    pygame.event.pump()
+-                    self.previous_buttons = {}
+-                    for i in range(self.joystick.get_numbuttons()):
+-                        self.previous_buttons[i] = self.joystick.get_button(i)
 --- a/atari_style/demos/games/breakout.py
 +++ b/atari_style/demos/games/breakout.py
 @@ -164,2 +163,0 @@
@@ -505,7 +545,7 @@
 -                    self.auto_launch_timer = 0
 --- /dev/null
 +++ b/tests/test_input_devices.py
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,79 @@
 +"""Input devices must satisfy the X/Y contract; Breakout waits for launch."""
 +import importlib
 +import unittest
@@ -538,6 +578,9 @@
 +                    handler = module.InputHandler()
 +                    try:
 +                        self.assertFalse(handler.joystick_initialized)
++                        for _ in range(60):
++                            handler._attempt_joystick_reconnection()
++                            self.assertFalse(handler.joystick_initialized)
 +                        self.assertEqual(handler.get_joystick_state(), (0.0, 0.0))
 +                    finally:
 +                        handler.cleanup()
