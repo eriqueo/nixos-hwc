@@ -159,22 +159,27 @@ link_memories() {
   done
 }
 
-stage_json_state() {
-  local directory=$1 path
+# Stage exactly the files one contract glob names: tracked (so deletions
+# count) and new. A file beside them is left untracked. Staging `projects`
+# whole committed two closeout records on 2026-11-09; they failed validation
+# and blocked this host's sync for two days.
+stage_glob() {
+  local path
   local paths=()
-  # Atomic writers leave .json.XXXXXX files while replacing a final .json.
-  # Include deleted tracked JSONs, but never publish those unfinished writes.
   while IFS= read -r -d '' path; do
     paths+=("$path")
-  done < <(git ls-files --cached --others --exclude-standard -z -- ":(glob)$directory/*.json")
+  done < <(git ls-files --cached --others --exclude-standard -z -- ":(glob)$1")
   [ "${#paths[@]}" -eq 0 ] || git add -A -- "${paths[@]}"
 }
 
 commit_local_state() {
-  git add -A -- MISTAKES.md projects
+  git add -A -- MISTAKES.md
+  stage_glob 'projects/*/memory/**'
   git add -A -- .harness-schema.json
-  stage_json_state ledger
-  stage_json_state guard
+  # Atomic writers leave .json.XXXXXX files while replacing a final .json.
+  # The glob includes deleted tracked JSONs and never those unfinished writes.
+  stage_glob 'ledger/*.json'
+  stage_glob 'guard/*.json'
   [ ! -e .mistakes-dismissed.log ] || git add -A -- .mistakes-dismissed.log
   if ! git diff --cached --quiet; then
     git commit -m "sync($HOST): agent state $(date -Iminutes)"

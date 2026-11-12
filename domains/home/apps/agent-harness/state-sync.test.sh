@@ -112,6 +112,53 @@ if git -C "$ROOT/hub.git" cat-file -e main:projects/demo/memory/invalid.md 2>/de
   exit 1
 fi
 
+# A file an agent drops beside a project's memory is outside the contract. On
+# 2026-11-09 two closeout records were staged with `git add projects`, failed
+# validation and blocked hwc-work's sync for two days. Such a file stays local
+# and untracked, and the sync still publishes.
+printf '{}\n' > "$ROOT/state/projects/demo/closeout.json"
+printf '\nentry\n' >> "$ROOT/state/MISTAKES.md"
+AGENT_STATE_DIR="$ROOT/state" AGENT_CONFIG_DIRS="$ROOT/config" AGENT_HOST=test \
+  bash "$(dirname "$0")/state-sync.sh" sync >/dev/null
+if git -C "$ROOT/state" ls-files --error-unmatch projects/demo/closeout.json >/dev/null 2>&1; then
+  echo 'state-sync.test: a file outside the contract was staged' >&2
+  exit 1
+fi
+test -z "$(git -C "$ROOT/state" log --oneline origin/main..HEAD)"
+git -C "$ROOT/hub.git" show main:MISTAKES.md | rg -q '^entry$'
+rm "$ROOT/state/projects/demo/closeout.json"
+
+# The validator must not fail a valid memory. With `set -o pipefail`,
+# `printf ... | rg -q` fails when rg exits at the first match while printf is
+# still writing; frontmatter larger than a pipe buffer makes that certain.
+{
+  printf -- '---\nname: big\nauthority: observation\nsource: test fixture\nmetadata:\n'
+  for i in $(seq 1 4000); do printf '  note%04d: %s\n' "$i" 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'; done
+  printf -- '---\n\nbody\n'
+} > "$ROOT/state/projects/demo/memory/big.md"
+if ! AGENT_STATE_DIR="$ROOT/state" bash "$VALIDATOR" >/dev/null 2>"$ROOT/validator.err"; then
+  echo "state-sync.test: a valid memory with long frontmatter failed validation: $(tail -2 "$ROOT/validator.err" | head -1)" >&2
+  exit 1
+fi
+rm "$ROOT/state/projects/demo/memory/big.md"
+
+# A directory the validator cannot read must not hide a memory conflict. Under
+# pipefail, find's permission error made `find | rg -q` report "no conflict".
+mkdir -p "$ROOT/state/projects/held/recovery"
+chmod 000 "$ROOT/state/projects/held/recovery"
+printf -- '---\nname: note\nauthority: observation\nsource: test fixture\n---\n\nconflict\n' \
+  > "$ROOT/state/projects/demo/memory/note.from-peer.md"
+if AGENT_STATE_DIR="$ROOT/state" bash "$VALIDATOR" >/dev/null 2>"$ROOT/validator.err"; then
+  echo 'state-sync.test: an unreadable directory hid a memory conflict' >&2
+  exit 1
+fi
+rg -q 'unreconciled' "$ROOT/validator.err" || {
+  echo 'state-sync.test: the validator failed without naming the memory conflict' >&2
+  exit 1
+}
+chmod 700 "$ROOT/state/projects/held/recovery"
+rm -r "$ROOT/state/projects/held" "$ROOT/state/projects/demo/memory/note.from-peer.md"
+
 # A host blocked by invalid state that arrived FROM the hub must receive the
 # hub's fix. Before, a blocked host skipped the fetch and stayed blocked
 # forever (2026-10-14). Both sides also append to MISTAKES.md, as they did then.
