@@ -11,7 +11,8 @@ hardened systemd user service that waits for Hyprland IPC before launching.
 - ❌ Does not provide gpu-toggle/gpu-launch (infrastructure GPU module) or the acpid lid handler (`machines/laptop/config.nix`); requires swaync enabled (asserted)
 
 ## Structure
-The center holds Feishin's native MPRIS track display. One click opens a small Wofi menu below the bar with Play, Pause, Next and Open. Hover lists those actions and Super+M. One action table supplies both the menu and its help; Open uses Hyprland's Feishin launch command. Calendar stays on the left; clock and weather sit on the right. The tray keeps hidden applications accessible.
+`patches/menu-widget-anchor.patch` anchors native GTK menus below their module; the Bluetooth and Hyprland patches keep their existing scopes.
+The center holds Feishin's native MPRIS track display. One click opens Waybar’s native GTK menu at the bar with Play, Pause, Next, Open and Quit Feishin. Hover lists those actions and Super+M. One action table supplies both the menu and its help; Open uses Hyprland's Feishin launch command. Calendar stays on the left; clock and weather sit on the right. The tray keeps hidden applications accessible.
 `parts/packages.nix` owns script runtime packages and additional interactive tools. Workspace IDs and labels derive from Hyprland’s workspace plan.
 Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar replaces its child on reload to renew GTK/DBus state and cleans its generated configuration.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
@@ -28,6 +29,7 @@ Desktop helpers and the laptop streaming host use native Hyprland Lua IPC. Works
 - `patches/bluetooth-null-manager.patch` — bluetooth module throws (module dropped, bar survives) when the org.bluez manager is unavailable
 
 ## Changelog
+- 2026-11-12: Replace the separate music picker with a native Waybar menu anchored below its module and add Quit Feishin.
 - 2026-11-12: Replace Waybar on reload to renew music subscriptions; check child replacement and temporary configuration cleanup.
 - 2026-11-12: Replace direct playback clicks with one labeled action menu and derive hover help from its action table.
 - 2026-11-12: Bind player actions to GLib's executable output so they work without gdbus on the session PATH.
