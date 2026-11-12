@@ -2191,6 +2191,7 @@ frigate-contract = let
     snapshot = server.hwc.data.borg.sqliteSnapshots.frigate;
     mediaPath = frigate.storage.mediaPath;
     tailnetIp = server.hwc.networking.hosts.ips.${server.hwc.networking.hosts.self};
+    healthCommand = server.systemd.services.frigate-recording-health.serviceConfig.ExecStart;
     settings = frigate._settings;
     inherit (frigate) port;
     configTemplate = frigate._configTemplate;
@@ -2208,7 +2209,7 @@ frigate-contract = let
 in pkgs.runCommand "frigate-contract" {
   nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.onnx p.pillow ])) pkgs.prometheus.cli ];
 } ''
-  python3 ${(repoRoot + "/domains/media/frigate/parts/test_config.py")} ${fixture} ${(repoRoot + "/domains/media/frigate/parts/labelmap.py")}
+  python3 ${(repoRoot + "/domains/media/frigate/parts/test_config.py")} ${fixture} ${(repoRoot + "/domains/media/frigate/parts/labelmap.py")} ${(repoRoot + "/domains/media/frigate/parts/recording-health.py")}
   touch $out
 '';
 

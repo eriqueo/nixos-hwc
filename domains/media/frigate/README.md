@@ -33,6 +33,8 @@ Owns Frigate and its generated configuration. Prometheus owns alert evaluation; 
 
 ## Structure
 
+`frigate/parts/recording-health.py` (relative to the media domain) checks finalized segments, keeps bounded incident state, and publishes node-exporter textfile metrics.
+
 Central metrics use the tailnet HTTPS vhost; the proxy rejects non-tailnet peers before serving Frigate.
 
 Its fixed listener default comes from networking/ports.nix, shared with the route. The existing assertion still rejects changing the host-networked application's fixed port.
@@ -709,6 +711,8 @@ hwc.media.frigate = {
 ---
 
 ## Changelog
+
+- 2026-11-11: Check finalized recording age, recovered gaps and sampled decode failures independently of detection FPS; alert on checker failure through existing Prometheus.
 
 - 2026-11-11: Bind Frigate administration and RTSP to loopback, WebRTC to Tailscale; regenerate config on container start; require the media filesystem and register consistent Borg state backup.
 

@@ -12,6 +12,8 @@ photo management, and video surveillance services.
 
 ## Structure
 
+`frigate/parts/recording-health.py` (relative to the media domain) checks finalized segments, keeps bounded incident state, and publishes node-exporter textfile metrics.
+
 Frigate metrics use the HTTPS vhost so internal listeners can be restricted without losing central monitoring.
 
 Navidrome does not auto-import bundled playlists. Ignored or absent tracks remain
@@ -202,6 +204,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-11: Check finalized recording age, recovered gaps and sampled decode failures independently of detection FPS; alert on checker failure through existing Prometheus.
 
 - 2026-11-11: Bind Frigate administration and RTSP to loopback, WebRTC to Tailscale; regenerate config on container start; require the media filesystem and register consistent Borg state backup.
 

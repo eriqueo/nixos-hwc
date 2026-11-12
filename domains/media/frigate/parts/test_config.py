@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import sqlite3
 
 import onnx
 from PIL import Image, ImageDraw
@@ -52,6 +53,45 @@ assert config["networking"]["ipv6"] is False
 assert config["go2rtc"]["api"]["listen"] == "127.0.0.1:1984"
 assert config["go2rtc"]["rtsp"]["listen"] == "127.0.0.1:8554"
 assert config["go2rtc"]["webrtc"]["listen"] == fixture["tailnetIp"] + ":8555"
+assert sys.argv[3] in fixture["healthCommand"]
+spec = importlib.util.spec_from_file_location("recording_health", sys.argv[3])
+health = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(health)
+with tempfile.TemporaryDirectory() as temp:
+    root = Path(temp)
+    settings = {"state":temp, "metrics":str(root/"health.prom"),
+                "database":str(root/"recordings.db"), "media":temp, "cameras":["enabled"]}
+    db = sqlite3.connect(settings["database"])
+    db.execute("create table recordings(camera text,start_time real,end_time real,path text)")
+    db.executemany("insert into recordings values(?,?,?,?)", [
+        ("enabled",940,950,"/media/frigate/recordings/old.mp4"),
+        ("enabled",990,1000,"/media/frigate/recordings/new.mp4")])
+    db.commit()
+    assert health.run(settings,1005,lambda path:True) == 0
+    metrics = Path(settings["metrics"]).read_text()
+    assert 'gap_seconds{camera_name="enabled"} 40.0' in metrics
+    assert 'age_seconds{camera_name="enabled"} 5.0' in metrics
+    state = json.loads((root/"state.json").read_text())
+    assert state["cases"]["enabled:gap"]["state"] == "open"
+    count = len(state["events"])
+    health.run(settings,1006,lambda path:True)
+    assert len(json.loads((root/"state.json").read_text())["events"]) == count
+    health.run(settings,1310,lambda path:False)
+    assert 'decode_failed{camera_name="enabled"} 1' in Path(settings["metrics"]).read_text()
+    db.execute("delete from recordings")
+    db.execute("insert into recordings values(?,?,?,?)",("enabled",1990,2000,"/media/frigate/recordings/recovered.mp4"))
+    db.commit()
+    health.run(settings,2005,lambda path:True)
+    state = json.loads((root/"state.json").read_text())
+    assert state["cases"]["enabled:gap"]["state"] == "recovered"
+    assert state["cases"]["enabled:decode"]["state"] == "recovered"
+    db.close()
+    settings["database"] = str(root/"absent.db")
+    assert health.run(settings,2006,lambda path:True) == 1
+    assert 'frigate_recording_check_failed 1' in Path(settings["metrics"]).read_text()
+    (root/"state.json").write_text('{broken')
+    assert health.run(settings,2007,lambda path:True) == 1
+    assert (root/"state.json").read_text() == '{broken'
 
 assert config["version"] == "0.18-0"
 assert "retain" not in config["record"]

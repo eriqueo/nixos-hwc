@@ -19,6 +19,15 @@ let
   mediaMountUnit = "${lib.escapeSystemdPath mediaMount}.mount";
   credentialNames = [ "frigate-rtsp-username" "frigate-rtsp-password" "frigate-camera-ips"
     "frigate-reolink-username" "frigate-reolink-password" ];
+  healthState = "${config.hwc.paths.state}/frigate-recording-health";
+  healthSettings = pkgs.writeText "frigate-recording-health.json" (builtins.toJSON {
+    database = "${cfg.storage.configPath}/frigate.db";
+    media = cfg.storage.mediaPath;
+    state = healthState;
+    metrics = "${healthState}/metrics/recording.prom";
+    ffmpeg = "${pkgs.ffmpeg}/bin/ffmpeg";
+    cameras = builtins.attrNames (lib.filterAttrs (_: camera: camera.enabled) cfg._settings.cameras);
+  });
   labelPython = pkgs.python3.withPackages (p: [ p.onnx ]);
   helpers = import ../../lib/mkContainer.nix { inherit lib pkgs; };
   runtimeDebs = builtins.fromJSON ''
@@ -202,11 +211,40 @@ in
 
     # Create all required directories
     systemd.tmpfiles.rules = [
+      "d ${healthState} 0755 eric users -"
+      "d ${healthState}/metrics 0755 eric users -"
       "d ${cfg.storage.configPath} 0755 eric users -"
       "d ${cfg.storage.configPath}/models 0755 eric users -"
       "d ${cfg.storage.configPath}/labelmap 0755 eric users -"
       "d ${cfg.storage.mediaPath} 0755 eric users -"
     ];
+
+    services.prometheus.exporters.node.enabledCollectors = [ "textfile" ];
+    services.prometheus.exporters.node.extraFlags = [ "--collector.textfile.directory=${healthState}/metrics" ];
+    systemd.timers.frigate-recording-health = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = { OnBootSec = "3min"; OnUnitInactiveSec = "30s"; AccuracySec = "1s"; };
+    };
+    systemd.services.frigate-recording-health = {
+      description = "Check finalized Frigate recordings";
+      after = [ "podman-frigate.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        User = lib.mkForce "eric";
+        Group = "users";
+        ExecStart = "${pkgs.python3}/bin/python3 ${./parts/recording-health.py} ${healthSettings}";
+        TimeoutStartSec = 55;
+        TimeoutStopSec = 5;
+        MemoryMax = "512M";
+        CPUQuota = "100%";
+        Nice = 10;
+        UMask = "0022";
+        ProtectSystem = "strict";
+        ReadWritePaths = [ healthState ];
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+      };
+    };
 
     # Ensure Frigate starts after mosquitto (for MQTT events) and CDI spec generation
     systemd.services.podman-frigate = {
@@ -323,6 +361,30 @@ in
           expr = "vector(${toString (if camera.enabled then camera.detect.fps else 0)})";
           labels.camera_name = name;
         }) cfg._settings.cameras;
+      } {
+        name = "frigate_recording_health";
+        rules = [
+          {
+            alert = "FrigateRecordingUnavailable";
+            expr = "((frigate_recording_age_seconds > 60) or (frigate_recording_gap_seconds > 30) or (frigate_recording_decode_failed > 0)) and on() (frigate_service_uptime_seconds > 180)";
+            for = "30s";
+            labels = { severity = "P4"; category = "frigate"; };
+            annotations = {
+              summary = "Frigate recording is missing or damaged";
+              description = "Inspect camera {{ $labels.camera_name }} recordings and the recording-health service on hwc-home.";
+            };
+          }
+          {
+            alert = "FrigateRecordingCheckUnavailable";
+            expr = "(frigate_recording_check_failed > 0) or (time() - frigate_recording_check_timestamp_seconds > 120) or absent(frigate_recording_check_timestamp_seconds)";
+            for = "1m";
+            labels = { severity = "P4"; category = "frigate"; };
+            annotations = {
+              summary = "Frigate recording checks are unavailable";
+              description = "Inspect frigate-recording-health.service on hwc-home. Healthy detection does not prove recording health.";
+            };
+          }
+        ];
       }];
     }) ];
 
