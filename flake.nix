@@ -201,6 +201,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Third-party terminal arcade source; upstream has no Nix flake.
+    # Package adapter: domains/home/apps/atari-style. Update through flake.lock.
+    atari-style = {
+      url = "github:jcaldwell-labs/atari-style";
+      flake = false;
+    };
+
     # tetro — terminal tetromino-stacking game (TUI), consumed by
     # domains/home/apps/tetro. UPSTREAM third-party repo (Strophox/tetro-tui), not
     # a first-party eriqueo app, so there is no local-clone build pattern here —

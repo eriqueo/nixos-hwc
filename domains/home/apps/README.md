@@ -8,6 +8,7 @@ User application configuration via Home Manager.
 - Does NOT manage: System deps → `system/apps/` (via sys.nix), services → `server/`
 
 ## Structure
+`atari-style/` installs the upstream terminal arcade collection as `atari-style`.
 
 `claude-desktop/` uses the shared supported Electron44.10.1 runtime. `onlyoffice-desktopeditors/` drops its unused GTK2 build input while retaining strict ELF resolution and the existing launcher.
 
@@ -38,6 +39,8 @@ apps/
 ```
 
 ## Changelog
+
+- 2026-11-11: Add the upstream Atari-style terminal arcade package and laptop opt-in.
 
 - 2026-11-03: Remove the unused Aider module, package, generated config and shell setup.
 
