@@ -264,8 +264,8 @@ in
       serviceConfig.BindPaths = [ cfg.storage.mediaPath ];
       serviceConfig.ExecStartPre = lib.mkBefore [
         "${pkgs.writeShellScript "frigate-media-mount-check" ''
-          actual=$(${pkgs.util-linux}/bin/findmnt -n -o SOURCE --target ${lib.escapeShellArg cfg.storage.mediaPath})
-          expected=$(${pkgs.coreutils}/bin/readlink -f ${lib.escapeShellArg config.fileSystems.${mediaMount}.device})
+          actual=$(${pkgs.coreutils}/bin/stat -c %d ${lib.escapeShellArg cfg.storage.mediaPath})
+          expected=$(${pkgs.coreutils}/bin/stat -Lc %r ${lib.escapeShellArg config.fileSystems.${mediaMount}.device})
           test "$actual" = "$expected" || { echo 'FRIGATE_MEDIA_MOUNT: wrong filesystem' >&2; exit 1; }
         ''}"
       ];
