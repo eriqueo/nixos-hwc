@@ -17,6 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
+Waybar centers Feishin's MPRIS track display with open, play/pause and next-track actions; its tray keeps the hidden player accessible.
 `apps/atari-style/` packages the upstream terminal arcade collection; the laptop enables it.
 Floating size limits preserve native menu positions; centering applies only to explicit dialog and utility rules.
 
@@ -181,6 +182,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-12: Center Feishin metadata and playback controls in Waybar, retaining calendar, clock, weather and the tray.
 
 - 2026-11-12: Exclude one-axis keyboard devices from Atari-style controllers and make Breakout wait for launch input.
 
