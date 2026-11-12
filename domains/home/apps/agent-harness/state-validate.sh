@@ -23,13 +23,16 @@ validate_memory_file() {
     NR > 1 && /^[^ ]/ { in_meta = /^metadata:[ ]*$/; print; next }
     NR > 1 && in_meta && /^  [^ ]/ { print substr($0, 3) }
   ' "$file")
-  if ! printf '%s\n' "$frontmatter" | rg -q '^authority: (observation|reference|decision)$'; then
+  # Here-strings, not `printf | rg -q`: under pipefail a writer that rg -q
+  # leaves mid-write dies of SIGPIPE and turns a match into a failure. That
+  # failed valid memories at random and blocked the sync (2026-11-11).
+  if ! rg -q '^authority: (observation|reference|decision)$' <<< "$frontmatter"; then
     fail "$display must declare authority: observation|reference|decision (top level or under metadata:)"
   fi
-  if ! printf '%s\n' "$frontmatter" | rg -q '^source: .+'; then
+  if ! rg -q '^source: .+' <<< "$frontmatter"; then
     fail "$display must declare a non-empty source (top level or under metadata:)"
   fi
-  if printf '%s\n' "$frontmatter" | rg -q '^standing:'; then
+  if rg -q '^standing:' <<< "$frontmatter"; then
     fail "$display declares standing policy; move the rule to static or project policy"
   fi
 }
@@ -113,7 +116,9 @@ while IFS= read -r path; do
   esac
 done < <(git -C "$STATE" ls-files)
 
-if find "$STATE/projects" -type f -name '*.from-*.md' -print -quit | rg -q .; then
+# The result is find's output, not its exit status: one unreadable directory
+# makes find exit non-zero, and under pipefail that hid a real conflict.
+if [ -n "$(find "$STATE/projects" -type f -name '*.from-*.md' -print -quit 2>/dev/null || true)" ]; then
   fail 'unreconciled *.from-<host>.md memory conflict exists'
 fi
 

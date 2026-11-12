@@ -52,9 +52,9 @@ The fleet control list names hwc-home, hwc-work and hwc-laptop.
 - `contract.nix` defines the ownership and revision contract shared by both lanes.
 - `control.sh` implements local and fleet health checks plus policy publication. Skill fingerprints use fixed C collation so host locales cannot report false drift.
 - `control.test.sh` checks split revisions, mutable runtime references, skill drift (hand install, foreign root, extra Pi path, drift alert retry), fleet names, and publication to all hosts and source remotes.
-- `state-sync.sh` synchronizes only memories, the mistakes ledger, and final `ledger/*.json` and `guard/*.json` files, with one bounded validation case under `.git`. Each run commits local state, merges the hub, then validates; it pushes only valid state. Atomic writer temporary files remain local.
+- `state-sync.sh` synchronizes only memories, the mistakes ledger, and final `ledger/*.json` and `guard/*.json` files, with one bounded validation case under `.git`. Each run commits local state, merges the hub, then validates; it pushes only valid state. Atomic writer temporary files remain local. It stages by contract glob (`projects/*/memory/**`), so a file an agent leaves beside a project's memory stays local and untracked.
 - `state-validate.sh` owns the memory contract for both full-store scans and projected writes on stdin.
-- `state-sync.test.sh` verifies import, links, validation blocking, recovery (including recovery from invalid state that came from the hub), commit, pull, and push against a throwaway hub.
+- `state-sync.test.sh` verifies import, links, validation blocking, recovery (including recovery from invalid state that came from the hub), commit, pull, and push against a throwaway hub. It also checks that a file outside the contract is never staged, that long frontmatter validates, and that an unreadable directory cannot hide a memory conflict.
 - `state-validate.sh pre-receive` is the state hub's gate. On the host that sets `stateHub` (hwc-home), it is pinned as the hub's `pre-receive` hook through `hwc.home.core.repoHooks`. It accepts only `refs/heads/main`, checks each pushed tip out into a throwaway repo, and refuses any tip that fails validation or cannot be checked. Emergency bypass: `git -C <hub> config --unset core.hooksPath`; the next activation re-pins it.
 - The pinned `tracker/` serves legacy cause/work inputs and per-problem explanation/action confirmations with Yes, No, Not sure and correction boxes. Its browser test exercises saving, reload, completeness and navigation on disposable project data.
 - `tracker-handoff stamp <project>` (pinned `tracker/handoff_doc.py`) records the writer and each project checkout's HEAD in the project's live `handoff.md`; the hub (`TRACKER_LEDGERS`) compares them with every host's ws ledger and puts the handoff at the top of the next prompt.
@@ -107,6 +107,8 @@ write the read-only roots, and an install into `~/.codex/skills` is drift. A dir
 authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
+
+- 2026-11-11: State sync stages only contract paths, and the validator no longer fails valid memories. hwc-work's sync was blocked from 2026-11-09 with 236 commits unpushed: `git add projects` had committed two closeout records that an agent left in `projects/domain-exposure-review/`. The records moved to that project's deliverables folder. Two validator faults came from `set -o pipefail`: `printf | rg -q` failed a valid memory when rg exited mid-write, and `find | rg -q` reported no memory conflict when one directory was unreadable. A blocked case is kept until the state changes, so one false failure held the sync.
 
 - 2026-11-09: Bind fleet and local Brain MCP facts in the base role; preserve URL consistency checks without reverse domain reads.
 
