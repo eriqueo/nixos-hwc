@@ -55,7 +55,7 @@ let
     networking = {
       listen.internal = "127.0.0.1:5000";
       listen.external = "127.0.0.1:8971";
-      ipv6 = false;
+      ipv6.enabled = false;
     };
     go2rtc.api.listen = "127.0.0.1:1984";
     go2rtc.rtsp.listen = "127.0.0.1:8554";

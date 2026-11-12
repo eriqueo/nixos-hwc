@@ -712,6 +712,8 @@ hwc.media.frigate = {
 
 ## Changelog
 
+- 2026-11-11: Use the pinned runtime IPv6 enabled field in generated listener configuration.
+
 - 2026-11-11: Validate media filesystem by device identity so the guard works inside the service private bind mount.
 
 - 2026-11-11: Check finalized recording age, recovered gaps and sampled decode failures independently of detection FPS; alert on checker failure through existing Prometheus.

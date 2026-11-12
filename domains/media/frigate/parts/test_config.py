@@ -49,7 +49,7 @@ assert fixture["mediaPath"] in fixture["privateMedia"]
 assert fixture["snapshot"]["source"].endswith("/frigate.db")
 assert fixture["snapshot"]["maxBytes"] == 536870912
 assert config["networking"]["listen"] == {"internal":"127.0.0.1:5000", "external":"127.0.0.1:8971"}
-assert config["networking"]["ipv6"] is False
+assert config["networking"]["ipv6"]["enabled"] is False
 assert config["go2rtc"]["api"]["listen"] == "127.0.0.1:1984"
 assert config["go2rtc"]["rtsp"]["listen"] == "127.0.0.1:8554"
 assert config["go2rtc"]["webrtc"]["listen"] == fixture["tailnetIp"] + ":8555"
