@@ -8,6 +8,7 @@ User application configuration via Home Manager.
 - Does NOT manage: System deps → `system/apps/` (via sys.nix), services → `server/`
 
 ## Structure
+`waybar/` replaces the bar process on configuration reload, with a bounded shutdown.
 `hyprland/` owns Super+M for Feishin and Super+Ctrl+M for btop; `waybar/` shows the centered track with a labeled music menu and hover help.
 `mtg/` installs Modern Terminal Games as `mtg`.
 
@@ -40,6 +41,7 @@ apps/
 ```
 
 ## Changelog
+- 2026-11-12: Replace Waybar on reload to renew music subscriptions; check child replacement and temporary configuration cleanup.
 - 2026-11-12: Add Feishin's shortcut, centered playback menu and hover help; move btop to Super+Ctrl+M.
 
 - 2026-11-12: Replace Atari-style with MTG and remove nSnake, nInvaders and Curse of War from the laptop; retain Tetro.

@@ -23,7 +23,7 @@ Floating size limits preserve native menu positions; centering applies only to e
 
 The shared shell package list takes native yt-dlp from the checked HTTP runtime
 catalog in both owned Home Manager lanes; package assets stay unchanged.
-Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar forwards reload to its child and cleans its generated configuration.
+Desktop wiring preserves mouse flags, uses packaged native cursor assets, and excludes virtual displays from bars and linked workspace selection. Waybar replaces its child on reload to renew GTK/DBus state and cleans its generated configuration.
 
 Owned instances select checked Python interpreters and package environments
 without rebuilding their native dependencies. Workbench TUI and Mail helpers
@@ -182,6 +182,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-12: Replace Waybar on reload to renew music subscriptions; check child replacement and temporary configuration cleanup.
 - 2026-11-12: Add the music action menu and hover help; bind Feishin to Super+M and btop to Super+Ctrl+M.
 - 2026-11-12: Use GLib's executable output for Waybar player actions without relying on the session PATH.
 - 2026-11-12: Center Feishin metadata and playback controls in Waybar, retaining calendar, clock, weather and the tray.
