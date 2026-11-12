@@ -393,10 +393,14 @@ publish() {
   # host already holds its heavy closure, so nothing is fetched twice. Measured
   # 2026-09-30: building hwc-home on hwc-work refetched its CUDA archives from
   # NVIDIA, and a dropped download failed the whole publication twice.
-  local host
+  # An unreachable host (a laptop asleep) is skipped for build and switch; a
+  # build that fails on a reachable host still stops publication.
+  local host skipped=() offline=()
   for host in "${FLEET_HOSTS[@]}"; do
     if [ "$host" = "$(hostname)" ]; then
       nix build --no-link "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
+    elif ! ssh -o BatchMode=yes -o ConnectTimeout=8 "$host" true 2>/dev/null; then
+      offline+=("$host"); skipped+=("$host")
     else
       nix build --no-link --eval-store auto --store "ssh-ng://$host" \
         "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
@@ -412,8 +416,8 @@ publish() {
   # A host whose checkout holds another session's unpushed commits cannot
   # fast-forward. Skip it and switch the rest: before 2026-11-12 the first such
   # host stopped the loop, and every host after it stayed on the old revision.
-  local skipped=()
   for host in "${FLEET_HOSTS[@]}"; do
+    case " ${offline[*]} " in *" $host "*) continue ;; esac
     if [ "$host" = "$(hostname)" ]; then
       sudo nixos-rebuild switch --flake "$NIXOS#$host" || skipped+=("$host")
     else
