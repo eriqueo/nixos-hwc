@@ -2072,11 +2072,14 @@ in pkgs.runCommand "seerr-settings-preservation" {
           'clientId': 'keep-client', 'vapidPrivate': 'keep-private', 'vapidPublic': 'keep-public',
           'network': {'proxy': 'keep-network'}, 'migrations': {'fixture': True},
           'jellyfin': {'libraries': [{'id': 'fixture-library', 'enabled': True}]},
-          'radarr': [{'id': 0, 'hostname': 'old-host', 'appOwnedOption': 'keep-radarr'}, {'id': 9, 'hostname': 'undeclared'}],
-          'sonarr': [{'id': 0, 'appOwnedOption': 'keep-sonarr'}]}
+          'radarr': [{'id': 0, 'hostname': 'old-host', 'activeProfileId': 1, 'appOwnedOption': 'keep-radarr'}, {'id': 9, 'hostname': 'undeclared'}],
+          'sonarr': [{'id': 0, 'activeProfileId': 1, 'activeAnimeProfileId': 1, 'appOwnedOption': 'keep-sonarr'}]}
   def run(script, target, *mask):
       return subprocess.run([script, str(target), *mask], capture_output=True, text=True, timeout=5)
   def preserved(value, mask=160):
+      assert value['radarr'][0]['activeProfileId'] == 7, 'movies bypass managed HD-1080p'
+      assert value['sonarr'][0]['activeProfileId'] == 8, 'TV bypasses managed HD-1080p'
+      assert value['sonarr'][0]['activeAnimeProfileId'] == 8, 'anime bypasses managed HD-1080p'
       for key in ['clientId', 'vapidPrivate', 'vapidPublic', 'network', 'migrations']:
           assert value.get(key) == seed[key], 'lost app-owned ' + key
       assert value['main']['apiKey'] == 'keep-api' and value['main']['clientSetting'] == 'keep-main'
@@ -2113,6 +2116,8 @@ in pkgs.runCommand "seerr-settings-preservation" {
       assert run(original, target, '160').returncode == 0
       fresh = json.loads(target.read_text())
       assert fresh['main']['initialized'] and fresh['main']['defaultPermissions'] == 160
+      assert fresh['radarr'][0]['activeProfileId'] == 7
+      assert fresh['sonarr'][0]['activeProfileId'] == fresh['sonarr'][0]['activeAnimeProfileId'] == 8
   print('production wiring, preservation, ownership, rotation, atomic failures and bootstrap pass')
   PYTEST
   touch "$out"

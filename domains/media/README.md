@@ -156,7 +156,7 @@ media/
 ├── jellyfin-native/         # Native Jellyfin; home GPU and XPS local libraries
 ├── navidrome-container/     # Navidrome music server (container)
 ├── audiobookshelf/          # Pinned app/supported Node recipe, config path and Borg recovery registration
-├── jellyseerr/              # Media requests; frozen dependency/client build, app backports and private config
+├── jellyseerr/              # HD-1080p request defaults; frozen dependency/client build, app backports and private config
 │
 ├── sonarr/                  # Pinned app/.NET/SQLite and qualified utility backports; existing binds
 ├── radarr/                  # Movie management
@@ -200,6 +200,8 @@ workspace/media/
 ```
 
 ## Changelog
+
+- 2026-11-12: Jellyseerr declares Recyclarr-managed HD-1080p defaults for movie, TV and anime requests instead of Any; cover reconciliation and bootstrap in the existing settings check.
 
 - 2026-11-11: Reolink records camera-native 1440p H.264 for browser playback; Cobra recording stays 4K.
 
