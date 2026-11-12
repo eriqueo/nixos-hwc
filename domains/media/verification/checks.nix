@@ -835,6 +835,16 @@ pkgs.runCommand "frigate-http-framing" { nativeBuildInputs = [ pkgs.python3 ]; }
   import copy, hashlib, json, pathlib, shlex, subprocess, sys, tempfile
   context = pathlib.Path(sys.argv[1])
   recipe = (context / 'Dockerfile').read_text()
+  # Exercise the emitted nginx backport guard and pin its production call.
+  nginx_command = 'RUN python3 /tmp/nginx-auth-patch.py /usr/local/nginx/conf/auth_location.conf && rm /tmp/nginx-auth-patch.py'
+  assert nginx_command in recipe
+  assert 'COPY nginx-auth-patch.py /tmp/nginx-auth-patch.py' in recipe
+  with tempfile.TemporaryDirectory() as folder:
+    target = pathlib.Path(folder) / 'auth.conf'
+    target.write_text('unexpected upstream configuration')
+    result = subprocess.run([sys.executable, str(context / 'nginx-auth-patch.py'), str(target)], capture_output=True)
+    assert result.returncode != 0 and b'NGINX_AUTH_SOURCE_DRIFT' in result.stderr
+    assert target.read_text() == 'unexpected upstream configuration'
   manifest = json.loads((context / 'manifest.json').read_text())['pythonHttpBackport']
   assert manifest['schemaVersion'] == 1 and set(manifest['modules']) == {'httpClient', 'urllib3'}
   assert len(manifest['stdlibUpstreamCommits']) == 2

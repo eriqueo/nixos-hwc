@@ -53,6 +53,19 @@ let
       };
     };
   };
+  # Upstream 06a956fbcd9e676d926fc35d8b400cf3853bc69c (#24682).
+  # Temporary backport: remove when the pinned base contains patchedSha below.
+  nginxAuthPatch = pkgs.writeText "frigate-nginx-auth-patch.py" ''
+    import hashlib
+    from pathlib import Path
+    import sys
+    path = Path(sys.argv[1])
+    source = path.read_bytes()
+    assert hashlib.sha256(source).hexdigest() == "048a9ba9d32a45e308ab62944891659c6aa89c8ad0c67b506f6e0034e7ec276a", "NGINX_AUTH_SOURCE_DRIFT"
+    result = source.replace(b"    proxy_pass $upstream_auth;", b"    proxy_pass $upstream_auth;\n    # $go2rtc_stream_proxy is only set by the go2rtc stream locations\n    uninitialized_variable_warn off;")
+    assert hashlib.sha256(result).hexdigest() == "2901c2c09b37f3cf0e389853b141b0cefa1cb6bfbf407b5a68f21e8bd2e90400", "NGINX_AUTH_RESULT_DRIFT"
+    path.write_bytes(result)
+  '';
   runtimeInputs = { debian = runtimeDebs; wheels = runtimeWheels;
     pythonHttpBackport = httpBackport.manifest; };
   # Temporary URL parser repair; remove after upstream passes the
@@ -63,6 +76,8 @@ let
     recipe = ''
       FROM ghcr.io/blakeblackshear/frigate@sha256:1cafb6ebbaff0aaf275cc3f31951bcf7e29f3989f18a10ba9565091367d8736c
       # Fixed runtime inputs ${builtins.hashString "sha256" (builtins.toJSON runtimeInputs)}
+      COPY nginx-auth-patch.py /tmp/nginx-auth-patch.py
+      RUN python3 /tmp/nginx-auth-patch.py /usr/local/nginx/conf/auth_location.conf && rm /tmp/nginx-auth-patch.py
       COPY debian/ /tmp/hwc-frigate-debs/
       RUN DEBIAN_FRONTEND=noninteractive apt-get --no-download --yes -o Dir::Cache::archives=/tmp/hwc-frigate-debs -o Dpkg::Options::=--force-confold install /tmp/hwc-frigate-debs/*.deb && test -z "$(dpkg --audit)" && rm -r /tmp/hwc-frigate-debs
       COPY wheels/ /tmp/hwc-frigate-wheels/
@@ -82,6 +97,7 @@ let
   runtimeContext = pkgs.runCommand "frigate-runtime-context" {} ''
     mkdir -p "$out/debian" "$out/wheels"
     cp ${runtime.dockerfile} "$out/Dockerfile"
+    cp ${nginxAuthPatch} "$out/nginx-auth-patch.py"
     cp ${runtimeManifest} "$out/manifest.json"
     ${lib.concatMapStrings (p: let source = pkgs.fetchurl { inherit (p) url hash; }; in ''
       cp ${source} "$out/debian/${p.file}"
