@@ -61,10 +61,10 @@ pkgs.runCommand "hyprland-lua-config" { nativeBuildInputs = [ hypr.package pkgs.
       + 'else: open('+repr(str(log))+',"a").write(" ".join(sys.argv[1:])+"\\n")\n')
   hyprctl.chmod(0o755)
   bar = root/'bin/waybar'
-  bar.write_text('#!${pkgs.python3}/bin/python3\nimport sys,signal,time,pathlib\n'
+  bar.write_text('#!${pkgs.python3}/bin/python3\nimport os,sys,signal,time,pathlib\n'
       + 'p=pathlib.Path(sys.argv[sys.argv.index("-c")+1])\n'
       + 'signal.signal(signal.SIGUSR2,lambda *_: print("RELOAD",flush=True))\n'
-      + 'print(p.read_text(),flush=True)\nwhile True: time.sleep(0.05)\n')
+      + 'print("START",os.getpid(),flush=True)\nprint(p.read_text(),flush=True)\nwhile True: time.sleep(0.05)\n')
   bar.chmod(0o755)
   env = os.environ | dict(XDG_CONFIG_HOME=str(root), XDG_RUNTIME_DIR=str(root),
       PATH=str(root/'bin')+':'+os.environ['PATH'])
@@ -79,8 +79,10 @@ pkgs.runCommand "hyprland-lua-config" { nativeBuildInputs = [ hypr.package pkgs.
           assert 'DP-2' in output.read_text() and 'HWC-GAME' not in output.read_text(), output.read_text()
           proc.send_signal(signal.SIGUSR2)
           deadline=time.monotonic()+5
-          while time.monotonic()<deadline and 'RELOAD' not in output.read_text(): time.sleep(0.05)
-          assert proc.poll() is None and 'RELOAD' in output.read_text(), output.read_text()
+          while time.monotonic()<deadline and output.read_text().count('START ')<2: time.sleep(0.05)
+          children = re.findall(r'START ([0-9]+)', output.read_text())
+          assert proc.poll() is None and len(children)==2 and children[0]!=children[1], output.read_text()
+          assert not pathlib.Path('/proc/'+children[0]).exists(), 'Old bar survived reload'
       finally:
           proc.terminate()
           proc.wait(timeout=5)

@@ -151,6 +151,8 @@ probe() {
     mcp/claude) in_store "$CLAUDE_MCP" ;;
     mcp/codex) command -v codex-mcp-sync >/dev/null && codex-mcp-sync --check >/dev/null 2>&1 ;;
     commands/claude) in_store "$CLAUDE_HOME/commands" ;;
+    commands/codex) in_store "$HOME/.codex/prompts" ;;
+    commands/pi) in_store "$HOME/.pi/agent/prompts" ;;
     subagents/claude) in_store "$CLAUDE_HOME/agents" ;;
     memory/claude)
       for link in "$CLAUDE_HOME"/projects/*/memory; do
@@ -159,6 +161,10 @@ probe() {
         case "$(readlink -f "$link")" in "$STATE"/projects/*) ;; *) return 1 ;; esac
       done
       [ "$found" = 1 ] ;;
+    # Codex and Pi read the same store: memory-recall, run by the installed
+    # bridge (Codex table) or from the settings.json registry (Pi).
+    memory/codex) rg -qF '"memory-recall"' "${SYSTEM_POLICY%/*}/codex/hook-bridge.py" && probe memory claude ;;
+    memory/pi) rg -qF 'hooks/memory-recall.sh' "${SYSTEM_POLICY%/*}/settings.json" && probe memory claude ;;
     *) return 2 ;;
   esac
 }

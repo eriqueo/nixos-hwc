@@ -71,32 +71,16 @@
     "agent-harness": {
       "flake": false,
       "locked": {
-        "lastModified": 1794512673,
-        "narHash": "sha256-j1jnCZL5RSxLDsdAr3CzB9i0nnhLOPitl3OwrI6ujT8=",
+        "lastModified": 1794514351,
+        "narHash": "sha256-XmC/9uJrBM3dZ/K5SLJ5K+e29ns91mbrLgTWdhYiSiY=",
         "owner": "eriqueo",
         "repo": "claude-config",
-        "rev": "9d17f237603ea601db1a5c0109baad4b8aaee7d7",
+        "rev": "8fec927201272a0a506fbb011355245d0e2b0db3",
         "type": "github"
       },
       "original": {
         "owner": "eriqueo",
         "repo": "claude-config",
-        "type": "github"
-      }
-    },
-    "atari-style": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1773973335,
-        "narHash": "sha256-njAOnYeX6flkJDEIULmSbrXdjvQPPetbW1awr2+ND98=",
-        "owner": "jcaldwell-labs",
-        "repo": "atari-style",
-        "rev": "3e62b37149448f6882eedc6575ec0629c14d9a1b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "jcaldwell-labs",
-        "repo": "atari-style",
         "type": "github"
       }
     },
@@ -561,6 +545,23 @@
         "type": "github"
       }
     },
+    "mtg": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794513596,
+        "narHash": "sha256-8Ct8V4lSjQLkCsBaayyYm1iN7grQDZrzr1taR/8sgRI=",
+        "ref": "main",
+        "rev": "5d8e5891d7346e2f2a55ff4cca46d118b889fd20",
+        "revCount": 22,
+        "type": "git",
+        "url": "ssh://git@github.com/eriqueo/mtg.git"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "ssh://git@github.com/eriqueo/mtg.git"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1793540411,
@@ -723,7 +724,6 @@
         "agenix": "agenix",
         "agenix-stable": "agenix-stable",
         "agent-harness": "agent-harness",
-        "atari-style": "atari-style",
         "bloxels-cv": "bloxels-cv",
         "brainvec": "brainvec",
         "claude-cowork": "claude-cowork",
@@ -735,6 +735,7 @@
         "hwc-dictation": "hwc-dictation",
         "khalt": "khalt",
         "meals": "meals",
+        "mtg": "mtg",
         "nixpkgs": "nixpkgs",
         "nixpkgs-stable": "nixpkgs-stable",
         "nixvirt": "nixvirt",

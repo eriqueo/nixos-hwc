@@ -201,10 +201,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Third-party terminal arcade source; upstream has no Nix flake.
-    # Package adapter: domains/home/apps/atari-style. Update through flake.lock.
-    atari-style = {
-      url = "github:jcaldwell-labs/atari-style";
+    # Owned MTG development fork; includes Frogger, no upstream Nix flake.
+    # Package adapter: domains/home/apps/mtg. Update through flake.lock.
+    mtg = {
+      url = "git+ssh://git@github.com/eriqueo/mtg.git?ref=main";
       flake = false;
     };
 

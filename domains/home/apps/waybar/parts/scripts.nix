@@ -1,5 +1,5 @@
 # domains/home/apps/waybar/parts/scripts.nix
-{ pkgs, lib, pathBin, osConfig ? {} }:
+{ pkgs, lib, pathBin, osConfig ? {}, musicActions ? [] }:
 let
   sh = name: text: pkgs.writeShellScriptBin name ''
     set -euo pipefail
@@ -8,6 +8,16 @@ let
   '';
 in
 {
+  "music-menu" = sh "waybar-music-menu" ''
+    # Play/Pause/Open are idempotent. Next is non-retriable: one selection,
+    # one command; this dispatcher never retries a playback effect.
+    choice=$(printf '%s\n' ${lib.escapeShellArgs (map (action: action.label) musicActions)} | ${pkgs.wofi}/bin/wofi --dmenu --no-custom-entry --hide-search --cache-file /dev/null --prompt Music --location top --yoffset 48 --width 280 --lines 4) || exit 0
+    case "$choice" in
+      ${lib.concatMapStringsSep "\n" (action: "${lib.escapeShellArg action.label}) ${action.command} ;;") musicActions}
+      *) exit 64 ;;
+    esac
+  '';
+
   "bitwarden-open" = sh "waybar-bitwarden-open" ''
     window() {
       hyprctl clients -j | jq -r '[.[] | select(.class == "bitwarden") | .address] | first // empty'
@@ -133,13 +143,31 @@ in
     fi
 
     }
+    start_bar() {
+      waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC" &
+      bar_pid=$!
+    }
+    stop_bar() {
+      kill -TERM "$bar_pid" 2>/dev/null || true
+      # Bound shutdown to two seconds, then reap before starting a replacement.
+      for _ in {1..20}; do
+        kill -0 "$bar_pid" 2>/dev/null || break
+        sleep 0.1
+      done
+      kill -KILL "$bar_pid" 2>/dev/null || true
+      wait "$bar_pid" 2>/dev/null || true
+    }
+    reload_bar() {
+      render_config || return
+      stop_bar
+      start_bar
+    }
     render_config
-    waybar -c "''$TMP_CONFIG" -s "''$STYLE_SRC" &
-    bar_pid=$!
-    # systemd signals this launcher. Refresh the generated config and forward
-    # reload to the bar; an interrupted wait must keep supervising that child.
-    trap 'render_config && kill -USR2 "$bar_pid"' USR2
-    trap 'kill -TERM "$bar_pid" 2>/dev/null || true; wait "$bar_pid" || true; exit 0' TERM INT
+    start_bar
+    # Replace GTK/DBus state on reload. Keep the launcher and its config owner
+    # alive; an interrupted wait resumes supervision of the replacement child.
+    trap reload_bar USR2
+    trap 'stop_bar; exit 0' TERM INT
     status=0
     while kill -0 "$bar_pid" 2>/dev/null; do
       wait "$bar_pid" && status=0 || status=$?

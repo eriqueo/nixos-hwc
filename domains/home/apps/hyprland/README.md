@@ -8,6 +8,7 @@ Configures the Hyprland Wayland window manager as the desktop session: full `way
 - ❌ Does not manage: waybar/swaync/kitty/yazi config (their own app modules), the greeter/login path (`domains/system`), the palette itself (`domains/home/theme`), or GPU launch scripts (`gpu-launch` comes from elsewhere).
 
 ## Structure
+Super+M opens or restores Feishin; Super+Ctrl+M opens btop. The binding records also generate the shortcut legend. Waybar's music menu consumes the same Feishin launch command.
 The workspace helper sends windows with `follow=false`; workspace navigation still changes focus.
 `parts/hardware.nix` owns the workspace plan consumed by bindings, monitor assignment, helper scripts and Waybar.
 Floating size limits preserve native menu positions; centering applies only to explicit dialog and utility rules.
@@ -38,6 +39,7 @@ Every binding is declared **once** in `parts/behavior.nix`, as a record carrying
 It is deliberately *not* read from `hyprctl binds -j`: that API emits malformed JSON in Hyprland 0.56.0 (keys and values misaligned — `"keycode": RETURN`, `"allow_input_capture": ,`), and carries no descriptions, so the best it could ever print is `exec hyprland-monitor-toggle`.
 
 ## Changelog
+- 2026-11-12: Bind Super+M to Feishin and move btop to Super+Ctrl+M, retaining the monitor shortcut on Super+Shift+M.
 - 2026-11-10: Keep the current workspace focused when sending a window to another workspace.
 - 2026-11-09: Derive slots, external workspace IDs and switcher arithmetic from the shared workspace plan in hardware.nix.
 - 2026-11-05: Preserve native context-menu positions by removing blanket floating-window centering; keep dialog centering and size limits.
