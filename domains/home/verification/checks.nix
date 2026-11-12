@@ -2,6 +2,18 @@
 { inputs, lib, mailHost, mailOwner, pkgs, repoRoot, self, system }:
 {
 
+tracker-rust-contracts = pkgs.rustPlatform.buildRustPackage {
+  pname = "hwc-tracker";
+  version = "0.1.0";
+  src = inputs.agent-harness + "/tracker/rust";
+  cargoLock.lockFile = inputs.agent-harness + "/tracker/rust/Cargo.lock";
+  nativeCheckInputs = [ pkgs.python3 ];
+  doCheck = true;
+  preCheck = ''
+    export PYTHONPATH="${inputs.agent-harness}/tracker"
+  '';
+};
+
 onlyoffice-runtime = let
   home = self.nixosConfigurations.hwc-laptop.config.home-manager.users.eric;
   package = lib.findFirst (p: (p.pname or "") == "onlyoffice-desktopeditors") null home.home.packages;
