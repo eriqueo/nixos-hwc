@@ -712,6 +712,8 @@ hwc.media.frigate = {
 
 ## Changelog
 
+- 2026-11-11: Normalize timestamps only in the disposable null decode output, avoiding false decode alarms from muxer timestamp collisions; saved footage stays untouched.
+
 - 2026-11-11: Use the pinned runtime IPv6 enabled field in generated listener configuration.
 
 - 2026-11-11: Validate media filesystem by device identity so the guard works inside the service private bind mount.

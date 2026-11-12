@@ -126,7 +126,8 @@ def main():
     def decode(path):
         try:
             result = subprocess.run([settings["ffmpeg"], "-v", "error", "-threads", "1",
-                                     "-i", str(path), "-t", "15", "-f", "null", "-"],
+                                     "-i", str(path), "-t", "15", "-vf", "setpts=N/FRAME_RATE/TB",
+                                     "-f", "null", "-"],
                                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=15)
             return result.returncode == 0 and not result.stderr
         except (subprocess.TimeoutExpired, OSError):
