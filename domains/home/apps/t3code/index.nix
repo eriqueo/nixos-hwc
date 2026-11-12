@@ -186,7 +186,7 @@ let
   # The harness owns release state and native verification. This module binds
   # its immutable command ports; it never pulls or rebuilds the serving tree.
   releaseContract = builtins.fromJSON (
-    builtins.readFile "${inputs.agent-harness}/tracker/t3-release-contract.json"
+    builtins.readFile "${inputs.agent-harness}/lifecycle/tracker/t3-release-contract.json"
   );
   harnessCfg = config.hwc.home.apps.agent-harness;
   releasePython = pkgs.python3.withPackages (p: [ p.jsonschema ]);
@@ -198,7 +198,7 @@ let
     userdata = "${config.home.homeDirectory}/.t3/userdata";
     serviceUnit = if cfg.serve.enable then "t3-serve.service" else "t3code.service";
     nixosRoot = harnessCfg.nixosRepo;
-    harnessRoot = "/etc/agent-harness/tracker";
+    harnessRoot = "/etc/agent-harness/lifecycle/tracker";
     harnessSource = harnessCfg.editableSource;
     manifest = "/etc/agent-harness-manifest.json";
     systemLink = "/run/current-system";
@@ -247,7 +247,7 @@ let
       pkgs.gnumake
     ];
     text = ''
-      exec python3 ${inputs.agent-harness}/tracker/t3_release.py \
+      exec python3 ${inputs.agent-harness}/lifecycle/tracker/t3_release.py \
         --runtime-config ${releaseRuntime} "$@"
     '';
   };

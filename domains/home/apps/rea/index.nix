@@ -44,7 +44,7 @@ in
     home.packages = [ reaPkg ];
 
     hwc.home.apps.agent-harness.extraSkills = lib.mkIf cfg.skill.enable {
-      reverse-engineer-anything = inputs.agent-harness + "/skill-packs/rea/reverse-engineer-anything";
+      reverse-engineer-anything = inputs.agent-harness + "/packs/rea/reverse-engineer-anything";
     };
 
     #========================================================================

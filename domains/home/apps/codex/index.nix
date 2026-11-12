@@ -18,14 +18,7 @@ let
   # the first edit through the hook bridge (S4, 2026-11-12). Rendered per host,
   # so two hosts can never conflict on it. A hand-written file found in place is
   # kept once as AGENTS.md.pre-render.bak.
-  # TEMPORARY fallback: a harness pin older than S4 has no [budget]. Remove when
-  # the pinned harness has [budget] (agent-harness S6b, nixos batch).
-  codexRules =
-    (builtins.fromTOML (builtins.readFile "${repo}/manifest.toml")).budget.codex or [
-      "codex/AGENTS.preamble.md"
-      "CLAUDE.md"
-      "standing-instructions.md"
-    ];
+  codexRules = (builtins.fromTOML (builtins.readFile "${repo}/manifest.toml")).budget.codex;
   agentsRender = pkgs.writeShellApplication {
     name = "codex-agents-render";
     runtimeInputs = with pkgs; [
@@ -152,7 +145,7 @@ in
         # One hooks.json for every host. herdr's own entry is in it, so
         # `herdr integration install codex` must not be run against the link.
         home.file.".codex/hooks.json".source =
-          config.lib.file.mkOutOfStoreSymlink "${repo}/codex/hooks.json";
+          config.lib.file.mkOutOfStoreSymlink "${repo}/adapters/codex/hooks.json";
 
         home.activation.codexSharedHarness = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
           run ${agentsRender}/bin/codex-agents-render \

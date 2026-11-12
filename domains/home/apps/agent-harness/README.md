@@ -111,6 +111,8 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-12: Read the harness at its new homes (S6b batch 1): `lifecycle/tracker/` (hub, relay, `ws`, release checks, the Rust check), `guards/` (`log-mistake`, `guard-audit`), `checks/`, `rules/` (the Claude instruction links), `adapters/` (Claude agents and commands, Codex hooks, the Pi bridge), `packs/`. The two `[budget]` fallbacks are gone. Publish also skips an unreachable host, fast-forwards a behind nixos-hwc and replays a raced pin push.
+
 - 2026-11-12: Codex and Pi get the harness commands (`~/.codex/prompts`, used as `/prompts:<name>`; `~/.pi/agent/prompts`) and the shared project memory (the harness `memory-recall` hook, run by the bridge). `agent-harness matrix` now probes `commands` and `memory` for both, and `mcp/codex` through `codex-mcp-sync --check`.
 - 2026-11-11: `state-sync.sh link` relinks a memory link left from an older layout even when the store has no memory for that project yet, importing what it held. The first fleet `agent-harness matrix` found two such hwc-laptop links into `~/.claude-config/projects`.
 - 2026-11-11: The harness `manifest.toml` replaces `skills/curation.json` and the provider list here. `contract.nix` reads `[programs]` (ownership JSON byte-identical before and after); new `agent-harness matrix`; the doctor checks matrix cells and `[outside]`. The principles hooks now carry the harness path in `settings.json`, so `sys.nix` drops its special-case rewrite.

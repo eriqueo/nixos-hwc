@@ -159,7 +159,7 @@ let
         cp -R --no-preserve=mode ${src} "$out/${name}"
       '') cfg.extraSkills
     )}
-    python3 ${harness}/bin/skill-curation-check --root ${harness} --packaged "$out" \
+    python3 ${harness}/checks/skill-curation-check --root ${harness} --packaged "$out" \
       ${lib.optionalString (!(cfg.extraSkills ? reverse-engineer-anything)) "--without-skill reverse-engineer-anything"}
   '';
   skillRoots = map (dir: "${dir}/skills") ([ ".claude" ] ++ cfg.claudeConfigDirs) ++ [ ".agents/skills" ];
@@ -178,7 +178,7 @@ let
   # Only inspection is elevated. Existing sudo authority is required; no new
   # sudoers grant is installed. -I excludes caller-controlled Python imports.
   wsPreservation = pkgs.writeShellScript "ws-preservation" ''
-    exec /run/wrappers/bin/sudo -n -- ${pkgs.python3}/bin/python3 -I ${harness}/tracker/preservation.py --sudo "$@"
+    exec /run/wrappers/bin/sudo -n -- ${pkgs.python3}/bin/python3 -I ${harness}/lifecycle/tracker/preservation.py --sudo "$@"
   '';
   ws = pkgs.writeShellApplication {
     name = "ws";
@@ -197,7 +197,7 @@ let
     text = ''
       export WS_ROOT=${lib.escapeShellArg cfg.workspaceRoot}
       export WS_PRESERVATION_HELPER=${wsPreservation}
-      exec ${pkgs.bash}/bin/bash ${harness}/bin/ws "$@"
+      exec ${pkgs.bash}/bin/bash ${harness}/lifecycle/ws "$@"
     '';
   };
 
@@ -539,7 +539,7 @@ in
       ws
       stateSync
       stateValidator
-      (pkgs.writeShellScriptBin "log-mistake" ''exec ${pkgs.python3}/bin/python3 ${harness}/bin/log-mistake "$@"'')
+      (pkgs.writeShellScriptBin "log-mistake" ''exec ${pkgs.python3}/bin/python3 ${harness}/guards/log-mistake "$@"'')
       # Fire counts per blocking guard from hooks/lib/fire-log.sh; names the
       # guards with no fire in the window (the removal budget).
       (pkgs.writeShellApplication {
@@ -550,22 +550,22 @@ in
           jq
           openssh
         ];
-        text = ''exec ${pkgs.bash}/bin/bash ${harness}/bin/guard-audit "$@"'';
+        text = ''exec ${pkgs.bash}/bin/bash ${harness}/guards/guard-audit "$@"'';
       })
       # Blocks until Eric presses "Done deciding" on the tracker hub, then prints
       # the next prompt; the fallback for agents outside T3 Code.
-      (pkgs.writeShellScriptBin "tracker-wait" ''exec ${pkgs.python3}/bin/python3 ${harness}/tracker/wait.py "$@"'')
+      (pkgs.writeShellScriptBin "tracker-wait" ''exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/wait.py "$@"'')
       # Binds the calling T3 thread to a tracker project, so "Done deciding"
       # posts the next prompt into that thread.
       (pkgs.writeShellScriptBin "tracker-link" ''
         export ${lib.concatStringsSep " " (lib.mapAttrsToList (k: v: "${k}=${lib.escapeShellArg v}") t3Env)}
-        exec ${pkgs.python3}/bin/python3 ${harness}/tracker/t3.py "$@"
+        exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/t3.py "$@"
       '')
       # Stamps a project's live handoff (agent/<project>/handoff.md) with the
       # writer and each checkout's HEAD, which the hub checks against the ledgers.
       (pkgs.writeShellScriptBin "tracker-handoff" ''
         export TRACKER_ROOT=${lib.escapeShellArg cfg.tracker.root} WS_ROOT=${lib.escapeShellArg cfg.workspaceRoot} TRACKER_WS_BIN=${ws}/bin/ws
-        exec ${pkgs.python3}/bin/python3 ${harness}/tracker/handoff_doc.py "$@"
+        exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/handoff_doc.py "$@"
       '')
     ]
     ++ lib.optional cfg.cliUpdates.enable cliUpdater;
@@ -576,16 +576,16 @@ in
       # (prompt templates in ~/.pi/agent/prompts). Both expand $ARGUMENTS.
       ++ [
         {
-          ".codex/prompts".source = harness + "/commands";
-          ".pi/agent/prompts".source = harness + "/commands";
+          ".codex/prompts".source = harness + "/adapters/claude/commands";
+          ".pi/agent/prompts".source = harness + "/adapters/claude/commands";
         }
       ]
       ++ map (dir: {
-        "${dir}/agents".source = harness + "/agents";
-        "${dir}/commands".source = harness + "/commands";
-        "${dir}/CLAUDE.md".source = harness + "/CLAUDE.md";
-        "${dir}/standing-instructions.md".source = harness + "/standing-instructions.md";
-        "${dir}/engineering-principles.md".source = harness + "/engineering-principles.md";
+        "${dir}/agents".source = harness + "/adapters/claude/agents";
+        "${dir}/commands".source = harness + "/adapters/claude/commands";
+        "${dir}/CLAUDE.md".source = harness + "/rules/AGENTS.md";
+        "${dir}/standing-instructions.md".source = harness + "/rules/standing-instructions.md";
+        "${dir}/engineering-principles.md".source = harness + "/rules/engineering-principles.md";
       }) ([ ".claude" ] ++ cfg.claudeConfigDirs)
     );
 
@@ -696,10 +696,10 @@ in
         Description = "HWC project tracker hub (roadmaps, plans, decision cards)";
         After = [ "network-online.target" ];
         # The server and page are pinned harness files; a new revision restarts it.
-        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "server.py" "index.html" "handoff_doc.py" "lifecycle.py" "close-contract.json" ];
+        X-Restart-Triggers = map (f: "${harness}/lifecycle/tracker/${f}") [ "server.py" "index.html" "handoff_doc.py" "lifecycle.py" "close-contract.json" ];
       };
       Service = {
-        ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/server.py ${toString cfg.tracker.port}";
+        ExecStart = "${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/server.py ${toString cfg.tracker.port}";
         # No T3 environment: the hub only queues pings; each host's
         # tracker-relay posts them into its own T3.
         # TRACKER_LEDGERS: every host's ws ledger, for the handoff coverage check.
@@ -770,10 +770,10 @@ in
         Description = "Deliver tracker pings into this host's T3 threads";
         After = [ "network-online.target" ];
         # relay.py imports handoff_doc; a change there must restart the relay too.
-        X-Restart-Triggers = map (f: "${harness}/tracker/${f}") [ "relay.py" "t3.py" "handoff_doc.py" "lifecycle.py" "closeout.py" "close-contract.json" ];
+        X-Restart-Triggers = map (f: "${harness}/lifecycle/tracker/${f}") [ "relay.py" "t3.py" "handoff_doc.py" "lifecycle.py" "closeout.py" "close-contract.json" ];
       };
       Service = {
-        ExecStart = "${pkgs.python3}/bin/python3 ${harness}/tracker/relay.py";
+        ExecStart = "${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/relay.py";
         Environment = [
           "TRACKER_URL=${cfg.tracker.url}"
           "TRACKER_WS_BIN=${ws}/bin/ws"

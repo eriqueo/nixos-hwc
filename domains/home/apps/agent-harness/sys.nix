@@ -20,7 +20,7 @@ let
           | walk(if type == "string" then
               gsub("/home/eric/.claude-config"; "/etc/agent-harness")
             else . end)
-        ' ${inputs.agent-harness}/settings.json > "$out"
+        ' ${inputs.agent-harness}/adapters/claude/settings.json > "$out"
       '';
 
   # The pinned hooks pass their own suites or the system does not build.
@@ -56,7 +56,7 @@ let
         mkdir -p "$HOME" "$TMPDIR"
         cp -r ${inputs.agent-harness} src
         chmod -R u+w src
-        bash src/hooks/tests/run.sh
+        bash src/guards/tests/run.sh
         touch $out
       '';
 

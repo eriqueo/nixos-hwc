@@ -5,12 +5,12 @@
 tracker-rust-contracts = pkgs.rustPlatform.buildRustPackage {
   pname = "hwc-tracker";
   version = "0.1.0";
-  src = inputs.agent-harness + "/tracker/rust";
-  cargoLock.lockFile = inputs.agent-harness + "/tracker/rust/Cargo.lock";
+  src = inputs.agent-harness + "/lifecycle/tracker/rust";
+  cargoLock.lockFile = inputs.agent-harness + "/lifecycle/tracker/rust/Cargo.lock";
   nativeCheckInputs = [ pkgs.python3 ];
   doCheck = true;
   preCheck = ''
-    export PYTHONPATH="${inputs.agent-harness}/tracker"
+    export PYTHONPATH="${inputs.agent-harness}/lifecycle/tracker"
   '';
 };
 
@@ -346,7 +346,7 @@ t3-update-gate = let
 in pkgs.runCommand "t3-update-gate" { nativeBuildInputs = [ python pkgs.git ]; } ''
   python3 -B ${(repoRoot + "/domains/home/apps/t3code/test_update_gate.py")} \
     --updater ${updater}/bin/t3-update --root ${root}
-  python3 -B ${inputs.agent-harness}/tracker/t3_release.test.py
+  python3 -B ${inputs.agent-harness}/lifecycle/tracker/t3_release.test.py
   touch "$out"
 '';
 
@@ -383,7 +383,7 @@ assert lib.assertMsg (lib.all (unit: unit.policy == "keep-old") units)
 pkgs.runCommand "t3-switch-policy" {
   nativeBuildInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) ];
 } ''
-  python3 -B - ${fixtures} ${inputs.agent-harness}/tracker/t3_release.py <<'PY'
+  python3 -B - ${fixtures} ${inputs.agent-harness}/lifecycle/tracker/t3_release.py <<'PY'
   import configparser, importlib.util, json, pathlib, shlex, sys, tempfile
   spec = importlib.util.spec_from_file_location('t3_release', sys.argv[2])
   release = importlib.util.module_from_spec(spec)

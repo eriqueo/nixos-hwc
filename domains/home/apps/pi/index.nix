@@ -53,9 +53,9 @@ let
   # The shared hooks for Pi: claude-config's adapter, with the pinned python
   # and bridge substituted so a headless unit's bare PATH cannot break it.
   hookBridge = pkgs.runCommand "pi-hook-bridge.ts" { } ''
-    substitute ${inputs.agent-harness}/pi/hook-bridge.ts "$out" \
+    substitute ${inputs.agent-harness}/adapters/pi/hook-bridge.ts "$out" \
       --replace-fail @python@ ${pkgs.python3}/bin/python3 \
-      --replace-fail @bridge@ ${inputs.agent-harness}/codex/hook-bridge.py
+      --replace-fail @bridge@ ${inputs.agent-harness}/adapters/codex/hook-bridge.py
   '';
 
   settingsSeed = pkgs.writeText "pi-settings.json" (builtins.toJSON (managedSettings // {
@@ -203,15 +203,10 @@ in
     contextFile = lib.mkOption {
       type = lib.types.nullOr lib.types.path;
       # The harness manifest's [budget].pi lists these files; its word-budget
-      # check counts the same list. TEMPORARY fallback for a pin older than S4
-      # (no [budget]); remove in agent-harness S6b's nixos batch.
+      # check counts the same list.
       default = pkgs.writeText "pi-agent-harness.md" (
-        lib.concatMapStringsSep "\n" (f: builtins.readFile (inputs.agent-harness + "/${f}")) (
-          (builtins.fromTOML (builtins.readFile (inputs.agent-harness + "/manifest.toml"))).budget.pi or [
-            "pi/AGENTS.md"
-            "standing-instructions.md"
-          ]
-        )
+        lib.concatMapStringsSep "\n" (f: builtins.readFile (inputs.agent-harness + "/${f}"))
+          (builtins.fromTOML (builtins.readFile (inputs.agent-harness + "/manifest.toml"))).budget.pi
       );
       description = ''
         Global instructions, installed as ~/.pi/agent/AGENTS.md. Set to null to
