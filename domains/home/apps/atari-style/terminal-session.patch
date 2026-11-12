@@ -48,7 +48,7 @@
 +        try:
 +            deadline = time.monotonic() + 5
 +            def menu_visible():
-+                return b'ATARI-STYLE TERMINAL DEMOS' in re.sub(rb'\x1b\[[0-?]*[ -/]*[@-~]', b'', output)
++                return b'ATARI-STYLE TERMINAL DEMOS' in re.sub(rb'\x1b(?:\[[0-?]*[ -/]*[@-~]|[ -/]*[@-~])', b'', output)
 +            while not menu_visible() and time.monotonic() < deadline:
 +                drain(0.01)
 +            assert menu_visible(), bytes(output[-2000:])
