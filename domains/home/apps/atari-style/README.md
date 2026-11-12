@@ -10,9 +10,10 @@ Enabled only on the laptop. No services or automatic game launches.
 
 ## Structure
 - `index.nix`: enable/package options, Python dependencies, upstream checks and installation.
-- `terminal-session.patch`: session-wide input mode and a real-terminal regression test for menu/game input, normal exit and SIGTERM.
+- `terminal-session.patch`: session-wide input mode, one keyboard read per game frame, game-loop movement/action tests, and a real-terminal regression test for menu/game input, normal exit and SIGTERM.
 - Source comes from the `atari-style` input in `flake.lock`.
 
 ## Changelog
+- 2026-11-11: Route each keyboard event once through Breakout, Galaga and Grand Prix; test paddle/ship/car movement, ball launch, firing and acceleration in both upstream game namespaces.
 - 2026-11-11: Keep key echo disabled between reads and restore terminal settings on exit; test through the public entry point with cursor and character-set escape sequences decoded and bounded capture and output draining during exit.
 - 2026-11-11: Add the terminal arcade package with metadata and shader assets, upstream registry/game/input checks, pygame community edition metadata, and laptop opt-in.
