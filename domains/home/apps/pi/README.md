@@ -15,7 +15,7 @@ parts/package.nix  # pinned buildNpmPackage of the pi monorepo (vendored from
 parts/guards.ts    # pi extension: the Pi-only rule, refusing unbounded reads
                    # of large files
 parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
-                   # (hwc-hook-bridge.ts is claude-config pi/hook-bridge.ts,
+                   # (hwc-hook-bridge.ts is the harness adapters/pi/hook-bridge.ts,
                    # substituted in index.nix; it runs the shared hooks)
 ```
 
@@ -60,7 +60,7 @@ parts/AGENTS.md    # global instructions → ~/.pi/agent/AGENTS.md
   the same shape as claude-code's gate-hook heal) rather than seeded. Seeding
   alone would never reach a machine whose settings.json already exists.
 - **Guards are hooks, not instructions, and they are Claude's hooks.**
-  `hwc-hook-bridge.ts` sends each Pi event to claude-config's
+  `hwc-hook-bridge.ts` sends each Pi event to the harness's
   `codex/hook-bridge.py --runtime pi`, which runs the hooks `settings.json`
   registers for the same Claude tool name. `tool_call` fires before execution
   and `{ block: true }` means the call never runs; an `ask` confirms with a UI

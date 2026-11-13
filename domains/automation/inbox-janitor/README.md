@@ -97,7 +97,7 @@ inbox-janitor --self-check
 ```
 
 `--citations` scans the dangling report's roots plus `~/600_apps` and
-`~/.claude-config`, matches folder references (`downloads/agent/<x>/`, with or
+`~/800_agents/harness`, matches folder references (`downloads/agent/<x>/`, with or
 without the slash) as well as files, and does not skip tombstoned lines — for a
 keep decision the safe error is keeping too much. The dangling report keeps its
 original four roots and extension-only pattern, so its daily output is unchanged.

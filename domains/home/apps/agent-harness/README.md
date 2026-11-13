@@ -73,7 +73,7 @@ local `AGENTS.md` or `CLAUDE.md` files.
 
 The agent workspace (`~/800_agents`: `projects/`, `closed/`, `log/`,
 `LEDGER.md`) is local to each host. Its allocator, guard and worktree hooks are
-static policy in claude-config (`bin/ws`, `hooks/workspace-*.sh`); the design
+static policy in the harness (`lifecycle/ws`, `guards/workspace-*.sh`); the design
 is `~/000_inbox/downloads/agent/agent-workspace/design.md`.
 
 New or changed memories declare `authority: observation|reference|decision` and
@@ -81,7 +81,7 @@ a non-empty `source:`, at the top level or directly under `metadata:` (where
 Claude Code's memory writer moves them). Standing policy belongs in the static harness or a
 project repository and is rejected from changed memory files.
 
-The private `eriqueo/claude-config` GitHub repository publishes static revisions
+The private `eriqueo/agent-harness` GitHub repository publishes static revisions
 for both root evaluators. The server bare repository remains an authoring mirror.
 
 ## Operations

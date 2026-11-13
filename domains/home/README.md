@@ -407,7 +407,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
   lockPref'd in mozilla.cfg, VA-API iHD decode working.
 - 2026-06-12: apps/claude-code gains `shareConfig` — symlinks
   `~/.claude/{skills,agents,commands,CLAUDE.md}` from a standalone
-  `~/.claude-config` git repo via `mkOutOfStoreSymlink` (single source of
+  `~/800_agents/harness` git repo (eriqueo/agent-harness) via `mkOutOfStoreSymlink` (single source of
   truth across hosts; branch-immune by living outside ~/.nixos). Decoupled
   from `enable`: hwc-server opts into `shareConfig.enable` only (npm-global
   claude, no Nix package / Obsidian cert). Optional `autoPull` systemd-user

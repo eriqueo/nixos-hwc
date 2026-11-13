@@ -5,7 +5,7 @@ Owns Claude Code CLI installation through `hwc.home.apps.claude-code.enable`. Th
 
 ## Boundaries
 - ✅ Claude CLI installation/native PATH and optional Obsidian certificate trust.
-- ❌ Does not manage the claude-config repo contents or clone it; does not touch host-local `~/.claude/{plans,docs,memory}`; never auto-commits/pushes the config repo; never edits or removes existing settings.json entries (heal is append-only — Claude Code stays the file's primary writer).
+- ❌ Does not manage the agent-harness repo contents or clone it; does not touch host-local `~/.claude/{plans,docs,memory}`; never auto-commits/pushes the config repo; never edits or removes existing settings.json entries (heal is append-only — Claude Code stays the file's primary writer).
 
 ## Structure
 - `index.nix` — CLI enable/install method and optional Obsidian certificate trust.
