@@ -5,7 +5,11 @@
 tracker-rust-contracts = pkgs.rustPlatform.buildRustPackage {
   pname = "hwc-tracker";
   version = "0.1.0";
-  src = inputs.agent-harness + "/lifecycle/tracker/rust";
+  # The parity tests read the hub page at ../index.html beside the crate, as the
+  # Python server does; a crate-only source made the Rust index fallback 404.
+  src = inputs.agent-harness + "/lifecycle/tracker";
+  cargoRoot = "rust";
+  buildAndTestSubdir = "rust";
   cargoLock.lockFile = inputs.agent-harness + "/lifecycle/tracker/rust/Cargo.lock";
   nativeCheckInputs = [ pkgs.python3 ];
   doCheck = true;
