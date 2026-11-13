@@ -111,6 +111,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-13: Publish's one-time host migration is gone. Every host has moved to `~/800_agents/harness`, and no host keeps a `~/.claude-config` link.
 - 2026-11-12: The harness repo is `eriqueo/agent-harness` (flake input renamed; same revision and hash) and its working copy is `~/800_agents/harness` (`editableSource`, `control.sh` SOURCE, the ownership contract). Publish migrates a host the first time it reaches it: moves `~/.claude-config`, repairs its worktrees, leaves the old path as a link and renames both remotes (TEMPORARY until S6e). Managed Claude settings no longer rewrite the authoring path: the harness names `/etc/agent-harness/guards/` itself.
 
 - 2026-11-12: Read the harness at its new homes (S6b batch 1): `lifecycle/tracker/` (hub, relay, `ws`, release checks, the Rust check), `guards/` (`log-mistake`, `guard-audit`), `checks/`, `rules/` (the Claude instruction links), `adapters/` (Claude agents and commands, Codex hooks, the Pi bridge), `packs/`. The two `[budget]` fallbacks are gone. Publish also skips an unreachable host, fast-forwards a behind nixos-hwc and replays a raced pin push.
