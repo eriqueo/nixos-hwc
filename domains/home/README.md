@@ -17,7 +17,7 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
-`verification/checks.nix` packages the pinned Rust tracker foundation and runs its state, snapshot, HTTP and Python projection contracts, including project clocks through the real route at local midnight. `tracker-rust-contracts` is required when this owner is selected; it does not switch the live Python tracker.
+`verification/checks.nix` packages the pinned Rust tracker foundation and runs its state, snapshot, HTTP and Python projection contracts, including project clocks through the real route at local midnight and the isolated candidate-only brief command (idempotent replay, revision checks, crash and replay durability). `tracker-rust-contracts` is required when this owner is selected; it does not switch the live Python tracker.
 The music menu uses Waybar’s native GTK popup anchored below its module and includes Quit Feishin.
 Waybar centers Feishin's MPRIS track display; one click opens Play, Pause, Next and Open, with the same choices in hover help. Super+M opens Feishin; Super+Ctrl+M opens btop. The tray keeps the hidden player accessible.
 `apps/mtg/` packages the owned Modern Terminal Games fork with Frogger; the laptop enables it alongside Tetro.
@@ -184,6 +184,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-13: Pin the Rust tracker's candidate-only brief command; its checks cover replay, stale revisions, concurrent writers, shutdown drain and replay durability after an uncertain write. The live Python tracker is unchanged.
 - 2026-11-12: Pin the Rust project-clock projection, with custom-policy and midnight parity checks against Python and bounded failures for invalid dates.
 - 2026-11-12: Add the Rust tracker package and contracts to the existing home verification owner, with the pinned Python oracle available only during checks.
 - 2026-11-12: Replace the separate music picker with a native Waybar menu anchored below its module and add Quit Feishin.
