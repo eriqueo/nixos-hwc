@@ -226,6 +226,11 @@ in
         default = [];
         description = "Explicit manifest hub/tile addresses allowed to perform declared item actions at the private origin.";
       };
+      hiddenHubs = lib.mkOption {
+        type = lib.types.listOf (lib.types.strMatching "[a-z0-9-]+");
+        default = [];
+        description = "Manifest hubs the browser shell does not serve, e.g. Workbench copies of an app the rail already links to. The TUI keeps them. A write tile on a hidden hub refuses startup.";
+      };
       stateDir = lib.mkOption {
         type = lib.types.path;
         default = "${config.hwc.paths.state}/workbench";
@@ -307,6 +312,8 @@ in
         HOME = config.hwc.paths.user.home;
         WORKBENCH_GATEWAY_URL = "http://127.0.0.1:${toString config.hwc.system.mcp.port}";
         WORKBENCH_HANDOFF_TARGETS = builtins.toJSON (if cfg.web.handoff.enable then cfg.web.handoff.targets else {});
+      } // lib.optionalAttrs (cfg.web.hiddenHubs != []) {
+        WORKBENCH_HIDDEN_HUBS = builtins.toJSON cfg.web.hiddenHubs;
       } // lib.optionalAttrs cfg.web.handoff.enable {
         WORKBENCH_HANDOFF_CREDENTIALS_FILE = config.hwc.secrets.api.${cfg.web.handoff.credentialsSecret};
         WORKBENCH_HANDOFF_CREDENTIAL_MOUNT = builtins.toJSON {

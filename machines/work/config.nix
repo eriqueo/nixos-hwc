@@ -41,7 +41,10 @@
   hwc.business.workbench.web = {
     enable = true;
     handoff.enable = true;
-    writeTiles = [ "today/mail" "mail/triage" "today/tasks" "crm-jobs/pipeline" "crm-network/network" "refinery/board" ];
+    writeTiles = [ "today/mail" "mail/triage" "today/tasks" ];
+    # The rail links the real CRM and Refinery apps; Eric chose them over these
+    # Workbench copies (2026-11-13). The TUI keeps the copies.
+    hiddenHubs = [ "crm-jobs" "crm-network" "refinery" ];
   };
   # The cert exporter requires a system bridge unit no host runs, and nothing
   # reads its pem; the mail role's user-unit bridge serves plaintext loopback.
