@@ -234,6 +234,9 @@ run_publish_check >/dev/null
 cat > "$BIN/nix" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/nix.log"
+# Pin what the static source holds, as the real `nix flake update` would.
+[ "$*" != 'flake update agent-harness' ] || printf '{"nodes":{"agent-harness":{"locked":{"rev":"%s"}}}}\n' \
+  "$(git -C "$AGENT_HARNESS_SOURCE" rev-parse HEAD)" > flake.lock
 EOF
 cat > "$BIN/ssh" <<'EOF'
 #!/usr/bin/env bash
@@ -308,6 +311,42 @@ HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" HARNESS_RACE="$ROOT/race.sh" \
 [ "$(git -C "$SOURCE_REMOTE" rev-parse refs/heads/main)" = "$(git -C "$OTHER" rev-parse HEAD)" ] || {
   echo 'control.test: publish rewound the newer github main' >&2; exit 1;
 }
+
+# A session's unpushed local commit while others push, before and during the suites.
+printf 'local\n' > "$SOURCE_REPO/local"; git -C "$SOURCE_REPO" add local
+git -C "$SOURCE_REPO" commit -q -m local
+cat > "$ROOT/race.sh" <<EOF
+[ -e "$ROOT/raced" ] && exit 0; : > "$ROOT/raced"
+printf 'three\n' >> "$OTHER/other"
+git -C "$OTHER" commit -q -am three && git -C "$OTHER" push -q origin main
+EOF
+HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" HARNESS_RACE="$ROOT/race.sh" \
+  AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
+  AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
+  AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
+  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
+  bash "$(dirname "$0")/control.sh" publish >/dev/null 2>&1 || {
+  echo 'control.test: publish failed with an unpushed local commit beside other pushes' >&2; exit 1;
+}
+PUBLISHED=$(git -C "$SOURCE_REMOTE" rev-parse refs/heads/main)
+[ "$PUBLISHED" = "$(git -C "$SOURCE_REPO" rev-parse HEAD)" ] \
+  && [ "$(git -C "$SOURCE_REMOTE" show "$PUBLISHED:other")" = "$(printf 'one\ntwo\nthree')" ] \
+  && git -C "$SOURCE_REMOTE" cat-file -e "$PUBLISHED:local" \
+  && [ "$(jq -r '.nodes."agent-harness".locked.rev' "$NIXOS_REPO/flake.lock")" = "$PUBLISHED" ] || {
+  echo 'control.test: diverged publish did not ship local work on top of every push' >&2; exit 1;
+}
+# A real conflict stops and leaves the copy as it was.
+printf 'mine\n' > "$SOURCE_REPO/other"; git -C "$SOURCE_REPO" commit -q -am mine
+git -C "$OTHER" pull -q --rebase origin main
+printf 'theirs\n' > "$OTHER/other"; git -C "$OTHER" commit -q -am theirs && git -C "$OTHER" push -q origin main
+BEFORE=$(git -C "$SOURCE_REPO" rev-parse HEAD)
+if run_publish_check >/dev/null 2>&1; then
+  echo 'control.test: conflicting local commit unexpectedly passed preflight' >&2; exit 1
+fi
+[ "$(git -C "$SOURCE_REPO" rev-parse HEAD)" = "$BEFORE" ] && [ ! -e "$SOURCE_REPO/.git/rebase-merge" ] || {
+  echo 'control.test: a conflicting rebase was not aborted cleanly' >&2; exit 1;
+}
+git -C "$SOURCE_REPO" reset -q --hard "$(git -C "$OTHER" rev-parse HEAD)"
 
 if AGENT_HARNESS_FLEET_HOSTS='hwc-server:bad host' \
   AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \

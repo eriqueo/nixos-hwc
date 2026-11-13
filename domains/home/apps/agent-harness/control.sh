@@ -333,6 +333,31 @@ require_clean_tracked() {
   }
 }
 
+# Bring the working copy level with github/main: fast-forward when behind,
+# replay committed local work on top when diverged (publish ships committed
+# work anyway). Before 2026-11-13 a diverged copy stopped every publish while
+# another session's commit waited to be pushed. A conflict, or a rebase or
+# merge another session has in progress, still stops.
+sync_source() {
+  local git_dir
+  git_dir=$(git -C "$SOURCE" rev-parse --absolute-git-dir)
+  if [ -e "$git_dir/rebase-merge" ] || [ -e "$git_dir/rebase-apply" ] || [ -e "$git_dir/MERGE_HEAD" ]; then
+    printf 'agent-harness: static policy has a rebase or merge in progress; publish again after it ends\n' >&2
+    return 1
+  fi
+  require_clean_tracked "$SOURCE" 'static policy' || return 1
+  git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
+  if git -C "$SOURCE" merge-base --is-ancestor HEAD github/main; then
+    git -C "$SOURCE" merge --ff-only --quiet github/main
+  elif ! git -C "$SOURCE" merge-base --is-ancestor github/main HEAD; then
+    git -C "$SOURCE" rebase --quiet github/main || {
+      git -C "$SOURCE" rebase --abort
+      printf 'agent-harness: local commits conflict with github/main; resolve in %s\n' "$SOURCE" >&2
+      return 1
+    }
+  fi
+}
+
 publish_preflight() {
   validate_fleet
   require_clean_tracked "$SOURCE" 'static policy'
@@ -340,27 +365,29 @@ publish_preflight() {
   [ "$(git -C "$SOURCE" branch --show-current)" = main ] || { printf 'agent-harness: static policy must be on main\n' >&2; return 1; }
   [ "$(git -C "$NIXOS" branch --show-current)" = main ] || { printf 'agent-harness: nixos-hwc must be on main\n' >&2; return 1; }
 
-  # Other sessions push the harness too. Start from the newest main so the
-  # suites below test what will ship; local commits not on github still stop.
-  git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
-  if git -C "$SOURCE" merge-base --is-ancestor HEAD github/main; then
-    git -C "$SOURCE" merge --ff-only --quiet github/main
-  elif ! git -C "$SOURCE" merge-base --is-ancestor github/main HEAD; then
-    printf 'agent-harness: static policy and github/main have diverged; rebase first\n' >&2
-    return 1
-  fi
-
-  (cd "$SOURCE" && checks/harness-policy-check)
-  # The live tier too: suites that need GitHub, ~/.nixos sources and this
-  # host's transcripts, which neither the commit gate nor the build check sees.
-  (cd "$SOURCE" && bash guards/tests/run.sh --live)
-  # A push that lands during the suites is not checked here, so publish the
-  # checked revision; it is already on github and needs no push. Before
-  # 2026-11-13 this case failed the publish (three times that day).
-  git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
-  git -C "$SOURCE" merge-base --is-ancestor github/main HEAD \
-    || git -C "$SOURCE" merge-base --is-ancestor HEAD github/main \
-    || { printf 'agent-harness: static policy and github/main have diverged; rebase first\n' >&2; return 1; }
+  # Other sessions share this working copy: they push to github, and they
+  # commit here and push later. Both happen while the suites run (eight
+  # minutes). Each attempt syncs to the newest main, runs the suites, and
+  # ends when the checked revision and github/main are in line: github holds
+  # it (publish it, no push) or it extends github (push it). A push that
+  # lands between check and push sends the run round again.
+  local attempt
+  for attempt in 1 2 3; do
+    sync_source || return 1
+    (cd "$SOURCE" && checks/harness-policy-check)
+    # The live tier too: suites that need GitHub, ~/.nixos sources and this
+    # host's transcripts, which neither the commit gate nor the build check sees.
+    (cd "$SOURCE" && bash guards/tests/run.sh --live)
+    git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
+    if git -C "$SOURCE" merge-base --is-ancestor github/main HEAD \
+        || git -C "$SOURCE" merge-base --is-ancestor HEAD github/main; then
+      break
+    fi
+    [ "$attempt" -lt 3 ] || {
+      printf 'agent-harness: github/main moved during each of 3 checked attempts; publish again when it is quiet\n' >&2
+      return 1
+    }
+  done
 
   # Other sessions push to nixos-hwc while the suites above run (eight minutes);
   # behind-only is safe to fast-forward. Local commits not on origin still stop.
