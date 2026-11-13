@@ -78,11 +78,7 @@ let
       ]
     }:$PATH
     root=$(${pkgs.git}/bin/git rev-parse --show-toplevel)
-    gate="$root/checks/harness-policy-check"
-    # TEMPORARY: a worktree still on a pre-S6 commit has bin/ instead of
-    # checks/. Remove when every harness worktree has checks/ (agent-harness S6e).
-    [ -e "$gate" ] || gate="$root/bin/harness-policy-check"
-    exec ${pkgs.bash}/bin/bash "$gate"
+    exec ${pkgs.bash}/bin/bash "$root/checks/harness-policy-check"
   '';
   cli = pkgs.writeShellApplication {
     name = "agent-harness";
