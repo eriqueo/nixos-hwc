@@ -340,12 +340,27 @@ publish_preflight() {
   [ "$(git -C "$SOURCE" branch --show-current)" = main ] || { printf 'agent-harness: static policy must be on main\n' >&2; return 1; }
   [ "$(git -C "$NIXOS" branch --show-current)" = main ] || { printf 'agent-harness: nixos-hwc must be on main\n' >&2; return 1; }
 
+  # Other sessions push the harness too. Start from the newest main so the
+  # suites below test what will ship; local commits not on github still stop.
+  git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
+  if git -C "$SOURCE" merge-base --is-ancestor HEAD github/main; then
+    git -C "$SOURCE" merge --ff-only --quiet github/main
+  elif ! git -C "$SOURCE" merge-base --is-ancestor github/main HEAD; then
+    printf 'agent-harness: static policy and github/main have diverged; rebase first\n' >&2
+    return 1
+  fi
+
   (cd "$SOURCE" && checks/harness-policy-check)
   # The live tier too: suites that need GitHub, ~/.nixos sources and this
   # host's transcripts, which neither the commit gate nor the build check sees.
   (cd "$SOURCE" && bash guards/tests/run.sh --live)
+  # A push that lands during the suites is not checked here, so publish the
+  # checked revision; it is already on github and needs no push. Before
+  # 2026-11-13 this case failed the publish (three times that day).
   git -C "$SOURCE" fetch github refs/heads/main:refs/remotes/github/main
-  git -C "$SOURCE" merge-base --is-ancestor github/main HEAD || { printf 'agent-harness: static policy is behind github/main\n' >&2; return 1; }
+  git -C "$SOURCE" merge-base --is-ancestor github/main HEAD \
+    || git -C "$SOURCE" merge-base --is-ancestor HEAD github/main \
+    || { printf 'agent-harness: static policy and github/main have diverged; rebase first\n' >&2; return 1; }
 
   # Other sessions push to nixos-hwc while the suites above run (eight minutes);
   # behind-only is safe to fast-forward. Local commits not on origin still stop.
@@ -374,10 +389,15 @@ publish() {
   publish_preflight
   [ "${1:-}" != --check ] || return 0
 
-  git -C "$SOURCE" push github HEAD:main
   # Remote authoring checkouts track the server mirror, while Nix pins GitHub.
   # Publish both before switching, so the checkout and active policy agree.
-  git -C "$SOURCE" push origin HEAD:main
+  # A remote already holding the checked revision (a newer push won) is skipped.
+  local remote
+  for remote in github origin; do
+    git -C "$SOURCE" fetch --quiet "$remote" "refs/heads/main:refs/remotes/$remote/main" 2>/dev/null \
+      && git -C "$SOURCE" merge-base --is-ancestor HEAD "$remote/main" \
+      || git -C "$SOURCE" push "$remote" HEAD:main
+  done
   static_revision=$(git -C "$SOURCE" rev-parse HEAD)
 
   if [ "$locked" != "$static_revision" ]; then

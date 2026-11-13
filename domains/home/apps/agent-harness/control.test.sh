@@ -201,7 +201,9 @@ chmod +x "$SOURCE_REPO/checks/harness-policy-check"
 mkdir -p "$SOURCE_REPO/guards/tests"
 cat > "$SOURCE_REPO/guards/tests/run.sh" <<'EOF'
 #!/usr/bin/env bash
-[ "$1" = --live ]
+[ "$1" = --live ] || exit 1
+# Lets a test land another session's push while the suites run.
+[ -z "${HARNESS_RACE:-}" ] || bash "$HARNESS_RACE"
 EOF
 printf 'static\n' > "$SOURCE_REPO/policy"
 git -C "$SOURCE_REPO" add .
@@ -274,6 +276,38 @@ for host in hwc-server hwc-laptop hwc-work; do
     echo "control.test: $host did not refresh its static authoring source" >&2; exit 1;
   }
 done
+
+# Another session's pushes: one before publish starts, one during the suites.
+OTHER="$ROOT/publish-other"
+git clone -q "$SOURCE_REMOTE" "$OTHER"
+git -C "$OTHER" config user.name other
+git -C "$OTHER" config user.email other@example.invalid
+printf 'one\n' > "$OTHER/other"; git -C "$OTHER" add other
+git -C "$OTHER" commit -q -m one && git -C "$OTHER" push -q origin main
+BEHIND_REVISION=$(git -C "$OTHER" rev-parse HEAD)
+printf '{"nodes":{"agent-harness":{"locked":{"rev":"%s"}}}}\n' "$BEHIND_REVISION" > "$NIXOS_REPO/flake.lock"
+git -C "$NIXOS_REPO" commit -q -am "pin $BEHIND_REVISION" && git -C "$NIXOS_REPO" push -q origin main
+cat > "$ROOT/race.sh" <<EOF
+printf 'two\n' >> "$OTHER/other"
+git -C "$OTHER" commit -q -am two && git -C "$OTHER" push -q origin main
+EOF
+HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" HARNESS_RACE="$ROOT/race.sh" \
+  AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
+  AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
+  AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
+  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
+  bash "$(dirname "$0")/control.sh" publish >/dev/null 2>&1 || {
+  echo 'control.test: publish failed when other sessions pushed the harness' >&2; exit 1;
+}
+[ "$(git -C "$SOURCE_REPO" rev-parse HEAD)" = "$BEHIND_REVISION" ] || {
+  echo 'control.test: publish did not fast-forward a behind static source' >&2; exit 1;
+}
+[ "$(git -C "$SOURCE_MIRROR" rev-parse refs/heads/main)" = "$BEHIND_REVISION" ] || {
+  echo 'control.test: mirror did not receive the checked revision' >&2; exit 1;
+}
+[ "$(git -C "$SOURCE_REMOTE" rev-parse refs/heads/main)" = "$(git -C "$OTHER" rev-parse HEAD)" ] || {
+  echo 'control.test: publish rewound the newer github main' >&2; exit 1;
+}
 
 if AGENT_HARNESS_FLEET_HOSTS='hwc-server:bad host' \
   AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
