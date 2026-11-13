@@ -48,14 +48,10 @@
   # The project tracker hub runs here only: http://hwc-work:8765/ on the tailnet.
   hwc.home.apps.agent-harness.tracker = {
     enable = true;
-    # TEMPORARY (2026-11-12, agent-harness S6): Close, Review intake and dispatch
-    # are off while the harness folders and name move, so no worktree removal
-    # runs against moved paths. Remove when: S6e is done and one Close preview
-    # and one Review round-trip pass on the moved runtime (plan.md, S6).
-    lifecycle.intakeEnabled = false;
-    lifecycle.dispatchEnabled = false;
+    lifecycle.intakeEnabled = true;
+    lifecycle.dispatchEnabled = true;
     # Installed capability4 scratch Close passed36 native/helper recovery checks.
-    lifecycle.close.enable = false;
+    lifecycle.close.enable = true;
     # Protocol2 Codex sessions are shared. Close requires an owned per-thread
     # process so shutdown can be proved before any workspace cleanup.
     lifecycle.close.profile = {
