@@ -20,9 +20,10 @@ assert lib.assertMsg (lib.length (lib.filter (host: lib.attrByPath [ "hwc" "auto
   && lib.hasInfix " dispatch" worker.ExecStart
   && !(c.systemd.timers ? screenshot-renamer)
   && c.systemd.paths.screenshot-renamer.pathConfig.PathChanged == [ "${c.hwc.paths.user.inbox}/screenshots" "${c.hwc.paths.user.inbox}/screenshots/.screenshot-policy" ]
-  && worker.Restart == "no"
-  && worker.RestartForceExitStatus == [ 75 ]
-  && worker.RestartSec == "30s"
+  && !(worker ? Restart && worker.Restart != "no")
+  && lib.hasInfix "screenshot-renamer-rerun.timer" worker.ExecStopPost
+  && c.systemd.timers.screenshot-renamer-rerun.timerConfig.OnActiveSec == "30s"
+  && !(c.systemd.timers.screenshot-renamer-rerun ? wantedBy && c.systemd.timers.screenshot-renamer-rerun.wantedBy != [ ])
   && lib.elem "${c.hwc.paths.user.inbox}/screenshots" c.services.borgbackup.jobs.hwc-backup.paths
   && lib.elem "${c.hwc.paths.state}/screenshot-renamer/work-*" c.services.borgbackup.jobs.hwc-backup.exclude
   && lib.elem "${c.hwc.paths.state}/screenshot-renamer/ledger.sqlite*" c.services.borgbackup.jobs.hwc-backup.exclude

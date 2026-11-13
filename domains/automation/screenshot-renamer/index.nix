@@ -107,18 +107,26 @@ in {
         ExecStart = command "dispatch";
         # 75 means settling/retry/burst work remains. Errors (1) stay failed;
         # empty queues (0) stop. This is work-driven, never an idle poll.
-        Restart = "no";
-        RestartForceExitStatus = [ 75 ];
-        RestartSec = "30s";
-        # 75 is a planned rerun, not a failure. Without SuccessExitStatus it
-        # was logged as failed (1,089 times in the week to 2026-10-12) and
-        # showed up in every deploy. A oneshot ignores RestartForceExitStatus
-        # for a success status (tested on hwc-home), so this unit is `exec`.
+        # 75 is a planned rerun, not a failure (SuccessExitStatus). The rerun
+        # is the one-shot timer below, not Restart=: a unit waiting in systemd's
+        # auto-restart state is reported failed by switch-to-configuration, so
+        # every deploy that landed in the 30 s gap showed this unit as failed
+        # (twice in agent-harness publishes, 2026-11-12 and 2026-11-13).
         # `exec` ends TimeoutStartSec's cover of the run, so RuntimeMaxSec
         # keeps the 615 s cap (app run budget 600 s).
         Type = "exec";
         SuccessExitStatus = [ 75 ];
         RuntimeMaxSec = "615s";
+        ExecStopPost = "+${pkgs.bash}/bin/bash -c '[ \"$EXIT_STATUS\" = 75 ] && ${pkgs.systemd}/bin/systemctl start --no-block screenshot-renamer-rerun.timer || true'";
+      };
+    };
+    # Started only by the worker's exit 75; fires once 30 s later, then stops.
+    systemd.timers.screenshot-renamer-rerun = {
+      description = "Rerun screenshot naming when work remains";
+      timerConfig = {
+        OnActiveSec = "30s";
+        Unit = "screenshot-renamer.service";
+        RemainAfterElapse = false;
       };
     };
     systemd.paths.screenshot-renamer = {
