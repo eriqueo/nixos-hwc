@@ -99,6 +99,8 @@ let
       systemd
       gawk
       curl
+      # publish extracts the tracker crate to compute its release.
+      gnutar
     ]);
     text = ''
       export AGENT_HARNESS_SKILL_SET=${agentSkills}
@@ -110,6 +112,7 @@ let
       export AGENT_HARNESS_SOURCE=${lib.escapeShellArg cfg.editableSource}
       export AGENT_HARNESS_NIXOS=${lib.escapeShellArg cfg.nixosRepo}
       export AGENT_HARNESS_FLEET_HOSTS=${lib.escapeShellArg (lib.concatStringsSep ":" cfg.fleetHosts)}
+      export AGENT_HARNESS_TRACKER_URL=${lib.escapeShellArg cfg.tracker.url}
       export AGENT_STATE_DIR=${lib.escapeShellArg cfg.stateDir}
       exec ${pkgs.bash}/bin/bash ${./control.sh} "$@"
     '';

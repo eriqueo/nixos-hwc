@@ -185,6 +185,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-14: `agent-harness-control` gets `gnutar`: `publish` now extracts the tracker crate to compute its release (see `apps/agent-harness` changelog (h)).
 - 2026-11-13: Move the Rust tracker build recipe from the verification file to `apps/agent-harness/parts/tracker-package.nix`. The check and the new read-only `tracker.package` (mail-health's client) call that one recipe. The check's derivation is unchanged. A stable host builds it without tests: two Python-parity tests need Python 3.14 and stable has 3.13.
 - 2026-11-13: Add `apps/herdr-core`: the Herdr core pinned from its upstream release, and a `serve` user unit that keeps one core running on hwc-home and hwc-work across reboots. Separate from `apps/herdr`, which ships a different project.
 - 2026-11-13: `agent-harness-control` runs `apps/agent-harness/control.test.sh` in the sandbox, so the gate fails a `publish` that activates outside the release runner.

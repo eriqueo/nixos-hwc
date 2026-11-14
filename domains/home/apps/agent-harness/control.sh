@@ -28,6 +28,10 @@ MATRIX=${AGENT_HARNESS_MATRIX:-}
 CLAUDE_HOME=${AGENT_HARNESS_CLAUDE_HOME:-$HOME/.claude}
 CLAUDE_MCP=${AGENT_HARNESS_CLAUDE_MCP:-$HOME/.mcp.json}
 CODEX_INSTRUCTIONS=${AGENT_HARNESS_CODEX_INSTRUCTIONS:-$HOME/.codex/AGENTS.md}
+# The tracker hub (tracker.url, http://hwc-work:8765) and the host it runs on.
+TRACKER_URL=${AGENT_HARNESS_TRACKER_URL:-}
+HUB=${TRACKER_URL#*://}
+HUB=${HUB%%[:/]*}
 
 failures=0
 ok() { printf 'ok   %s\n' "$*"; }
@@ -455,11 +459,61 @@ planned_commit() {
   git -C "$NIXOS" rev-parse --verify --quiet "$base^{commit}"
 }
 
-# Hosts publish activates: this host always (the pin is integrated here), and
-# the named ones. Before 2026-11-13 every publish switched the whole fleet.
+targeted() { case " ${TARGETS[*]} " in *" $1 "*) return 0 ;; esac; return 1; }
+
+# The tracker release a harness revision builds: parts/tracker-package.nix
+# takes the first 12 characters of the crate directory's store hash, and the
+# hub and its clients refuse each other's writes when theirs differ. A dry-run
+# add computes that hash without writing to the store.
+tracker_release() {
+  local tmp out=
+  tmp=$(mktemp -d)
+  if git -C "$SOURCE" archive "$1" lifecycle/tracker/rust 2>/dev/null | tar -x -C "$tmp" 2>/dev/null; then
+    out=$(nix store add --dry-run --name hwc-tracker-crate "$tmp/lifecycle/tracker/rust" 2>/dev/null) || out=
+  fi
+  rm -rf "$tmp"
+  out=${out##*/}
+  printf '%s\n' "${out:0:12}"
+}
+
+# "<hub's release> -> <revision's release>" when publishing the revision
+# changes the tracker release or either side is unknown; empty when it does not.
+tracker_change() {
+  local now next
+  [ -n "$HUB" ] || return 0
+  now=$(curl -fsS --max-time 5 "$TRACKER_URL/health" 2>/dev/null | jq -r '.release // empty' 2>/dev/null) || now=
+  next=$(tracker_release "$1")
+  [ -n "$now" ] && [ "$now" = "$next" ] || printf '%s -> %s\n' "${now:-unknown}" "${next:-unknown}"
+}
+
+# A tracker release change with the hub host left out switches clients the
+# old hub refuses. Refuse it before anything is pushed or switched; the
+# operator adds the hub host (it then goes first), nothing widens silently.
+hub_refusal() {
+  [ -n "$TRACKER_CHANGE" ] && ! targeted "$HUB" || return 0
+  printf 'tracker release changes (%s) but %s, the tracker hub, is not activated, so these hosts would be refused by the hub; run: agent-harness publish%s --host %s\n' \
+    "$TRACKER_CHANGE" "$HUB" "${PUBLISH_ARGS:+ $PUBLISH_ARGS}" "$HUB"
+}
+
+# Which revision each fleet host runs, after publish stopped.
+report_hosts() {
+  local host
+  printf 'fleet now:\n'
+  for host in "${FLEET_HOSTS[@]}"; do
+    printf '  %s: harness %s, nixos-hwc %s\n' "$host" "$(host_revision "$host")" "$(host_configuration "$host")"
+  done
+}
+
+# Hosts publish activates, in order: this host first unless the operator
+# placed it, then the named hosts in the order given (--fleet: the fleet
+# order). The tracker hub's host (tracker.url) moves to the front, because its
+# clients on every host must not run a release it refuses. Before 2026-11-13
+# every publish switched the whole fleet; before 2026-11-14 this host always
+# went first.
 publish_targets() {
-  local host requested=() all=0
+  local host requested=() all=0 rest=()
   CANDIDATE_REF=
+  PUBLISH_ARGS=$*
   validate_fleet
   while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -470,12 +524,17 @@ publish_targets() {
     esac
     shift
   done
-  TARGETS=("$(hostname)")
   [ "$all" = 0 ] || requested=("${FLEET_HOSTS[@]}")
+  TARGETS=()
+  case " ${requested[*]} " in *" $(hostname) "*) ;; *) TARGETS=("$(hostname)") ;; esac
   for host in "${requested[@]}"; do
     case " ${FLEET_HOSTS[*]} " in *" $host "*) ;; *) printf 'agent-harness: %s is not in the fleet (%s)\n' "$host" "${FLEET_HOSTS[*]}" >&2; return 1 ;; esac
-    case " ${TARGETS[*]} " in *" $host "*) ;; *) TARGETS+=("$host") ;; esac
+    targeted "$host" || TARGETS+=("$host")
   done
+  if [ -n "$HUB" ] && targeted "$HUB"; then
+    for host in "${TARGETS[@]}"; do [ "$host" = "$HUB" ] || rest+=("$host"); done
+    TARGETS=("$HUB" "${rest[@]}")
+  fi
 }
 
 # What publish does to each fleet host. Every activation goes through
@@ -491,17 +550,28 @@ print_plan() {
   else
     printf '  nixos-hwc: commit the pin on origin/main in a detached worktree, release.py verify it, push it to origin main (fast-forward only)\n'
   fi
-  for host in "${FLEET_HOSTS[@]}"; do
+  TRACKER_CHANGE=$(tracker_change "$revision")
+  if [ -n "$HUB" ]; then
+    printf '  tracker release: %s\n' "${TRACKER_CHANGE:-unchanged}"
+  fi
+  local refusal step=0
+  refusal=$(hub_refusal)
+  [ -z "$refusal" ] || printf '  REFUSED: %s\n' "$refusal"
+  printf '  activation order:\n'
+  for host in "${TARGETS[@]}"; do
+    step=$((step + 1))
     current=$(host_revision "$host")
     if host_current "$host" "$revision" "$target"; then
-      printf '  %s: already runs %s at nixos-hwc %s; no activation\n' "$host" "$revision" "$target"
+      printf '  %s. %s: already runs %s at nixos-hwc %s; no activation\n' "$step" "$host" "$revision" "$target"
     elif [ "$host" = "$(hostname)" ]; then
-      printf '  %s (this host, runs %s): release.py deploy --candidate <pin commit>: verify, fast-forward main, switch\n' "$host" "$current"
-    elif case " ${TARGETS[*]} " in *" $host "*) true ;; *) false ;; esac; then
-      printf '  %s (runs %s): over ssh, pull its harness checkout --ff-only, then release.py deploy --candidate origin/main there\n' "$host" "$current"
+      printf '  %s. %s (this host, runs %s): release.py deploy --candidate <pin commit>: verify, fast-forward main, switch\n' "$step" "$host" "$current"
     else
-      printf '  %s (runs %s): not activated; add --host %s or --fleet\n' "$host" "$current" "$host"
+      printf '  %s. %s (runs %s): over ssh, pull its harness checkout --ff-only, then release.py deploy --candidate origin/main there\n' "$step" "$host" "$current"
     fi
+    [ "$host" != "$HUB" ] || printf '     first: it runs the tracker hub (%s), whose clients on every host are refused across releases; if it does not switch, publish stops before any other host\n' "$TRACKER_URL"
+  done
+  for host in "${FLEET_HOSTS[@]}"; do
+    targeted "$host" || printf '  -  %s (runs %s): not activated; add --host %s or --fleet\n' "$host" "$(host_revision "$host")" "$host"
   done
 }
 
@@ -585,6 +655,9 @@ publish() {
   if [ "$mode" = plan ]; then publish_plan; return; fi
   publish_preflight
   print_plan "$static_revision"
+  local refusal
+  refusal=$(hub_refusal)
+  [ -z "$refusal" ] || { printf 'agent-harness: %s\n' "$refusal" >&2; return 1; }
   [ "$mode" != check ] || return 0
 
   # Remote authoring checkouts track the server mirror, while Nix pins GitHub.
@@ -598,32 +671,41 @@ publish() {
   done
   static_revision=$(git -C "$SOURCE" rev-parse HEAD)
 
-  local candidate host skipped=() untargeted=()
+  local candidate host failed skipped=() untargeted=()
   integrate_pin || return 1
 
   # Every activation is the release runner on the host it activates: it
   # verifies the exact candidate, fast-forwards that host's main and switches.
-  if host_current "$(hostname)" "$static_revision" "$candidate"; then
-    ok "$(hostname) already runs $static_revision at nixos-hwc $candidate"
-  elif ! release_runner deploy --candidate "$candidate"; then
-    printf 'agent-harness: %s is on origin/main, but this host refused or failed activation; fix that, then: python3 workspace/nixos-dev/verification/release.py deploy --candidate origin/main\n' "$candidate" >&2
-    return 1
-  fi
-
-  # A remote host runs its own runner against origin/main, which now holds the
-  # pin. Its gate refuses a checkout with another session's unpushed commits;
-  # that host is reported and the rest continue (before 2026-11-12 the first
-  # such host stopped the loop).
+  # Hosts go in TARGETS order. This host's failure stops publish, and so does
+  # the hub host's, which goes first: no other host then runs a client it
+  # refuses. A remote host runs its own runner against origin/main, which now
+  # holds the pin; its gate refuses a checkout with another session's unpushed
+  # commits. Any other host that fails is reported and the rest continue.
   for host in "${TARGETS[@]}"; do
-    [ "$host" != "$(hostname)" ] || continue
-    if [ "$(host_revision "$host")" = unreachable ]; then
-      skipped+=("$host (unreachable)")
-    elif host_current "$host" "$static_revision" "$candidate"; then
+    failed=
+    if host_current "$host" "$static_revision" "$candidate"; then
       ok "$host already runs $static_revision at nixos-hwc $candidate"
+      continue
+    elif [ "$host" = "$(hostname)" ]; then
+      release_runner deploy --candidate "$candidate" || {
+        printf 'agent-harness: %s is on origin/main, but this host refused or failed activation; publish stopped. Fix that, then: python3 workspace/nixos-dev/verification/release.py deploy --candidate origin/main\n' "$candidate" >&2
+        report_hosts >&2
+        return 1
+      }
+      continue
+    elif [ "$(host_revision "$host")" = unreachable ]; then
+      failed="$host (unreachable)"
     else
       ssh -t "$host" "git -C ~/800_agents/harness pull --ff-only && cd ~/.nixos && git fetch --quiet origin && python3 workspace/nixos-dev/verification/release.py deploy --candidate origin/main" \
-        || skipped+=("$host (refused or failed; see above)")
+        || failed="$host (refused or failed; see above)"
     fi
+    [ -n "$failed" ] || continue
+    if [ "$host" = "$HUB" ]; then
+      printf 'agent-harness: %s, the tracker hub host, did not switch: %s; publish stopped before any other host. Fix it, then publish again.\n' "$host" "$failed" >&2
+      report_hosts >&2
+      return 1
+    fi
+    skipped+=("$failed")
   done
   for host in "${FLEET_HOSTS[@]}"; do
     case " ${TARGETS[*]} " in *" $host "*) ;; *) untargeted+=("$host") ;; esac

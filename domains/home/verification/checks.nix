@@ -714,7 +714,7 @@ pkgs.runCommand "gpg-stale-lock" { nativeBuildInputs = [ pkgs.gnupg pkgs.coreuti
 # nixos-rebuild, sudo or home-manager itself, builds a toplevel, moves main
 # without the runner, or activates a remote host unasked fails here.
 agent-harness-control = pkgs.runCommand "agent-harness-control" {
-  nativeBuildInputs = with pkgs; [ bash git jq ripgrep coreutils findutils gawk diffutils hostname ];
+  nativeBuildInputs = with pkgs; [ bash git jq ripgrep coreutils findutils gawk diffutils hostname gnutar ];
 } ''
   set -euo pipefail
   export HOME="$TMPDIR" LOCALE_ARCHIVE=${pkgs.glibcLocales}/lib/locale/locale-archive

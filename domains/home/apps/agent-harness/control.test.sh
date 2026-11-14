@@ -219,6 +219,11 @@ cat > "$SOURCE_REPO/guards/tests/run.sh" <<'EOF'
 [ -z "${HARNESS_RACE:-}" ] || bash "$HARNESS_RACE"
 EOF
 printf 'static\n' > "$SOURCE_REPO/policy"
+# The tracker crate; its content is the tracker release (stub nix below).
+mkdir -p "$SOURCE_REPO/lifecycle/tracker/rust"
+printf 'crate v1\n' > "$SOURCE_REPO/lifecycle/tracker/rust/src.rs"
+release_of() { printf '%s' "$1" | sha256sum | cut -c1-12; }
+release_of $'crate v1\n' > "$ROOT/hub-release"
 git -C "$SOURCE_REPO" add .
 git -C "$SOURCE_REPO" commit -q -m static
 STATIC_REVISION=$(git -C "$SOURCE_REPO" rev-parse HEAD)
@@ -239,16 +244,31 @@ chmod +x "$NIXOS_REPO/.git/hooks/post-commit"
 
 cat > "$BIN/nix" <<'EOF'
 #!/usr/bin/env bash
+# A dry-run add writes nothing: the store path's hash is the crate content's.
+if [ "$1 $2 $3" = 'store add --dry-run' ]; then
+  printf '/nix/store/%s-hwc-tracker-crate\n' "$(sha256sum < "${@: -1}/src.rs" | cut -c1-32)"; exit 0
+fi
 printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/nix.log"
 # Pin what the static source holds, as the real `nix flake update` would.
 [ "$*" != 'flake update agent-harness' ] || printf '{"nodes":{"agent-harness":{"locked":{"rev":"%s"}}}}\n' \
   "$(git -C "$AGENT_HARNESS_SOURCE" rev-parse HEAD)" > flake.lock
 EOF
+# The tracker hub's /health reports the release in hub-release.
+cat > "$BIN/curl" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in *'http://hwc-work:8765/health'*) printf '{"status":"ok","release":"%s"}\n' "$(cat "$HARNESS_TEST_ROOT/hub-release")" ;; *) exit 7 ;; esac
+EOF
 # Remote hosts report rev1; a host named in HARNESS_OFFLINE is unreachable.
+# Every activation is logged in order to activations.log; the runner on the
+# host named in HARNESS_FAIL fails.
 cat > "$BIN/ssh" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/ssh.log"
 for arg in "$@"; do case " ${HARNESS_OFFLINE:-} " in *" $arg "*) exit 255 ;; esac; done
+case "$*" in *release.py*)
+  printf '%s\n' "$2" >> "$HARNESS_TEST_ROOT/activations.log"
+  [ "$2" != "${HARNESS_FAIL:-}" ] || exit 1 ;;
+esac
 case "$*" in
   *'agent-harness revision'*) printf '%s\n' "${HARNESS_REMOTE_REVISION:-rev1}" ;;
   *'nixos-version --json'*) printf '{"configurationRevision":"%s"}\n' "${HARNESS_CONFIGURATION:-none}" ;;
@@ -280,14 +300,15 @@ printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/release.log"
 case "$1" in
   verify) [ -z "${HARNESS_REFUSE:-}" ] || exit 1
           printf '%s %s\n' "$3" "$(git -C "$repo" ls-remote origin refs/heads/main | cut -f1)" >> "$HARNESS_TEST_ROOT/verified.log" ;;
-  deploy) git -C "$repo" merge --ff-only --quiet "$3" ;;
+  deploy) printf 'hwc-test\n' >> "$HARNESS_TEST_ROOT/activations.log"
+          git -C "$repo" merge --ff-only --quiet "$3" ;;
 esac
 EOF
 # Any activation outside the runner is a bypass.
 for command in sudo nixos-rebuild home-manager; do
   printf '#!/usr/bin/env bash\nprintf "%%s %%s\\n" %s "$*" >> "$HARNESS_TEST_ROOT/bypass.log"\n' "$command" > "$BIN/$command"
 done
-chmod +x "$BIN"/{nix,ssh,nixos-version,hostname,agent-harness,python3,sudo,nixos-rebuild,home-manager}
+chmod +x "$BIN"/{nix,curl,ssh,nixos-version,hostname,agent-harness,python3,sudo,nixos-rebuild,home-manager}
 
 FLEET=hwc-test:hwc-server:hwc-work
 run_publish() {
@@ -296,6 +317,7 @@ run_publish() {
   AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
   AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
   AGENT_HARNESS_FLEET_HOSTS="$FLEET" \
+  AGENT_HARNESS_TRACKER_URL=http://hwc-work:8765 \
   bash "$(dirname "$0")/control.sh" publish "$@"
 }
 run_publish_check() { run_publish --check; }
@@ -307,8 +329,9 @@ no_bypass() {
 
 run_publish_check >/dev/null
 
-# A new harness commit: --plan changes nothing; a refused verification keeps
-# the pin off main; publish pins it verify -> push -> runner deploy, here only.
+# A new harness commit that leaves the tracker crate alone: --plan changes
+# nothing; a refused verification keeps the pin off main; publish pins it
+# verify -> push -> runner deploy, here only, with the hub host not named.
 printf 'new\n' > "$SOURCE_REPO/policy"; git -C "$SOURCE_REPO" commit -q -am new
 STATIC_REVISION=$(git -C "$SOURCE_REPO" rev-parse HEAD)
 heads() { git -C "$SOURCE_REMOTE" rev-parse main; git -C "$NIXOS_REMOTE" rev-parse main; git -C "$NIXOS_REPO" rev-parse main; }
@@ -355,6 +378,52 @@ rg -q 'not switched: hwc-server \(unreachable\)' "$ROOT/fleet.err" \
   echo 'control.test: --fleet did not gate each host or report the unreachable one' >&2; exit 1;
 }
 no_bypass fleet
+
+# Order: named hosts go in the operator's order, this host first when not
+# named, and the tracker hub's host (tracker.url) ahead of all; --plan says why.
+: > "$ROOT/activations.log"
+run_publish --host hwc-server --host hwc-test >/dev/null
+[ "$(cat "$ROOT/activations.log")" = $'hwc-server\nhwc-test' ] || {
+  echo 'control.test: publish did not activate hosts in the order named' >&2; exit 1; }
+PLAN=$(run_publish --plan --host hwc-server --host hwc-work 2>&1)
+printf '%s\n' "$PLAN" | rg -q '^  1\. hwc-work \(runs' \
+  && printf '%s\n' "$PLAN" | rg -q '^     first: it runs the tracker hub \(http://hwc-work:8765\)' \
+  && printf '%s\n' "$PLAN" | rg -q '^  2\. hwc-test \(this host' \
+  && printf '%s\n' "$PLAN" | rg -q '^  3\. hwc-server \(runs' || {
+  echo "control.test: --plan did not put the hub host first with its reason: $PLAN" >&2; exit 1; }
+: > "$ROOT/activations.log"
+run_publish --host hwc-server --host hwc-work >/dev/null
+[ "$(cat "$ROOT/activations.log")" = $'hwc-work\nhwc-test\nhwc-server' ] || {
+  echo 'control.test: the hub host did not activate first' >&2; exit 1; }
+# The hub host fails: publish stops with every other host untouched, reports
+# each host's revision and exits non-zero.
+: > "$ROOT/activations.log"
+if HARNESS_FAIL=hwc-work run_publish --fleet >/dev/null 2>"$ROOT/stop.err"; then
+  echo 'control.test: publish passed after the hub host failed' >&2; exit 1
+fi
+[ "$(cat "$ROOT/activations.log")" = hwc-work ] \
+  && rg -q 'hwc-work, the tracker hub host, did not switch.*publish stopped before any other host' "$ROOT/stop.err" \
+  && rg -q '^  hwc-server: harness rev1, nixos-hwc ' "$ROOT/stop.err" || {
+  echo 'control.test: a failed hub host did not stop publish and report the fleet' >&2; exit 1; }
+# A tracker crate change without the hub host is refused before anything is
+# pushed or switched, naming the command that includes it; with it, it ships.
+printf 'crate v2\n' > "$SOURCE_REPO/lifecycle/tracker/rust/src.rs"
+git -C "$SOURCE_REPO" commit -q -am 'crate v2'
+BEFORE=$(heads); : > "$ROOT/activations.log"
+PLAN=$(run_publish --plan 2>&1)
+if run_publish >/dev/null 2>"$ROOT/refuse.err"; then
+  echo 'control.test: publish without the hub host passed a tracker release change' >&2; exit 1
+fi
+[ "$(heads)" = "$BEFORE" ] && [ ! -s "$ROOT/activations.log" ] \
+  && [ "$(wc -l < "$ROOT/refuse.err")" = 1 ] \
+  && rg -q "^agent-harness: tracker release changes \($(release_of $'crate v1\n') -> $(release_of $'crate v2\n')\) but hwc-work, the tracker hub, is not activated.*; run: agent-harness publish --host hwc-work$" "$ROOT/refuse.err" \
+  && printf '%s\n' "$PLAN" | rg -q '^  REFUSED: tracker release changes' || {
+  echo 'control.test: a tracker release change without the hub host was not refused cleanly' >&2; cat "$ROOT/refuse.err" >&2; exit 1; }
+run_publish --host hwc-work >/dev/null
+[ "$(cat "$ROOT/activations.log")" = $'hwc-work\nhwc-test' ] || {
+  echo 'control.test: publish --host <hub> did not ship the tracker change hub first' >&2; exit 1; }
+release_of $'crate v2\n' > "$ROOT/hub-release"
+no_bypass order
 
 # --candidate: a release that also carries nixos commits. The pin lands on top
 # of the branch and both reach origin main in one verified push; a branch that
