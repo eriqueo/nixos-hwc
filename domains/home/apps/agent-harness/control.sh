@@ -158,6 +158,9 @@ probe() {
     memory/claude)
       for link in "$CLAUDE_HOME"/projects/*/memory; do
         [ -e "$link" ] || [ -L "$link" ] || continue
+        # Claude makes an empty plain folder for a session outside the
+        # workspace (/tmp tests); it holds no memory, so nothing escapes the store.
+        [ -L "$link" ] || [ -n "$(find "$link" -mindepth 1 -print -quit)" ] || continue
         found=1
         case "$(readlink -f "$link")" in "$STATE"/projects/*) ;; *) return 1 ;; esac
       done

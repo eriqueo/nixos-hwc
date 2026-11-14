@@ -124,6 +124,19 @@ for seed in '.matrix.subagents.codex = "provided"' '.matrix.memory = {"codex":"p
 done
 rm "$ROOT/matrix-seed.json"
 
+# Claude memory: an empty plain folder (a session in /tmp) holds nothing and
+# passes; one holding a file outside the state store fails.
+mkdir -p "$ROOT/state/projects/p/memory" "$HOME_T/.claude/projects/p" "$HOME_T/.claude/projects/-tmp-x/memory"
+ln -s "$ROOT/state/projects/p/memory" "$HOME_T/.claude/projects/p/memory"
+jq '.matrix.memory = {"claude":"provided","codex":"unsupported","pi":"unsupported"}' "$ROOT/matrix.json" > "$ROOT/matrix-memory.json"
+MATRIX_FILE="$ROOT/matrix-memory.json" AGENT_STATE_DIR="$ROOT/state" run_doctor >/dev/null || {
+  echo 'control.test: an empty memory folder outside the store failed the matrix' >&2; exit 1; }
+touch "$HOME_T/.claude/projects/-tmp-x/memory/note.md"
+if MATRIX_FILE="$ROOT/matrix-memory.json" AGENT_STATE_DIR="$ROOT/state" run_doctor >/dev/null 2>&1; then
+  echo 'control.test: a memory file outside the store passed the matrix' >&2; exit 1
+fi
+rm -r "$HOME_T/.claude/projects" "$ROOT/matrix-memory.json"
+
 # A skill a program loads from outside the harness must be listed.
 mkdir "$HOME_T/.codex/skills/.system/unlisted"
 if run_doctor >/dev/null 2>&1; then

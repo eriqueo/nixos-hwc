@@ -129,6 +129,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-14 (e): The `memory/claude` matrix probe skips an empty plain `~/.claude/projects/*/memory` folder. Claude makes one for a session outside the workspace (a `/tmp` test); it holds nothing, yet it failed `agent-harness doctor` on the laptop after tonight's tests.
 - 2026-11-14 (d): `sys.nix` approves the generated MCP servers by name (`enabledMcpjsonServers` in the managed Claude settings, from the same attrsets as `~/.mcp.json` and the repo `.mcp.json`). Claude read `~/.mcp.json` as a project file in every new folder and asked "8 new MCP servers found", so an agent started by `tracker-open` or Workbench waited there silently. `agent-harness publish --candidate <ref>` pins on top of a nixos branch. `release.py` pushes `main` to `origin` fast-forward only after a successful activation (after the merge for `--action merge|build`), and fails loudly when origin moved; before, nothing pushed a fast-forwarded main.
 - 2026-11-14 (c): Pins agent-harness bc48a94: `herdr-restore` lists a resumed Codex as running once it is in front (Codex records its session only at its first turn).
 - 2026-11-14 (b): Pins agent-harness dd2ba71: the `herdr-session` hook, `herdr_restore.py`, the delegate Herdr transport and templates, `herdr_link.py` and `herdr_alerts.py` that the 2026-11-13 (e)–(g) entries need; `tracker-open` resumes a project's recorded agent in place.
