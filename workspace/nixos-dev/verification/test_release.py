@@ -34,6 +34,12 @@ class ReleaseContract(unittest.TestCase):
         self.git('add', '--', str(self.file))
         self.git('commit', '-m', 'base')
         self.base = release.revision(self.repo, 'HEAD')
+        origin = tempfile.TemporaryDirectory()
+        self.addCleanup(origin.cleanup)
+        self.origin = Path(origin.name)
+        subprocess.run(['git', 'init', '--quiet', '--bare', '-b', 'main', str(self.origin)], check=True)
+        self.git('remote', 'add', 'origin', str(self.origin))
+        self.git('push', '--quiet', 'origin', 'main')
         self.git('checkout', '-b', 'feature')
         self.file.write_text('{ changed = true; }')
         self.git('commit', '-am', 'desktop')
@@ -123,6 +129,28 @@ class ReleaseContract(unittest.TestCase):
         self.assertEqual(release.revision(self.repo, 'HEAD'), current)
         self.assertEqual(release.revision(self.repo, 'main'), current)
 
+    def test_merge_pushes_main_and_a_moved_origin_fails_loudly(self):
+        with patch.object(release, 'verify', side_effect=lambda repo, candidate, *a, **k: (
+                release.snapshot(repo, candidate, 'system'), '/nonexistent')), \
+             patch.object(release, 'active_revision', return_value=self.base):
+            release.release(self.repo, self.candidate, socket.gethostname(), 'system', 'merge')
+            self.assertEqual(release.git(self.origin, 'rev-parse', 'main'), self.candidate)
+            self.git('checkout', '-q', '-b', 'later', self.candidate)
+            self.file.write_text('{ later = true; }')
+            self.git('commit', '-qam', 'later')
+            later = release.revision(self.repo, 'HEAD')
+            self.git('checkout', '-q', '-b', 'other', self.base)
+            self.file.write_text('{ other = true; }')
+            self.git('commit', '-qam', 'other session')
+            other = release.revision(self.repo, 'HEAD')
+            self.git('checkout', '-q', 'main')
+            # Another session's main on origin (fixture remote); ours must not overwrite it.
+            self.git('push', '--quiet', '--force', 'origin', other + ':refs/heads/main')
+            with self.assertRaisesRegex(ValueError, 'not fast-forwarded'):
+                release.release(self.repo, later, socket.gethostname(), 'system', 'merge')
+        self.assertEqual(release.revision(self.repo, 'main'), later)
+        self.assertEqual(release.git(self.origin, 'rev-parse', 'main'), other)
+
     def test_home_lane_cannot_skip_pending_system_changes(self):
         self.git('checkout', 'feature')
         (self.repo / 'flake.lock').write_text('{}')
@@ -151,6 +179,7 @@ class ReleaseContract(unittest.TestCase):
             with patch.object(release, 'verify', return_value=(token, str(output))):
                 release.release(self.repo, self.candidate, socket.gethostname(), 'home', 'switch')
         self.assertEqual(release.home_revision(home, socket.gethostname()), self.candidate)
+        self.assertEqual(release.git(self.origin, 'rev-parse', 'main'), self.candidate)  # Pushed after the switch.
         known = release.changed(self.repo, self.candidate,
             [self.base, release.home_revision(home, socket.gethostname())])
         self.assertEqual(release.select(INVENTORY, known)[0], ['desktop', 'fleet', 'law', 'mail'])

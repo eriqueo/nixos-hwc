@@ -108,6 +108,7 @@ alone. Nothing in publish runs `nixos-rebuild`, `sudo` or a bare merge of main.
 - `agent-harness publish` activates this host only. Other hosts keep their revision until asked; the final local doctor names them.
 - `--host <name>` (repeatable) or `--fleet` also activates those hosts. Each runs its own runner over SSH (`release.py deploy --candidate origin/main` in its `~/.nixos`) after its harness checkout fast-forwards. An unreachable or refusing host is reported, and publish exits non-zero. `--fleet` ends with `doctor --fleet`.
 - `--check` runs the preflight and prints the plan without pushing.
+- `--candidate <nixos ref>` puts the pin on top of that nixos-hwc branch instead of `origin/main`, for a release that also carries nixos commits. The branch must contain `origin/main`; one that already pins the revision is used as is. Both reach `origin` main in the one verified push.
 
 On a host with `cliUpdates.enable`, `agent-cli-update` runs daily. Run it by
 hand with `systemctl --user start agent-cli-update`. Read the version changes
@@ -128,6 +129,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-14 (d): `sys.nix` approves the generated MCP servers by name (`enabledMcpjsonServers` in the managed Claude settings, from the same attrsets as `~/.mcp.json` and the repo `.mcp.json`). Claude read `~/.mcp.json` as a project file in every new folder and asked "8 new MCP servers found", so an agent started by `tracker-open` or Workbench waited there silently. `agent-harness publish --candidate <ref>` pins on top of a nixos branch. `release.py` pushes `main` to `origin` fast-forward only after a successful activation (after the merge for `--action merge|build`), and fails loudly when origin moved; before, nothing pushed a fast-forwarded main.
 - 2026-11-14 (c): Pins agent-harness bc48a94: `herdr-restore` lists a resumed Codex as running once it is in front (Codex records its session only at its first turn).
 - 2026-11-14 (b): Pins agent-harness dd2ba71: the `herdr-session` hook, `herdr_restore.py`, the delegate Herdr transport and templates, `herdr_link.py` and `herdr_alerts.py` that the 2026-11-13 (e)–(g) entries need; `tracker-open` resumes a project's recorded agent in place.
 - 2026-11-14: `herdrEnv` keeps `TRACKER_HC_BIN` on `~/.local/bin/hc` where `apps/herdr-core` runs the app's own binary (`serve.binary`, the laptop), not the Nix package.

@@ -12,11 +12,21 @@ let
     inherit revision;
     manifest = builtins.fromTOML (builtins.readFile "${inputs.agent-harness}/manifest.toml");
   };
+  # The MCP servers generated below are approved by name in the same file.
+  # Claude reads ~/.mcp.json as a project file in every folder under home and
+  # asks "N new MCP servers found" in each folder it has not seen; an agent
+  # started there (tracker-open, Workbench) waited at that dialog. Names, not
+  # enableAllProjectMcpServers: a repository's own .mcp.json still asks.
+  approvedMcpServers = builtins.toJSON (
+    lib.optionals cfg.userMcp.enable (builtins.attrNames userMcpServers)
+    ++ lib.optionals cfg.projectMcp.enable (builtins.attrNames projectMcpServers)
+  );
   managedClaudeSettings =
     pkgs.runCommand "claude-managed-settings.json" { nativeBuildInputs = [ pkgs.jq ]; }
       ''
-        jq '
+        jq --argjson approved ${lib.escapeShellArg approvedMcpServers} '
           .hooks.UserPromptSubmit[]?.hooks |= map(select((.command | contains("standing-instructions.sh")) | not))
+          | .enabledMcpjsonServers = ((.enabledMcpjsonServers // []) + $approved | unique)
         ' ${inputs.agent-harness}/adapters/claude/settings.json > "$out"
       '';
 
@@ -75,9 +85,7 @@ let
   # home directory; the repo file adds what is specific to the nixos checkout.
   # hwc-sys is the Nix-built gateway service over its tailnet route, so every
   # session on every host gets the deployed code and the service's environment.
-  userMcpJson = pkgs.writeText "user-mcp.json" (
-    builtins.toJSON {
-      mcpServers = {
+  userMcpServers = {
         fetch = {
           command = "uvx";
           args = [ "mcp-server-fetch" ];
@@ -112,11 +120,8 @@ let
         };
       }
       // cfg.userMcp.extraServers;
-    }
-  );
-  projectMcpJson = pkgs.writeText "nixos-mcp.json" (
-    builtins.toJSON {
-      mcpServers = {
+  userMcpJson = pkgs.writeText "user-mcp.json" (builtins.toJSON { mcpServers = userMcpServers; });
+  projectMcpServers = {
         git = {
           command = "uvx";
           args = [
@@ -127,8 +132,7 @@ let
         };
       }
       // cfg.projectMcp.extraServers;
-    }
-  );
+  projectMcpJson = pkgs.writeText "nixos-mcp.json" (builtins.toJSON { mcpServers = projectMcpServers; });
 
   # Scratch and worktrees must remain host-local; only state/ syncs by git.
   agentsRoot = config.hwc.paths.user.agents;

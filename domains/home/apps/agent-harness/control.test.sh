@@ -335,6 +335,32 @@ rg -q 'not switched: hwc-server \(unreachable\)' "$ROOT/fleet.err" \
 }
 no_bypass fleet
 
+# --candidate: a release that also carries nixos commits. The pin lands on top
+# of the branch and both reach origin main in one verified push; a branch that
+# lacks origin/main is refused before anything is committed or pushed.
+git -C "$NIXOS_REPO" checkout -q -b release
+printf 'bump\n' > "$NIXOS_REPO/other-input"; git -C "$NIXOS_REPO" add other-input
+git -C "$NIXOS_REPO" commit -q -m 'other input'
+BRANCH=$(git -C "$NIXOS_REPO" rev-parse HEAD)
+git -C "$NIXOS_REPO" checkout -q main
+printf 'candidate\n' > "$SOURCE_REPO/policy"; git -C "$SOURCE_REPO" commit -q -am candidate
+STATIC_REVISION=$(git -C "$SOURCE_REPO" rev-parse HEAD)
+: > "$ROOT/release.log"
+run_publish --candidate release >/dev/null
+PIN=$(git -C "$NIXOS_REMOTE" rev-parse main)
+[ "$(git -C "$NIXOS_REMOTE" rev-parse "$PIN^")" = "$BRANCH" ] \
+  && [ "$(git -C "$NIXOS_REMOTE" show "$PIN:flake.lock" | jq -r '.nodes."agent-harness".locked.rev')" = "$STATIC_REVISION" ] \
+  && [ "$(git -C "$NIXOS_REPO" rev-parse main)" = "$PIN" ] \
+  && [ "$(cat "$ROOT/release.log")" = "$(printf -- '--repo %s verify --candidate %s\n--repo %s deploy --candidate %s' "$NIXOS_REPO" "$PIN" "$NIXOS_REPO" "$PIN")" ] || {
+  echo 'control.test: publish --candidate did not pin on top of the branch and ship both' >&2; exit 1;
+}
+git -C "$NIXOS_REPO" branch -q stale "$BRANCH^"
+if run_publish --candidate stale >/dev/null 2>"$ROOT/stale.err" || [ "$(git -C "$NIXOS_REMOTE" rev-parse main)" != "$PIN" ] \
+    || ! rg -q 'does not contain origin/main' "$ROOT/stale.err"; then
+  echo 'control.test: a candidate without origin/main was not refused' >&2; exit 1
+fi
+no_bypass candidate
+
 # Another session's pushes: one before publish starts, one during the suites.
 OTHER="$ROOT/publish-other"
 git clone -q "$SOURCE_REMOTE" "$OTHER"

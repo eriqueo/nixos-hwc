@@ -177,6 +177,20 @@ def release_lock(repo):
         yield
 
 
+def publish_main(repo, candidate):
+    """Fast-forward origin's main to the integrated candidate. Nothing else
+    pushes it: the post-commit hook pushes only on a commit, and this merge
+    is a fast-forward. A refusal (origin moved, no access) is loud."""
+    try:
+        git(repo, 'fetch', '--quiet', 'origin', 'refs/heads/main:refs/remotes/origin/main')
+        if revision(repo, 'origin/main') == candidate:
+            return
+        subprocess.run(['git', '-C', str(repo), 'push', '--quiet', 'origin', candidate + ':refs/heads/main'], check=True)
+    except subprocess.CalledProcessError:
+        raise ValueError(f'main is {candidate} here, but origin main was not fast-forwarded to it; '
+                         f'push it: git -C {repo} push origin main') from None
+
+
 def verify(repo, candidate, target, lane, full=False, nix_args=()):
     token = snapshot(repo, candidate, lane)
     if lane == 'home':
@@ -223,6 +237,7 @@ def release(repo, candidate, target, lane, action, full=False, nix_args=()):
         if active_revision(lane) != token[4] or generation(lane) != token[5]:
             raise ValueError('Active generation changed during integration; rerun verification')
         if action == 'merge' or action == 'build':
+            publish_main(repo, candidate)
             return
         if lane == 'home':
             if action != 'switch':
@@ -232,6 +247,8 @@ def release(repo, candidate, target, lane, action, full=False, nix_args=()):
             subprocess.run(['sudo', 'env', 'HOME=/root', 'nixos-rebuild', action,
                             '--flake', uri(repo, candidate) + '#' + target, *nix_args], check=True)
         print(f'{candidate}: activated {target} via {lane}; live service health still requires inspection')
+        # After a successful activation only: a failed switch leaves main local for a fix forward.
+        publish_main(repo, candidate)
 
 
 def main():

@@ -426,10 +426,12 @@ host_revision() {
 # the named ones. Before 2026-11-13 every publish switched the whole fleet.
 publish_targets() {
   local host requested=() all=0
+  CANDIDATE_REF=
   validate_fleet
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --fleet) all=1 ;;
+      --candidate) [ -n "${2:-}" ] || usage; CANDIDATE_REF=$2; shift ;;
       --host) [ -n "${2:-}" ] || usage; requested+=("$2"); shift ;;
       *) usage ;;
     esac
@@ -448,7 +450,9 @@ publish_targets() {
 print_plan() {
   local revision=$1 host current
   printf 'publish plan: harness %s (origin/main pins %s)\n' "$revision" "$locked"
-  if [ "$locked" = "$revision" ]; then
+  if [ -n "$CANDIDATE_REF" ]; then
+    printf '  nixos-hwc: pin on top of %s (it must contain origin/main) in a detached worktree, release.py verify it, push it to origin main (fast-forward only)\n' "$CANDIDATE_REF"
+  elif [ "$locked" = "$revision" ]; then
     printf '  nixos-hwc: pin unchanged; no commit\n'
   else
     printf '  nixos-hwc: commit the pin on origin/main in a detached worktree, release.py verify it, push it to origin main (fast-forward only)\n'
@@ -486,36 +490,52 @@ publish_plan() {
 # hook pushes the current branch: a pin committed on main reached origin
 # before any check. A push that loses a race to another session starts again
 # from the new origin/main; nothing reaches main unverified.
+# --candidate <ref>: the pin goes on top of that nixos-hwc commit instead, so
+# a release that also carries nixos commits (another input bump, a module fix)
+# ships in one verified push. The ref must contain origin/main; one that
+# already pins the revision is the candidate itself.
 integrate_pin() {
-  local attempt worktree
+  local attempt worktree base
   for attempt in 1 2 3; do
     nixos_main_in_origin || return 1
-    if [ "$(origin_pin)" = "$static_revision" ]; then
-      candidate=$(git -C "$NIXOS" rev-parse origin/main)
-      ok "origin/main $candidate already pins $static_revision"
-      return 0
+    base=origin/main worktree=
+    if [ -n "$CANDIDATE_REF" ]; then
+      base=$(git -C "$NIXOS" rev-parse --verify --quiet "$CANDIDATE_REF^{commit}") || {
+        printf 'agent-harness: no nixos-hwc commit %s\n' "$CANDIDATE_REF" >&2; return 1; }
+      git -C "$NIXOS" merge-base --is-ancestor origin/main "$base" || {
+        printf 'agent-harness: %s does not contain origin/main; rebase it onto origin/main, then publish again\n' "$CANDIDATE_REF" >&2
+        return 1
+      }
     fi
-    mkdir -p "$NIXOS-worktrees"
-    worktree=$(mktemp -d "$NIXOS-worktrees/harness-publish.XXXXXX")
-    git -C "$NIXOS" worktree add --quiet --detach "$worktree" origin/main
-    (cd "$worktree" && nix flake update agent-harness)
-    [ "$(jq -r '.nodes."agent-harness".locked.rev' "$worktree/flake.lock")" = "$static_revision" ] || {
-      printf 'agent-harness: flake lock did not resolve static revision %s (left at %s)\n' "$static_revision" "$worktree" >&2
-      return 1
-    }
-    git -C "$worktree" add flake.lock
-    git -C "$worktree" commit --quiet -m "chore: publish agent harness $static_revision"
-    candidate=$(git -C "$worktree" rev-parse HEAD)
+    if [ "$(git -C "$NIXOS" show "$base:flake.lock" | jq -r '.nodes."agent-harness".locked.rev')" = "$static_revision" ]; then
+      candidate=$(git -C "$NIXOS" rev-parse "$base")
+      if [ "$candidate" = "$(git -C "$NIXOS" rev-parse origin/main)" ]; then
+        ok "origin/main $candidate already pins $static_revision"
+        return 0
+      fi
+    else
+      mkdir -p "$NIXOS-worktrees"
+      worktree=$(mktemp -d "$NIXOS-worktrees/harness-publish.XXXXXX")
+      git -C "$NIXOS" worktree add --quiet --detach "$worktree" "$base"
+      (cd "$worktree" && nix flake update agent-harness)
+      [ "$(jq -r '.nodes."agent-harness".locked.rev' "$worktree/flake.lock")" = "$static_revision" ] || {
+        printf 'agent-harness: flake lock did not resolve static revision %s (left at %s)\n' "$static_revision" "$worktree" >&2
+        return 1
+      }
+      git -C "$worktree" add flake.lock
+      git -C "$worktree" commit --quiet -m "chore: publish agent harness $static_revision"
+      candidate=$(git -C "$worktree" rev-parse HEAD)
+    fi
     release_runner verify --candidate "$candidate" || {
-      printf 'agent-harness: release verification refused pin commit %s; left at %s\n' "$candidate" "$worktree" >&2
+      printf 'agent-harness: release verification refused candidate %s%s\n' "$candidate" "${worktree:+; left at $worktree}" >&2
       return 1
     }
     if git -C "$NIXOS" push origin "$candidate:refs/heads/main"; then
       git -C "$NIXOS" fetch --quiet origin refs/heads/main:refs/remotes/origin/main
-      git -C "$NIXOS" worktree remove "$worktree"
+      [ -z "$worktree" ] || git -C "$NIXOS" worktree remove "$worktree"
       return 0
     fi
-    git -C "$NIXOS" worktree remove --force "$worktree"
+    [ -z "$worktree" ] || git -C "$NIXOS" worktree remove --force "$worktree"
     warn "origin/main moved before the pin push (attempt $attempt); rebuilding the candidate"
   done
   printf 'agent-harness: origin/main moved during each of 3 attempts; publish again when it is quiet\n' >&2
@@ -615,7 +635,7 @@ drift() {
 }
 
 usage() {
-  printf 'usage: agent-harness [status|doctor [--fleet]|matrix [--fleet]|drift|revision|sync|validate-state|diff|publish [--plan|--check] [--host <name>]... [--fleet]]\n' >&2
+  printf 'usage: agent-harness [status|doctor [--fleet]|matrix [--fleet]|drift|revision|sync|validate-state|diff|publish [--plan|--check] [--candidate <nixos ref>] [--host <name>]... [--fleet]]\n' >&2
   exit 2
 }
 

@@ -29,7 +29,8 @@ triggered by the file's path rather than your read of the task.
   `origin/main`, then run
   `python3 workspace/nixos-dev/verification/release.py deploy --candidate <branch>`.
   This verifies the exact candidate against current main and the active target
-  revision, builds the local assembly, fast-forwards main, then switches. Services
+  revision, builds the local assembly, fast-forwards main, switches, then pushes
+  main to `origin` fast-forward only (it fails loudly if origin moved). Services
   read files from this checkout at runtime (`paths.nixos`), so it must hold
   exactly what runs, and `--ff-only` is what stops a deploy from dropping
   commits that are already live. If a switch fails verification, fix forward or
