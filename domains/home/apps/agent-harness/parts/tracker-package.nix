@@ -38,7 +38,12 @@ pkgs.rustPlatform.buildRustPackage {
   HWC_TRACKER_RELEASE = builtins.substring 0 12 (baseNameOf crate);
   nativeCheckInputs = [ pkgs.python3 pkgs.jq pkgs.git ];
   inherit doCheck;
-  preCheck = ''
+  # The tests are dev builds (crate README, Policy and release): they build
+  # hubs and clients with chosen releases, and a dev hub accepts any client.
+  # Unsetting the release recompiles the test targets only; the installed
+  # binary keeps it.
+  preCheck = lib.optionalString doCheck ''
     export PYTHONPATH="${harness}/lifecycle/tracker"
+    unset HWC_TRACKER_RELEASE
   '';
 }
