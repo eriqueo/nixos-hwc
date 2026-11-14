@@ -249,7 +249,15 @@ cat > "$BIN/ssh" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/ssh.log"
 for arg in "$@"; do case " ${HARNESS_OFFLINE:-} " in *" $arg "*) exit 255 ;; esac; done
-case "$*" in *'agent-harness revision'*) printf 'rev1\n' ;; esac
+case "$*" in
+  *'agent-harness revision'*) printf '%s\n' "${HARNESS_REMOTE_REVISION:-rev1}" ;;
+  *'nixos-version --json'*) printf '{"configurationRevision":"%s"}\n' "${HARNESS_CONFIGURATION:-none}" ;;
+esac
+EOF
+# Every host's active system reports HARNESS_CONFIGURATION as its nixos-hwc commit.
+cat > "$BIN/nixos-version" <<'EOF'
+#!/usr/bin/env bash
+printf '{"configurationRevision":"%s"}\n' "${HARNESS_CONFIGURATION:-none}"
 EOF
 cat > "$BIN/hostname" <<'EOF'
 #!/usr/bin/env bash
@@ -279,7 +287,7 @@ EOF
 for command in sudo nixos-rebuild home-manager; do
   printf '#!/usr/bin/env bash\nprintf "%%s %%s\\n" %s "$*" >> "$HARNESS_TEST_ROOT/bypass.log"\n' "$command" > "$BIN/$command"
 done
-chmod +x "$BIN"/{nix,ssh,hostname,agent-harness,python3,sudo,nixos-rebuild,home-manager}
+chmod +x "$BIN"/{nix,ssh,nixos-version,hostname,agent-harness,python3,sudo,nixos-rebuild,home-manager}
 
 FLEET=hwc-test:hwc-server:hwc-work
 run_publish() {
@@ -373,6 +381,41 @@ if run_publish --candidate stale >/dev/null 2>"$ROOT/stale.err" || [ "$(git -C "
   echo 'control.test: a candidate without origin/main was not refused' >&2; exit 1
 fi
 no_bypass candidate
+
+# A nixos-only release: every host already runs the pinned harness, at the
+# previous nixos-hwc commit. Each targeted host still activates the new commit
+# (before 2026-11-14 publish compared only the harness revision and skipped
+# them all); a host already on the new commit is left alone.
+cp "$ROOT/expected.json" "$ROOT/expected.saved"
+jq --arg r "$STATIC_REVISION" '.staticPolicy.revision = $r' "$ROOT/expected.saved" > "$ROOT/expected.json"
+git -C "$NIXOS_REPO" checkout -q -b nixos-only "$PIN"
+printf 'module\n' > "$NIXOS_REPO/module"; git -C "$NIXOS_REPO" add module
+git -C "$NIXOS_REPO" commit -q -m 'nixos only'
+NIXOS_ONLY=$(git -C "$NIXOS_REPO" rev-parse HEAD)
+git -C "$NIXOS_REPO" checkout -q main
+: > "$ROOT/release.log"; : > "$ROOT/ssh.log"
+export HARNESS_REMOTE_REVISION="$STATIC_REVISION" HARNESS_CONFIGURATION="$PIN"
+PLAN=$(run_publish --plan --candidate nixos-only --fleet 2>&1)
+printf '%s\n' "$PLAN" | rg -q 'hwc-work \(runs .*release.py deploy' \
+  && printf '%s\n' "$PLAN" | rg -q 'hwc-test \(this host' \
+  && ! printf '%s\n' "$PLAN" | rg -q 'no activation' || {
+  echo 'control.test: publish --plan skipped hosts for a nixos-only change' >&2; exit 1;
+}
+run_publish --candidate nixos-only --fleet >/dev/null
+[ "$(git -C "$NIXOS_REMOTE" rev-parse main)" = "$NIXOS_ONLY" ] \
+  && [ "$(cat "$ROOT/release.log")" = "$(printf -- '--repo %s verify --candidate %s\n--repo %s deploy --candidate %s' "$NIXOS_REPO" "$NIXOS_ONLY" "$NIXOS_REPO" "$NIXOS_ONLY")" ] \
+  && [ "$(rg -c 'release.py deploy --candidate origin/main' "$ROOT/ssh.log")" = 2 ] || {
+  echo 'control.test: publish skipped a host for a nixos-only change' >&2; exit 1;
+}
+: > "$ROOT/release.log"; : > "$ROOT/ssh.log"
+HARNESS_CONFIGURATION="$NIXOS_ONLY" run_publish --fleet >/dev/null
+[ ! -s "$ROOT/release.log" ] && ! rg -q 'release.py' "$ROOT/ssh.log" || {
+  echo 'control.test: publish activated hosts that already run the release' >&2; exit 1;
+}
+unset HARNESS_REMOTE_REVISION HARNESS_CONFIGURATION
+mv "$ROOT/expected.saved" "$ROOT/expected.json"
+PIN=$NIXOS_ONLY
+no_bypass nixos-only
 
 # Another session's pushes: one before publish starts, one during the suites.
 OTHER="$ROOT/publish-other"

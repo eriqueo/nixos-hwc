@@ -425,6 +425,36 @@ host_revision() {
   ssh -o BatchMode=yes -o ConnectTimeout=8 "$1" 'agent-harness revision' 2>/dev/null || printf 'unreachable\n'
 }
 
+# The nixos-hwc commit a host's active system was built from ("" when the
+# system carries none, "unreachable" when the host does not answer).
+host_configuration() {
+  local json
+  if [ "$1" = "$(hostname)" ]; then
+    json=$(nixos-version --json 2>/dev/null) || json='{}'
+  else
+    json=$(ssh -o BatchMode=yes -o ConnectTimeout=8 "$1" 'nixos-version --json' 2>/dev/null) || { printf 'unreachable\n'; return; }
+  fi
+  jq -r '.configurationRevision // ""' <<< "$json" 2>/dev/null || printf '\n'
+}
+
+# A host is current only when it runs both the harness revision and the
+# nixos-hwc commit that pins it. Before 2026-11-14 only the harness revision
+# was compared, so a release carrying nixos commits on an unchanged pin
+# (`--candidate`) skipped every host that already ran that pin.
+host_current() {
+  [ "$(host_revision "$1")" = "$2" ] && [ -n "$3" ] && [ "$(host_configuration "$1")" = "$3" ]
+}
+
+# The nixos-hwc commit publish will activate, when it is known before
+# integration: origin/main or the candidate itself when either already pins
+# the revision. Empty when publish must make a new pin commit.
+planned_commit() {
+  local revision=$1 base=origin/main
+  [ -z "$CANDIDATE_REF" ] || base=$CANDIDATE_REF
+  [ "$(git -C "$NIXOS" show "$base:flake.lock" 2>/dev/null | jq -r '.nodes."agent-harness".locked.rev')" = "$revision" ] || return 0
+  git -C "$NIXOS" rev-parse --verify --quiet "$base^{commit}"
+}
+
 # Hosts publish activates: this host always (the pin is integrated here), and
 # the named ones. Before 2026-11-13 every publish switched the whole fleet.
 publish_targets() {
@@ -451,7 +481,8 @@ publish_targets() {
 # What publish does to each fleet host. Every activation goes through
 # workspace/nixos-dev/verification/release.py on the host it activates.
 print_plan() {
-  local revision=$1 host current
+  local revision=$1 host current target
+  target=$(planned_commit "$revision")
   printf 'publish plan: harness %s (origin/main pins %s)\n' "$revision" "$locked"
   if [ -n "$CANDIDATE_REF" ]; then
     printf '  nixos-hwc: pin on top of %s (it must contain origin/main) in a detached worktree, release.py verify it, push it to origin main (fast-forward only)\n' "$CANDIDATE_REF"
@@ -462,8 +493,8 @@ print_plan() {
   fi
   for host in "${FLEET_HOSTS[@]}"; do
     current=$(host_revision "$host")
-    if [ "$current" = "$revision" ]; then
-      printf '  %s: already runs %s; no activation\n' "$host" "$revision"
+    if host_current "$host" "$revision" "$target"; then
+      printf '  %s: already runs %s at nixos-hwc %s; no activation\n' "$host" "$revision" "$target"
     elif [ "$host" = "$(hostname)" ]; then
       printf '  %s (this host, runs %s): release.py deploy --candidate <pin commit>: verify, fast-forward main, switch\n' "$host" "$current"
     elif case " ${TARGETS[*]} " in *" $host "*) true ;; *) false ;; esac; then
@@ -572,8 +603,8 @@ publish() {
 
   # Every activation is the release runner on the host it activates: it
   # verifies the exact candidate, fast-forwards that host's main and switches.
-  if [ "$(expected_revision)" = "$static_revision" ]; then
-    ok "$(hostname) already runs $static_revision"
+  if host_current "$(hostname)" "$static_revision" "$candidate"; then
+    ok "$(hostname) already runs $static_revision at nixos-hwc $candidate"
   elif ! release_runner deploy --candidate "$candidate"; then
     printf 'agent-harness: %s is on origin/main, but this host refused or failed activation; fix that, then: python3 workspace/nixos-dev/verification/release.py deploy --candidate origin/main\n' "$candidate" >&2
     return 1
@@ -585,12 +616,14 @@ publish() {
   # such host stopped the loop).
   for host in "${TARGETS[@]}"; do
     [ "$host" != "$(hostname)" ] || continue
-    case "$(host_revision "$host")" in
-      unreachable) skipped+=("$host (unreachable)") ;;
-      "$static_revision") ok "$host already runs $static_revision" ;;
-      *) ssh -t "$host" "git -C ~/800_agents/harness pull --ff-only && cd ~/.nixos && git fetch --quiet origin && python3 workspace/nixos-dev/verification/release.py deploy --candidate origin/main" \
-           || skipped+=("$host (refused or failed; see above)") ;;
-    esac
+    if [ "$(host_revision "$host")" = unreachable ]; then
+      skipped+=("$host (unreachable)")
+    elif host_current "$host" "$static_revision" "$candidate"; then
+      ok "$host already runs $static_revision at nixos-hwc $candidate"
+    else
+      ssh -t "$host" "git -C ~/800_agents/harness pull --ff-only && cd ~/.nixos && git fetch --quiet origin && python3 workspace/nixos-dev/verification/release.py deploy --candidate origin/main" \
+        || skipped+=("$host (refused or failed; see above)")
+    fi
   done
   for host in "${FLEET_HOSTS[@]}"; do
     case " ${TARGETS[*]} " in *" $host "*) ;; *) untargeted+=("$host") ;; esac
