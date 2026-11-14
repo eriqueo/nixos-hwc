@@ -481,11 +481,13 @@ publish_plan() {
   print_plan "$head"
 }
 
-# Commit the pin on a branch from origin/main, verify it with the runner, and
-# push it to origin main. A push that loses a race to another session starts
-# again from the new origin/main; nothing reached main unverified.
+# Commit the pin on origin/main in a detached worktree, verify it with the
+# runner, and push it to origin main. Detached, because nixos-hwc's post-commit
+# hook pushes the current branch: a pin committed on main reached origin
+# before any check. A push that loses a race to another session starts again
+# from the new origin/main; nothing reaches main unverified.
 integrate_pin() {
-  local attempt worktree branch
+  local attempt worktree
   for attempt in 1 2 3; do
     nixos_main_in_origin || return 1
     if [ "$(origin_pin)" = "$static_revision" ]; then
@@ -495,8 +497,7 @@ integrate_pin() {
     fi
     mkdir -p "$NIXOS-worktrees"
     worktree=$(mktemp -d "$NIXOS-worktrees/harness-publish.XXXXXX")
-    branch="harness-publish/${worktree##*.}"
-    git -C "$NIXOS" worktree add --quiet -b "$branch" "$worktree" origin/main
+    git -C "$NIXOS" worktree add --quiet --detach "$worktree" origin/main
     (cd "$worktree" && nix flake update agent-harness)
     [ "$(jq -r '.nodes."agent-harness".locked.rev' "$worktree/flake.lock")" = "$static_revision" ] || {
       printf 'agent-harness: flake lock did not resolve static revision %s (left at %s)\n' "$static_revision" "$worktree" >&2
@@ -506,16 +507,15 @@ integrate_pin() {
     git -C "$worktree" commit --quiet -m "chore: publish agent harness $static_revision"
     candidate=$(git -C "$worktree" rev-parse HEAD)
     release_runner verify --candidate "$candidate" || {
-      printf 'agent-harness: release verification refused pin commit %s; left at %s (branch %s)\n' "$candidate" "$worktree" "$branch" >&2
+      printf 'agent-harness: release verification refused pin commit %s; left at %s\n' "$candidate" "$worktree" >&2
       return 1
     }
     if git -C "$NIXOS" push origin "$candidate:refs/heads/main"; then
+      git -C "$NIXOS" fetch --quiet origin refs/heads/main:refs/remotes/origin/main
       git -C "$NIXOS" worktree remove "$worktree"
-      git -C "$NIXOS" branch --quiet -D "$branch"
       return 0
     fi
     git -C "$NIXOS" worktree remove --force "$worktree"
-    git -C "$NIXOS" branch --quiet -D "$branch"
     warn "origin/main moved before the pin push (attempt $attempt); rebuilding the candidate"
   done
   printf 'agent-harness: origin/main moved during each of 3 attempts; publish again when it is quiet\n' >&2

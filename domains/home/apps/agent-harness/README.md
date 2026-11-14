@@ -93,8 +93,9 @@ the local desired revision. `agent-harness sync` validates and synchronizes muta
 
 `agent-harness publish` ships a harness revision. It runs the harness suites,
 pushes the harness to `github` and `origin`, and prints its plan per host. When
-the pin moves, it commits it on a branch from nixos-hwc `origin/main` (a
-throwaway worktree under `~/.nixos-worktrees/`), runs `release.py verify` on it,
+the pin moves, it commits it on nixos-hwc `origin/main` in a detached
+throwaway worktree under `~/.nixos-worktrees/` (detached, so the post-commit
+hook pushes nothing), runs `release.py verify` on it,
 and pushes it to `origin` main fast-forward only. A push that lost a race is
 rebuilt from the new `origin/main`. This host then activates with `release.py
 deploy --candidate <pin commit>`. A host already running the revision is left
@@ -124,7 +125,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
-- 2026-11-13 (c): `agent-harness publish` goes through the release gate. It used to build all three hosts (control.sh:447-456) and switch each with a direct `nixos-rebuild` (laptop:470, remote over SSH:472). It also fast-forwarded and committed on nixos-hwc main itself (:396, :437) and replayed a lost push with `pull --rebase` on main (:460). Now the pin is verified before it reaches `origin` main, each host activates through `release.py` on that host, and the default activates this host only (`--host`, `--fleet`, new `--plan`). The fleet-wide switch had no dependency behind it: each host's doctor compares that host's own system and user manifests, so a host on an older revision is consistent; `doctor --fleet` only reports the difference. The remote-store prebuild is gone, because each host's runner builds and verifies there. `control.test.sh` now fails on any activation outside the runner, and the home verification owner runs it (`agent-harness-control`).
+- 2026-11-13 (c): `agent-harness publish` goes through the release gate. It used to build all three hosts (control.sh:447-456) and switch each with a direct `nixos-rebuild` (laptop:470, remote over SSH:472). It also fast-forwarded and committed on nixos-hwc main itself (:396, :437) and replayed a lost push with `pull --rebase` on main (:460). Because nixos-hwc's post-commit hook pushes the current branch, that pin commit on main also reached `origin` before any build. Now the pin is verified before it reaches `origin` main, each host activates through `release.py` on that host, and the default activates this host only (`--host`, `--fleet`, new `--plan`). The fleet-wide switch had no dependency behind it: each host's doctor compares that host's own system and user manifests, so a host on an older revision is consistent; `doctor --fleet` only reports the difference. The remote-store prebuild is gone, because each host's runner builds and verifies there. `control.test.sh` now fails on any activation outside the runner, and the home verification owner runs it (`agent-harness-control`).
 - 2026-11-13 (b): Pins agent-harness a8fb5e5: tracked agent work in Herdr App terminals. New `tracker-open` wrapper (pinned `tracker/herdr.py`); `tracker-link` and `tracker-relay` get `herdrEnv` (`TRACKER_HC_BIN`, `TRACKER_HERDR_APP_BIN` under the home directory), `tracker-link` also gets `tracker.url`, and the relay restarts on `herdr.py` changes.
 - 2026-11-13: Publish's one-time host migration is gone. Every host has moved to `~/800_agents/harness`, and no host keeps a `~/.claude-config` link. The commit gate no longer falls back to `bin/harness-policy-check`: every harness worktree carries `checks/`.
 - 2026-11-12: The harness repo is `eriqueo/agent-harness` (flake input renamed; same revision and hash) and its working copy is `~/800_agents/harness` (`editableSource`, `control.sh` SOURCE, the ownership contract). Publish migrates a host the first time it reaches it: moves `~/.claude-config`, repairs its worktrees, leaves the old path as a link and renames both remotes (TEMPORARY until S6e). Managed Claude settings no longer rewrite the authoring path: the harness names `/etc/agent-harness/guards/` itself.

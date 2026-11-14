@@ -220,6 +220,9 @@ git -C "$NIXOS_REPO" add flake.lock
 git -C "$NIXOS_REPO" commit -q -m nixos
 git -C "$NIXOS_REPO" remote add origin "$NIXOS_REMOTE"
 git -C "$NIXOS_REPO" push -q -u origin main
+# nixos-hwc's post-commit hook: push the current branch after every commit.
+printf '#!/usr/bin/env bash\nb=$(git branch --show-current); [ -z "$b" ] || git push -q origin "$b"\n' > "$NIXOS_REPO/.git/hooks/post-commit"
+chmod +x "$NIXOS_REPO/.git/hooks/post-commit"
 
 cat > "$BIN/nix" <<'EOF'
 #!/usr/bin/env bash
@@ -296,11 +299,11 @@ PLAN=$(run_publish --plan 2>&1) || { echo 'control.test: publish --plan failed' 
   echo 'control.test: publish --plan changed something or did not show each host' >&2; exit 1;
 }
 if HARNESS_REFUSE=1 run_publish >/dev/null 2>&1 || [ "$(git -C "$NIXOS_REMOTE" rev-parse main)" != "$(awk 'NR==2' <<< "$BEFORE")" ] \
-    || [ "$(git -C "$NIXOS_REPO" rev-parse main)" != "$(awk 'NR==3' <<< "$BEFORE")" ]; then
-  echo 'control.test: a pin the runner refused reached main' >&2; exit 1
+    || [ "$(git -C "$NIXOS_REPO" rev-parse main)" != "$(awk 'NR==3' <<< "$BEFORE")" ] \
+    || [ "$(git -C "$NIXOS_REMOTE" for-each-ref --format='%(refname)')" != refs/heads/main ]; then
+  echo 'control.test: a pin the runner refused reached the nixos remote' >&2; exit 1
 fi
 rm -rf "$NIXOS_REPO-worktrees"; git -C "$NIXOS_REPO" worktree prune
-git -C "$NIXOS_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/harness-publish/*' | xargs -r git -C "$NIXOS_REPO" branch -q -D
 : > "$ROOT/release.log"
 run_publish >/dev/null
 PIN=$(git -C "$NIXOS_REMOTE" rev-parse main)
