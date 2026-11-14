@@ -358,6 +358,7 @@ in
         LOG_LEVEL = "info";
         NODE_ENV = "production";
         HWC_NOTIFY_URL = cfg.notifyUrl;
+        HOME_SCOUT_DASHBOARD_URL = "https://home-scout.${config.hwc.networking.shared.vhostDomain}";
         # The classifier shells out to the `claude` CLI (lead_scout precedent:
         # unit PATH carries only nodejs, so the binary must be declared).
         CLAUDE_BIN = "/etc/profiles/per-user/${cfg.user}/bin/claude";
