@@ -55,8 +55,6 @@
   # The project tracker hub runs here only: http://hwc-work:8765/ on the tailnet.
   hwc.home.apps.agent-harness.tracker = {
     enable = true;
-    lifecycle.intakeEnabled = true;
-    lifecycle.dispatchEnabled = true;
     # Installed capability4 scratch Close passed36 native/helper recovery checks.
     lifecycle.close.enable = true;
     # Protocol2 Codex sessions are shared. Close requires an owned per-thread

@@ -232,9 +232,12 @@ let
       python3
       bash
       systemd
+      # ws changes tracker records only through the hub's client.
+      trackerPackage
     ];
     text = ''
       export WS_ROOT=${lib.escapeShellArg cfg.workspaceRoot}
+      : "''${TRACKER_URL:=${cfg.tracker.url}}"; export TRACKER_URL
       export WS_PRESERVATION_HELPER=${wsPreservation}
       exec ${pkgs.bash}/bin/bash ${harness}/lifecycle/ws "$@"
     '';
@@ -385,20 +388,14 @@ in
     };
     tracker = {
       enable = lib.mkEnableOption ''
-        the project tracker hub (harness lifecycle/tracker/server.py): every agent
+        the project tracker hub (`hwc-tracker serve`, harness lifecycle/tracker/rust): every agent
         project's roadmap, plan and Eric's decision cards, on one tailnet page.
         Run it on ONE host; project data syncs through the deliverables folder'';
+      # Review/Close retired with the Rust hub (2026-11-14): the hub has no
+      # lifecycle settings. `close.*` remains only because T3's release drill
+      # (apps/t3code `t3-update`, t3_release.py) still reads it and the relay's
+      # TRACKER_CLOSE_RUNTIME; remove it with that drill.
       lifecycle = {
-        intakeEnabled = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Accept explicit Review requests after backup, native isolation and result/stop acceptance.";
-        };
-        dispatchEnabled = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "Allow new lifecycle worker/helper starts and prepared effects; existing requests remain inspectable when disabled.";
-        };
         close = {
           enable = lib.mkEnableOption "canonical Close after ordinary native, owning cleanup and shutdown acceptance";
           brainRoot = lib.mkOption {
@@ -616,6 +613,8 @@ in
       cli
       doctor
       ws
+      # `hwc-tracker`: agents change tracker records only through the hub.
+      trackerPackage
       stateSync
       stateValidator
       (pkgs.writeShellScriptBin "log-mistake" ''exec ${pkgs.python3}/bin/python3 ${harness}/guards/log-mistake "$@"'')
@@ -831,52 +830,59 @@ in
       };
     };
 
-    # Tracker data is not state of this unit: tracker.json (agents) and
-    # decisions.json / next-prompt.md (this server) live in each project's
-    # synced deliverables folder, so no StateDirectory or retention timer.
+    # The hub is the one writer of each project's tracker.json, decisions.json
+    # and next-prompt.md in the synced deliverables folder; agents, ws and
+    # mail-health change them through `hwc-tracker`. Those files are not state
+    # of this unit, so no StateDirectory or retention timer. Every setting is a
+    # flag (the binary reads no environment); the crate README is the contract.
+    # A refused setting exits 78, which RestartPreventExitStatus keeps from
+    # looping; a held root or a busy port is exit 1 and restarts.
+    # Rollback: the previous generation runs the Python hub (server.py, kept in
+    # the harness) on the same files; Python reads everything Rust writes.
     systemd.user.services.hwc-tracker = lib.mkIf cfg.tracker.enable {
       Unit = {
         Description = "HWC project tracker hub (roadmaps, plans, decision cards)";
         After = [ "network-online.target" ];
-        # The server and page are pinned harness files; a new revision restarts it.
-        X-Restart-Triggers = map (f: "${harness}/lifecycle/tracker/${f}") [ "server.py" "index.html" "handoff_doc.py" "lifecycle.py" "close-contract.json" ];
+        # The binary and the page are pinned; a new build or page restarts it.
+        X-Restart-Triggers = [ "${trackerPackage}" "${harness}/lifecycle/tracker/index.html" ];
       };
       Service = {
-        ExecStart = "${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/server.py ${toString cfg.tracker.port}";
-        # No T3 environment: the hub only queues pings; each host's
-        # tracker-relay posts them into its own T3.
-        # TRACKER_LEDGERS: every host's ws ledger, for the handoff coverage check.
-        Environment = [
-          "TRACKER_ROOT=${cfg.tracker.root}"
-          "TRACKER_LEDGERS=${cfg.stateDir}/ledger"
-          "TRACKER_LIFECYCLE_INTAKE=${if cfg.tracker.lifecycle.intakeEnabled then "1" else "0"}"
-          "TRACKER_LIFECYCLE_DISPATCH=${if cfg.tracker.lifecycle.dispatchEnabled then "1" else "0"}"
-          "TRACKER_CLOSE_ENABLED=${if cfg.tracker.lifecycle.close.enable then "1" else "0"}"
-          # The Backlog tab's read model lives on the Refinery board (one store of work items).
-          "TRACKER_REFINERY_URL=${cfg.tracker.refineryUrl}"
-          "TRACKER_REFINERY_PUBLIC_URL=${cfg.tracker.refineryPublicUrl}"
+        ExecStart = lib.escapeShellArgs ([
+          "${trackerPackage}/bin/hwc-tracker" "serve" "--production"
+          "--root" cfg.tracker.root
+          "--bind" "0.0.0.0:${toString cfg.tracker.port}"
+          # Every host's ws ledger, for the handoff coverage check.
+          "--ledgers" "${cfg.stateDir}/ledger"
+          # summary.json (the standing Discord message), outside the synced root.
+          "--state-dir" "${home}/.local/state/hwc-tracker"
+          "--index" "${harness}/lifecycle/tracker/index.html"
+          # The page's palette and theme CSS (Python's TRACKER_TOKENS default).
+          "--tokens-dir" "${home}/600_apps/scout/packages/ui/src/styles"
+          # The Backlog tab's read model lives on the Refinery board.
+          "--refinery-url" cfg.tracker.refineryUrl
+          "--refinery-public-url" cfg.tracker.refineryPublicUrl
         ] ++ lib.optionals cfg.tracker.discordCards.enable [
-          # Discord cards: off without the token file. The hub reads the token
-          # on each control request, so a rotated token needs no restart here.
-          "TRACKER_CONTROL_TOKEN_FILE=${cfg.tracker.discordCards.tokenFile}"
-          "TRACKER_CARD_INGRESS_URL=${cfg.tracker.discordCards.ingressUrl}"
-          "TRACKER_POST_SINCE=${cfg.tracker.discordCards.since}"
-          "TRACKER_PUBLIC_URL=${cfg.tracker.discordCards.publicUrl}"
-          "TRACKER_SUMMARY=${if cfg.tracker.discordCards.summary then "1" else "0"}"
-        ] ++ lib.optional (workbenchSite != null)
-          # Workbench area switcher: the page renders the Nix-produced registry
-          # (hwc.business.workbench, the one producer of the area list) from the
-          # hub's own areas.json. Absent → the switcher is not shown.
-          "TRACKER_WORKBENCH_AREAS_FILE=${workbenchSite}/areas.json";
+          # Discord cards: the hub reads the token on each control request, so
+          # a rotated token needs no restart here.
+          "--control-token-file" cfg.tracker.discordCards.tokenFile
+          "--card-ingress-url" cfg.tracker.discordCards.ingressUrl
+          "--post-since" cfg.tracker.discordCards.since
+          "--public-url" cfg.tracker.discordCards.publicUrl
+        ] ++ lib.optional (cfg.tracker.discordCards.enable && cfg.tracker.discordCards.summary) "--summary"
+        # Workbench area switcher: the page renders the Nix-produced registry
+        # (hwc.business.workbench, the one producer of the area list) from the
+        # hub's own areas.json. Absent → the switcher is not shown.
+        ++ lib.optionals (workbenchSite != null) [ "--areas-file" "${workbenchSite}/areas.json" ]);
         Restart = "on-failure";
         RestartSec = 5;
+        RestartPreventExitStatus = 78;
       };
       Install.WantedBy = [ "default.target" ];
     };
 
-    # Each minute: ask the hub to post new open cards to Discord. The work runs
-    # inside the hub's single-threaded request loop, so it cannot race Eric's
-    # clicks on decisions.json. The hub bounds it (3 sends per call, 30 a day)
+    # Each minute: ask the hub to post new open cards to Discord. The hub runs
+    # one call at a time and records each file step under its writer lease, so
+    # it cannot race Eric's clicks on decisions.json. The hub bounds it (3 sends per call, 30 a day)
     # and never repeats a card. The same call keeps the standing summary
     # message current. Stopping this timer stops all posting.
     systemd.user.services.tracker-post-cards = lib.mkIf (cfg.tracker.enable && cfg.tracker.discordCards.enable) {
