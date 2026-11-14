@@ -127,6 +127,7 @@ business/
 
 ## Changelog
 
+- 2026-11-13: Workbench web phone layout (app bca3e14): bottom tab bar (Today, Mail, Server, More sheet) from the shared shell's opt-in `data-phone-nav="tabs"` (Scout 94d8948), one-row topbar, inline briefing shortcuts and Mail swipe motion. Desktop unchanged.
 - 2026-11-13: Workbench web: Today becomes the cross-app action briefing and every app sits in the rail; bullets stay low-noise (app f9c37c7). Add `web.hiddenHubs`; work hides the CRM and Refinery copy hubs and drops their write tiles.
 - 2026-11-09: Preserve repository context when packaging the catalog-export regression check.
 
