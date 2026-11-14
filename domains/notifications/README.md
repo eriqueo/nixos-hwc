@@ -9,6 +9,8 @@ Delivery infrastructure — how messages reach humans.
 
 ## Structure
 
+Resolved Alertmanager messages label previous incident details and use the clearing timestamp.
+
 `send/post.nix` shares shell delivery checks; `verification/` tests generated shell commands against a local HTTP fixture.
 
 Pipeline and circuit dispatch share an injected clock. The executive meaning bound has one core owner, channel credentials load at the composition root, and logger vocabulary lives in its port.
@@ -48,6 +50,8 @@ notifications/
 | `hwc.notifications.notify.transitionMode` | Transition decision engine: `shadow` (default, records only) or `off` |
 
 ## Changelog
+
+- 2026-11-13: Resolved Alertmanager messages label previous incident details and use the clearing timestamp.
 
 - 2026-11-09: Correct notifier caller comments after retiring the dormant backup engine; preserve existing event command names.
 - 2026-11-09: Add the `discord-projects` channel (`#projects`, secret `discord-webhook-projects`) and move the `projects` topic to it from `discord-ops`. A P1 on that topic still adds SMTP.

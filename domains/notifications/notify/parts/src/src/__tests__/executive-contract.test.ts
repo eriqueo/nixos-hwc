@@ -244,3 +244,23 @@ test("Discord send posts the rendered executive embed to the webhook", async (t)
   assert.equal(result.message, undefined);
   assert.equal(typeof result.durationMs, "number");
 });
+
+import { webhookToNotifications } from "../core/from-alertmanager.js";
+test("resolved alerts label incident details and use the clearing time", () => {
+  const alert = {
+    labels: { alertname: "IngressDown", category: "leads", severity: "critical" },
+    annotations: { summary: "Ingress down", description: "Submissions are being lost." },
+    startsAt: "2026-11-05T12:00:00Z", endsAt: "2026-11-06T12:00:00Z",
+    fingerprint: "ingress",
+  };
+  const convert = (status: "resolved" | "firing") => webhookToNotifications({
+    alerts: [{ ...alert, status }], commonLabels: {}, commonAnnotations: {}, groupLabels: {},
+  })[0]!;
+  const recovered = convert("resolved");
+  assert.match(recovered.body, /^Alertmanager reports that this alert cleared/);
+  assert.match(recovered.body, /Previous alert details:\nSubmissions are being lost/);
+  assert.equal(recovered.occurredAt, alert.endsAt);
+  assert.equal(recovered.priority, 5);
+  assert.equal(convert("firing").body, alert.annotations.description);
+  assert.equal(convert("firing").occurredAt, alert.startsAt);
+});

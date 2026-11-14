@@ -95,6 +95,11 @@ function alertToNotification(
     body = renderLabels(labels, new Set(["alertname", "severity"]));
   }
 
+  if (isResolved) {
+    body = "Alertmanager reports that this alert cleared. This does not verify recovery of affected work."
+      + (body ? `\n\nPrevious alert details:\n${body}` : "");
+  }
+
   // Tags: pluck a few well-known labels. Filter empties.
   const tags: string[] = [];
   for (const k of ["severity", "alertname", "category", "instance", "job"]) {
@@ -132,7 +137,8 @@ function alertToNotification(
       generatorURL: alert.generatorURL || "",
       fingerprint: alert.fingerprint || "",
     },
-    occurredAt: alert.startsAt,
+    occurredAt: isResolved && alert.endsAt && !alert.endsAt.startsWith("0001-")
+      ? alert.endsAt : alert.startsAt,
   };
 }
 

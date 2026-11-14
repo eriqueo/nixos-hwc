@@ -13,6 +13,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
   server-only).
 
 ## Structure
+
+Firefly summaries identify balances and activity as recorded ledger data and validate complete notification delivery.
 Catalog export verification runs from the complete committed source tree so both operator entry points retain their relative imports.
 
 Estimator pure calculator contracts live in `engine/calculator-contract.js`; browser transport stays in `api/crm.js`. Geometry has one implementation. Both manual catalog export entries delegate to the PostgreSQL exporter. `verification/` checks production engine outputs and captured export behavior. Superseded DataX market-research code and unused website/estimator bundles are removed; source owners, recovery data and the permanent website compatibility link remain.
@@ -126,6 +128,8 @@ business/
 ```
 
 ## Changelog
+
+- 2026-11-13: Firefly summaries identify balances and activity as recorded ledger data and validate complete notification delivery.
 
 - 2026-11-13: Workbench web phone layout (app bca3e14): bottom tab bar (Today, Mail, Server, More sheet) from the shared shell's opt-in `data-phone-nav="tabs"` (Scout 94d8948), one-row topbar, inline briefing shortcuts and Mail swipe motion. Desktop unchanged.
 - 2026-11-13: Workbench web: Today becomes the cross-app action briefing and every app sits in the rail; bullets stay low-noise (app f9c37c7). Add `web.hiddenHubs`; work hides the CRM and Refinery copy hubs and drops their write tiles.
