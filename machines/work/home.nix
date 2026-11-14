@@ -11,7 +11,7 @@
   # 7-day RSS trace showed churn between 150 and 830 MB, no daily climb.
   hwc.mail.bridge.restart.onCalendar = "Sun *-*-* 04:20:00";
   # A mail health case open past a day becomes a card on proton-mail. Only
-  # here: the tracker root is Syncthing-shared, so one writer host.
+  # here: each run sends the hub the whole open set, so one sender host.
   hwc.mail.health.tracker.project = "proton-mail";
 
   # khalt (forked khal/ikhal) — supersedes plain khal. Enabled only to

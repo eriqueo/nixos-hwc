@@ -12,6 +12,8 @@ source and one mutable state store.
 
 ## Structure
 
+- `parts/tracker-package.nix` is the one build recipe for the Rust tracker (`hwc-tracker`: hub and client CLI) from the pinned `lifecycle/tracker/rust`. `index.nix` exposes it as read-only `tracker.package`, built with the host's packages and without tests; mail-health runs its client. The `tracker-rust-contracts` check calls the same recipe with the check packages and the contract tests on. Declaring the option builds nothing; the Python hub still serves.
+
 `sys.nix` receives Brain MCP URLs from the base role. It checks an explicitly supplied local-server URL when present, without reading networking or server namespaces.
 
 The pinned handoff poll carries versioned handoff messages only. Old Close records retain history, late acknowledgements and safety holds, but grant no dispatch. Relays refuse unsupported messages before calling T3; canonical Review and Close use their reserved protocol.
@@ -129,6 +131,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-13 (b): New `parts/tracker-package.nix` and read-only `tracker.package`: the Rust `hwc-tracker` recipe moved here from `domains/home/verification/checks.nix`, so the `tracker-rust-contracts` check and consumers (mail-health's `sync-health-cards`) share one recipe. Hosts build it without the tests; the check runs them. Nothing installs or starts it here.
 - 2026-11-14 (e): The `memory/claude` matrix probe skips an empty plain `~/.claude/projects/*/memory` folder. Claude makes one for a session outside the workspace (a `/tmp` test); it holds nothing, yet it failed `agent-harness doctor` on the laptop after tonight's tests.
 - 2026-11-14 (d): `sys.nix` approves the generated MCP servers by name (`enabledMcpjsonServers` in the managed Claude settings, from the same attrsets as `~/.mcp.json` and the repo `.mcp.json`). Claude read `~/.mcp.json` as a project file in every new folder and asked "8 new MCP servers found", so an agent started by `tracker-open` or Workbench waited there silently. `agent-harness publish --candidate <ref>` pins on top of a nixos branch. `release.py` pushes `main` to `origin` fast-forward only after a successful activation (after the merge for `--action merge|build`), and fails loudly when origin moved; before, nothing pushed a fast-forwarded main.
 - 2026-11-14 (c): Pins agent-harness bc48a94: `herdr-restore` lists a resumed Codex as running once it is in front (Codex records its session only at its first turn).

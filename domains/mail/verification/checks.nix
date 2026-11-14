@@ -800,15 +800,31 @@ mail-health-lanes = pkgs.runCommand "mail-health-lanes" {} ''
   review['lanes']['commands'].update(pendingCount=1,oldestPendingAgeSeconds=1801)
   review['lanes']['labels'].update(state='degraded',conflictCount=1)
 
-  def runner(text, root, infrastructure=False):
+  HUB='http://hub.invalid:1'
+  PROJECT='fixture-project'
+  def runner(text, root, infrastructure=False, real_client=False):
       # Run the generated producer, routing, cards and publisher. Local
       # probe ports are controlled; no real credentials or services run.
+      # hwc-tracker is a recording stub unless real_client keeps the packaged one.
       for name in ['check_gpg','check_pass','check_bridge','check_freshness']:
           injected = 'infra fixture-auth-failed "Fixture authentication is unavailable."' if name=='check_gpg' and infrastructure else ':'
           text,count = re.subn(r'(?m)^\s*'+name+r'\s*$',injected,text)
           assert count==1,(name,count)
-      bindings={'SYNC_STATUS':str(root/'status.json'),'TRACKER_FILE':str(root/'tracker.json'),
+      stub=root/'stub';(stub/'calls').mkdir(parents=True,exist_ok=True)
+      (stub/'hwc-tracker').write_text('#!${pkgs.bash}/bin/bash\n'
+          'dir='+shlex.quote(str(stub))+'\n'
+          'n=$(ls "$dir/calls" | wc -l)\n'
+          'printf "%s\\n" "$@" > "$dir/calls/$n.argv"\n'
+          'cat > "$dir/calls/$n.stdin"\n'
+          'code=$(cat "$dir/exit" 2>/dev/null || echo 0)\n'
+          'if [ "$code" = 0 ]; then echo "saved fixture-project command record-v1:0"\n'
+          'else echo "{\\"schemaVersion\\":1,\\"error\\":{\\"code\\":\\"stub\\",\\"detail\\":\\"stub exit $code\\"}}" >&2; fi\n'
+          'exit "$code"\n')
+      (stub/'hwc-tracker').chmod(0o755)
+      bindings={'SYNC_STATUS':str(root/'status.json'),'TRACKER_PROJECT':PROJECT,
+                'TRACKER_URL':'http://127.0.0.1:9' if real_client else HUB,
                 'HOST':'fixture','STALE_SECONDS':'0','ESCALATE_SECONDS':'1800'}
+      if not real_client:bindings['TRACKER_CLIENT']=str(stub/'hwc-tracker')
       for name,value in bindings.items():
           text,count=re.subn(r'(?m)^\s*'+name+r'=.*$',name+'='+shlex.quote(value),text)
           assert count==1,(name,count)
@@ -817,27 +833,25 @@ mail-health-lanes = pkgs.runCommand "mail-health-lanes" {} ''
       assert text.count(needle)==1
       return text.replace(needle,ports+needle,1)
 
-  def run(script, root, status):
+  def execute(script, root, status, expect=0):
       (root/'status.json').write_text(json.dumps(status))
       result=subprocess.run(['${pkgs.bash}/bin/bash','-c',script],capture_output=True,text=True,
           env={**os.environ,'HOME':str(root),'XDG_STATE_HOME':str(root/'state')})
-      assert result.returncode==0,result.stderr
+      assert result.returncode==expect,(result.returncode,result.stderr)
       summary=json.loads((root/'state/mail-health/summary.json').read_text())
       assert summary['checker']=='ok'
-      return result.stdout.splitlines(),summary
+      return result.stdout.splitlines(),summary,result.stderr.splitlines()
+  def run(script, root, status):return execute(script,root,status)[:2]
 
   def notifications(lines,prefix):return sum(line.startswith(prefix) for line in lines)
-  sentinel={'id':'human-card','done':False,'context':'Preserve the human decision.'}
   with tempfile.TemporaryDirectory() as directory:
-      root=pathlib.Path(directory);(root/'tracker.json').write_text(json.dumps({'cards':[sentinel]}))
+      root=pathlib.Path(directory)
       script=runner(source,root)
       first,summary=run(script,root,review)
       assert {(i['lane'],i['outcome']) for i in summary['issues']}=={('commands','warning'),('labels','warning')},summary
       assert notifications(first,'A:')==2 and notifications(first,'N:')==0,first
       repeated,_=run(script,root,review)
       assert notifications(repeated,'A:')==notifications(repeated,'N:')==0,repeated
-      cards=json.loads((root/'tracker.json').read_text())['cards']
-      assert sentinel in cards and len([c for c in cards if c['id'].startswith('MH-')])==2,cards
       stale=copy.deepcopy(review);stale['lanes']['index']['lastSuccessEpoch']=1
       opened,summary=run(script,root,stale)
       assert ('index','critical') in {(i['lane'],i['outcome']) for i in summary['issues']},summary
@@ -847,8 +861,6 @@ mail-health-lanes = pkgs.runCommand "mail-health-lanes" {} ''
       closed,summary=run(script,root,base)
       assert summary['issues']==[],summary
       assert notifications(closed,'A:')==3 and notifications(closed,'N:')==0,closed
-      cards=json.loads((root/'tracker.json').read_text())['cards']
-      assert sentinel in cards and all(c['done'] for c in cards if c['id'].startswith('MH-')),cards
       missing,summary=run(script,root,{})
       assert ('availability','critical') in {(i['lane'],i['outcome']) for i in summary['issues']},summary
       assert notifications(missing,'N:')>=1,missing
@@ -858,7 +870,7 @@ mail-health-lanes = pkgs.runCommand "mail-health-lanes" {} ''
 
   def check_infrastructure(text):
       with tempfile.TemporaryDirectory() as directory:
-          root=pathlib.Path(directory);(root/'tracker.json').write_text(json.dumps({'cards':[sentinel]}))
+          root=pathlib.Path(directory)
           script=runner(text,root,infrastructure=True)
           lines,summary=run(script,root,base)
           issue=next((i for i in summary['issues'] if i['code']=='fixture-auth-failed'),None)
@@ -877,7 +889,117 @@ mail-health-lanes = pkgs.runCommand "mail-health-lanes" {} ''
   try:check_infrastructure(source.replace(needle,"",1))
   except AssertionError:pass
   else:raise AssertionError('removed infrastructure input passed the generated health check')
-  print('generated health: one case store, warnings, missing/stale delivery, escalation, transition alerts and bounded cards pass')
+
+  # Cards: the hub owns tracker records. Every run sends one sync-health-cards
+  # carrying the complete open set; this job writes no tracker file and closes
+  # nothing by itself.
+  LIMITS={'title':200,'ask':1000,'context':4000,'plan':4000,'risk':1000,'recommend':1000}
+  OWN_STATE={'summary.json','infra-issues.json','last-healthy','tracker-command'}
+  def check_cards(text):
+      with tempfile.TemporaryDirectory() as directory:
+          root=pathlib.Path(directory)
+          record=root/'000_inbox/downloads/agent'/PROJECT/'tracker.json'
+          record.parent.mkdir(parents=True)
+          record.write_text(json.dumps({'cards':[{'id':'human-card','done':False}],'updated':'fixture'}))
+          script=runner(text,root)
+          seen=[0]
+          def sent(count=1):
+              # The calls made since the last look: (command id, open set).
+              names=sorted((root/'stub/calls').glob('*.argv'),key=lambda f:int(f.stem))[seen[0]:]
+              assert len(names)==count,('one sync-health-cards per run',[n.read_text() for n in names])
+              seen[0]+=count
+              out=[]
+              for name in names:
+                  argv=name.read_text().splitlines()
+                  assert argv[:5]==['sync-health-cards',PROJECT,'--url',HUB,'--text'] and argv[5]=='--command-id' \
+                      and argv[7:]==['--input','-'],argv
+                  assert re.fullmatch(r'mh-[0-9]+-[0-9a-f]{32}',argv[6]) and len(argv[6])<=128,argv[6]
+                  cards=json.loads(name.with_suffix('.stdin').read_text())
+                  wire=json.dumps({'schemaVersion':1,'commandId':argv[6],'command':{'type':'syncHealthCards','open':cards}})
+                  assert len(cards)<=64 and len(wire.encode())<=16*1024,len(wire)
+                  for card in cards:
+                      assert set(card)=={'id','kind','title','ask','context','plan','risk','recommend'},card
+                      assert re.fullmatch(r'MH-[0-9a-f]{8}',card['id']) and card['kind']=='decision',card
+                      for field,limit in LIMITS.items():
+                          assert card[field].strip() and len(card[field].encode())<=limit and '\0' not in card[field],(field,card)
+                  assert len({c['id'] for c in cards})==len(cards),cards
+                  out.append((argv[6],cards))
+              return out[0] if count==1 else out
+          def tree():
+              # Everything under HOME except this job's own state and the stub's log.
+              skip=(root/'state/mail-health',root/'stub/calls')
+              return {str(f.relative_to(root)):f.read_bytes() for f in root.rglob('*')
+                      if f.is_file() and f!=root/'status.json' and not any(s in f.parents for s in skip)}
+          def hub(code):(root/'stub/exit').write_text(str(code))
+          hub(0)
+          execute(script,root,review)
+          _,two=sent()
+          assert len(two)==2 and all(c['title'].startswith('Mail health: ') for c in two),two
+          # An unchanged world still sends the whole set, not a delta.
+          execute(script,root,review)
+          _,again=sent()
+          assert {c['id'] for c in again}=={c['id'] for c in two},again
+          stale=copy.deepcopy(review);stale['lanes']['index']['lastSuccessEpoch']=1
+          execute(script,root,stale)
+          three_id,three=sent()
+          assert {c['id'] for c in two}<{c['id'] for c in three} and len(three)==3,three
+          # The cases clear while the hub is down: the run completes, alerts as
+          # usual, logs one line and writes no file outside its own state.
+          hub(3);before=tree()
+          lines,summary,errors=execute(script,root,base)
+          down_id,none=sent()
+          assert none==[] and down_id!=three_id,(none,'the empty set is still sent')
+          assert summary['issues']==[] and notifications(lines,'A:')==3,(lines,summary)
+          assert [e for e in errors if 'tracker hub' in e]==[e for e in errors if 'unreachable' in e] \
+              and sum('unreachable' in e for e in errors)==1,errors
+          assert tree()==before and record.exists(),'a hub-down run wrote outside its own state'
+          state={f.name for f in (root/'state/mail-health').iterdir() if not f.name.startswith('cases.sqlite')}
+          assert state<=OWN_STATE,state
+          # The next healthy run has no transition and still closes the cards:
+          # it sends the same empty set under the same command id.
+          hub(0)
+          lines,_,errors=execute(script,root,base)
+          assert notifications(lines,'A:')==notifications(lines,'N:')==0,lines
+          retry_id,none=sent()
+          assert none==[] and retry_id==down_id and not any('tracker' in e for e in errors),(none,retry_id,down_id,errors)
+          execute(script,root,base)
+          assert sent()==(down_id,[]),'an unchanged empty set keeps its command id and is sent every run'
+          # A set that returns is a new command: the hub would replay the old id unreconciled.
+          execute(script,root,review)
+          back_id,back=sent()
+          assert len(back)==2 and back_id not in (down_id,three_id),back
+          execute(script,root,base)
+          empty_id,none=sent()
+          assert none==[] and empty_id not in (down_id,back_id),'a returning set reused its command id'
+          # An unknown outcome does not break the run either; a refusal fails the
+          # unit only after the summary is published.
+          hub(6)
+          _,_,errors=execute(script,root,base)
+          assert sent()==(empty_id,[]) and sum('no clear answer' in e for e in errors)==1,errors
+          hub(5);(root/'state/mail-health/summary.json').unlink()
+          _,_,errors=execute(script,root,base,expect=1)
+          assert sent()==(empty_id,[]) and sum('card sync refused' in e for e in errors)==1,errors
+          assert json.loads(record.read_text())=={'cards':[{'id':'human-card','done':False}],'updated':'fixture'}
+          assert not [f for f in root.rglob('tracker.json') if f!=record]
+  check_cards(source)
+  for gone in ['tracker.json','TRACKER_FILE','complete-card','.updated']:
+      assert gone not in source,gone+' is still in the generated health check'
+  assert source.count('"$TRACKER_CLIENT" ')==1,'exactly one hub command per run'
+  # Distinct failing case: a job that only speaks when a case is stale never closes a card.
+  needle='if [[ -n "$TRACKER_PROJECT" ]]; then'
+  assert source.count(needle)==1
+  quiet=needle[:-6]+' && jq -e \'.stale | length > 0\' <<<"$REPORT" >/dev/null; then'
+  try:check_cards(source.replace(needle,quiet,1))
+  except AssertionError:pass
+  else:raise AssertionError('a health check that skips the empty card set passed')
+  # The packaged client accepts the generated command: it checks the payload with
+  # the hub's own parser before connecting, so a closed port must read as "hub
+  # unreachable" (exit 3), never as a refused command.
+  with tempfile.TemporaryDirectory() as directory:
+      root=pathlib.Path(directory)
+      _,_,errors=execute(runner(source,root,real_client=True),root,review)
+      assert sum('unreachable' in e for e in errors)==1 and not list((root/'stub/calls').iterdir()),errors
+  print('generated health: one case store, warnings, missing/stale delivery, escalation, transition alerts and hub-owned cards pass')
   PYTEST
   touch "$out"
 '';

@@ -120,7 +120,7 @@ mail/
 │   ├── index.nix              # SMTP send module
 │   └── parts/render.nix       # msmtp config generation
 ├── health/
-│   └── index.nix              # Health monitoring (GPG→pass→Bridge→mbsync→freshness)
+│   └── index.nix              # Health monitoring (GPG→pass→Bridge→mbsync→freshness); MH-* cards through the hwc-tracker client
 └── notmuch/
     ├── index.nix              # notmuch module + canonical sender identities
     └── parts/
@@ -172,6 +172,7 @@ Proton Bridge (v3.21.x) occasionally refuses APPEND for messages it considers du
 
 ## Changelog
 
+- 2026-11-13: health: `MH-*` cards go through the tracker hub. Every run sends one `hwc-tracker sync-health-cards` with the complete open set (empty included); the direct `tracker.json` write, its `updated` bump and the close-on-transition step are gone, so a run missed while the hub was down is repaired by the next. New `hwc.mail.health.tracker.client` (default: the agent-harness `tracker.package`). `mail-health-lanes` runs the generated step against a stub client and the packaged one.
 - 2026-11-13: Proton residency promoted (System One fa0afed): an archive, trash or move-back Eric makes in Proton, observed as a transition of an unchanged thread, completes or reopens the local case like the human path, without transport (`source: proton`). Unsettled moves block, overflow defers, `--effects-off` stays shadow. `observe-residency` now takes the mail owner lock outside sync-mail; new `reconcile-residency` (preview, `--apply`, `--rollback`) backfills only shadow proposals that still hold. `mail-workflow-v2` checks the lock, with a seeded bypass.
 - 2026-11-13: Gmail returns to forward-only (`sync.enable = false` on both accounts): its mail reaches the local store once, through Proton, the mailbox Eric reads. The June backlog-cleanup INBOX sync had duplicated 883 messages and kept 466 Gmail-only unread threads in Workbench. Local gmail maildirs stay; msmtp Gmail send accounts and mail-janitor are unchanged. System One ba53e53 prunes retired accounts' `fetch/*` lanes so health does not read them as mail not arriving, and makes board lanes follow Proton Inbox residency. The coordinator check iterates the generated accounts.
 - 2026-11-09: Move common notmuch policy out of duplicate role blocks and remove redundant identity/path helpers.

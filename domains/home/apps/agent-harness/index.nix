@@ -164,6 +164,10 @@ let
   '';
   skillRoots = map (dir: "${dir}/skills") ([ ".claude" ] ++ cfg.claudeConfigDirs) ++ [ ".agents/skills" ];
 
+  # HELPERS: the Rust tracker (hub and `hwc-tracker` client), one recipe shared
+  # with the `tracker-rust-contracts` check, which runs its contract tests.
+  trackerPackage = import ./parts/tracker-package.nix { inherit pkgs harness; };
+
   # How tracker/t3.py reaches T3 Code: its CLI issues short bearer sessions
   # from T3's own state dir, so no token is stored. Used on each host by
   # tracker-link and tracker-relay, never by the hub.
@@ -456,6 +460,18 @@ in
           defaultText = lib.literalExpression ''osConfig.hwc.notifications.notify.url or ""'';
           description = "The hwc-notify base URL; the one producer is the system option, handed to the standalone lane by flake.nix.";
         };
+      };
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = trackerPackage;
+        defaultText = lib.literalMD "the Rust tracker built from the pinned harness's `lifecycle/tracker/rust`";
+        readOnly = true;
+        description = ''
+          `hwc-tracker`: the hub's client CLI (one command to the hub per call, no
+          local write). Jobs that change tracker records run this; mail-health
+          sends its `sync-health-cards` through it. Declaring it installs
+          nothing: only a consumer's reference builds it. Built without the
+          crate's tests; `tracker-rust-contracts` runs them on the same recipe.'';
       };
       refineryUrl = lib.mkOption {
         type = lib.types.str;

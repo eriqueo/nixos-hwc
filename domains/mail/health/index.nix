@@ -21,7 +21,8 @@
 # Boundaries:
 #   - Owns: local checks, systemd timer, alert and card routing, summary.json
 #   - Depends on: mail domain (bridge, mbsync status path), System One
-#     health-cases, hwc-notify, optionally the tracker root (agent-harness)
+#     health-cases, hwc-notify, optionally the tracker hub through the
+#     hwc-tracker client (agent-harness)
 #   - Does NOT touch: mail data, configs, or services (read-only + GPG lock cleanup)
 { config, lib, pkgs, inputs, osConfig ? {}, ... }:
 let
@@ -35,9 +36,9 @@ let
 
   stateDir = "\${XDG_STATE_HOME:-$HOME/.local/state}/mail-health";
   staleLock = lib.getExe config.hwc.home.apps.gpg.staleLock.package;
-  trackerRoot = lib.attrByPath [ "hwc" "home" "apps" "agent-harness" "tracker" "root" ] null config;
-  trackerFile = if cfg.tracker.project != null && trackerRoot != null
-                then "${trackerRoot}/${cfg.tracker.project}/tracker.json" else "";
+  trackerUrl = lib.attrByPath [ "hwc" "home" "apps" "agent-harness" "tracker" "url" ] null config;
+  # Referenced only with a project set, so a host without cards never builds the client.
+  trackerOn = cfg.tracker.project != null && cfg.tracker.client != null && trackerUrl != null;
 
   healthScript = pkgs.writeShellScript "mail-health-check" ''
     set -euo pipefail
@@ -57,7 +58,9 @@ let
     BRIDGE_LOCAL="${if (config.hwc.mail.bridge.enable or false) then "true" else "false"}"
     AUTO_REMEDIATE="${if cfg.autoRemediate then "true" else "false"}"
     SYNC_STATUS=${lib.escapeShellArg (config.hwc.paths.user.mailSyncStatus or "${config.home.homeDirectory}/.local/state/mail-sync/status.json")}
-    TRACKER_FILE=${lib.escapeShellArg trackerFile}
+    TRACKER_PROJECT=${lib.escapeShellArg (if trackerOn then cfg.tracker.project else "")}
+    TRACKER_CLIENT=${lib.escapeShellArg (if trackerOn then "${cfg.tracker.client}/bin/hwc-tracker" else "")}
+    TRACKER_URL=${lib.escapeShellArg (if trackerOn then trackerUrl else "")}
     HOST="$(${pkgs.hostname}/bin/hostname)"
     jq() { ${pkgs.jq}/bin/jq "$@"; }
 
@@ -240,36 +243,63 @@ let
     done < <(jq -c '.transitions[]' <<<"$REPORT")
 
     # ─── Cards: a case open past STALE_SECONDS is a decision for Eric ──
-    # tracker.json is the agents' file; this is a bounded second writer for ids
-    # MH-*, written whole and atomically. The card closes when the case clears.
+    # The tracker hub owns its records. Every run sends the hub the complete set
+    # of cards that should be open now (ids MH-*), the empty set included, as one
+    # sync-health-cards command; the hub opens, closes and reopens cards to match.
+    # A run the hub missed is repaired by the next one. Nothing here writes a
+    # tracker file or decides that a card is closed.
     card_id() { printf 'MH-%s' "$(printf '%s' "$1" | ${pkgs.coreutils}/bin/sha256sum | cut -c1-8)"; }
-    if [[ -n "$TRACKER_FILE" && -f "$TRACKER_FILE" ]]; then
-      now_iso=$(${pkgs.coreutils}/bin/date -Iseconds)
+    # Prints one line. Returns 0 when the command was sent, and also when the hub
+    # was unreachable or its outcome is unknown: the next run sends the full set
+    # again. Returns 1 when the hub or the client refused the command, which no
+    # later run repairs.
+    sync_health_cards() {
+      local open='[]' item id digest sent="" last="" out status=0
       while IFS= read -r item; do
         [[ -n "$item" ]] || continue
-        id=$(card_id "$(jq -r '.caseId' <<<"$item")")
-        if jq -e --arg id "$id" 'any(.cards[]?; .id==$id and (.done|not))' "$TRACKER_FILE" >/dev/null; then continue; fi
-        hours=$(jq -r '(.openSeconds / 3600 | floor)' <<<"$item")
-        jq --arg id "$id" --arg now "$now_iso" \
-           --arg title "Mail health: $(jq -r '.lane + " " + .code' <<<"$item") open for ''${hours}h" \
-           --arg ask "$(jq -r '.message' <<<"$item")" \
-           --arg context "Case $(jq -r '.caseId' <<<"$item") on $HOST has been open since $(jq -r '(now - .openSeconds) | todate' <<<"$item") (outcome $(jq -r '.outcome' <<<"$item")). The alert fired once when it opened; this card exists because nobody acted in ''${hours} hours." \
-           '.cards = ((.cards // []) | map(select(.id != $id))) + [{id: $id, kind: "decision", title: $title, ask: $ask, context: $context,
-              plan: "Run the named command on the host, or say the case can stay open. The card closes itself when the case clears.",
-              risk: "An open mail health case left unactioned keeps masking a real outage.", recommend: "approve", done: false}]
-            | .updated = $now' "$TRACKER_FILE" > "$TRACKER_FILE.tmp" && mv "$TRACKER_FILE.tmp" "$TRACKER_FILE"
-        echo "card $id opened on $(basename "$(dirname "$TRACKER_FILE")")"
+        id=$(card_id "$(jq -r '.caseId' <<<"$item")") || return 1
+        open=$(jq -c --arg id "$id" --arg host "$HOST" --argjson item "$item" '
+          . + [$item | (.openSeconds / 3600 | floor | tostring) as $hours | {
+            id: $id, kind: "decision",
+            title: ("Mail health: " + .lane + " " + .code + " open for " + $hours + "h"),
+            ask: (.message // .caseId),
+            context: ("Case " + .caseId + " on " + $host + " has been open since " + ((now - .openSeconds) | todate)
+              + " (outcome " + .outcome + "). The alert fired once when it opened; this card exists because nobody acted in "
+              + $hours + " hours."),
+            plan: "Run the named command on the host, or say the case can stay open. The card closes itself when the case clears.",
+            risk: "An open mail health case left unactioned keeps masking a real outage.",
+            recommend: "approve"}]' <<<"$open") || { echo "mail-health: could not build the card for $id" >&2; return 1; }
       done < <(jq -c '.stale[]' <<<"$REPORT")
-      while IFS= read -r item; do
-        [[ -n "$item" ]] || continue
-        id=$(card_id "$(jq -r '.caseId' <<<"$item")")
-        if jq -e --arg id "$id" 'any(.cards[]?; .id==$id and (.done|not))' "$TRACKER_FILE" >/dev/null; then
-          jq --arg id "$id" --arg now "$now_iso" \
-             '.cards |= map(if .id==$id then .done=true else . end) | .updated=$now' \
-             "$TRACKER_FILE" > "$TRACKER_FILE.tmp" && mv "$TRACKER_FILE.tmp" "$TRACKER_FILE"
-          echo "card $id closed"
+      # The command id names one desired set from the moment it was first tried.
+      # An unchanged set keeps its id, so a run repeated after an unreachable hub
+      # or an unknown outcome is the same command and cannot apply twice. A changed
+      # set takes a new id: the hub conflicts on one id carrying two payloads. The
+      # moment is part of the id because the hub answers a remembered id without
+      # reconciling again; a set that comes back (empty, one card, empty) would
+      # otherwise replay its first answer and leave the card open.
+      digest=$(printf '%s' "$open" | ${pkgs.coreutils}/bin/sha256sum | cut -c1-32) || return 1
+      if [[ -f "$STATE_DIR/tracker-command" ]]; then read -r sent last < "$STATE_DIR/tracker-command" || true; fi
+      if [[ "$last" != "$digest" || ! "$sent" =~ ^[0-9]+$ ]]; then
+        sent=$(${pkgs.coreutils}/bin/date +%s%N)
+        if ! { printf '%s %s\n' "$sent" "$digest" > "$STATE_DIR/tracker-command.tmp" \
+               && mv "$STATE_DIR/tracker-command.tmp" "$STATE_DIR/tracker-command"; }; then
+          echo "mail-health: could not record the card command id; nothing was sent to the tracker hub" >&2
+          return 1
         fi
-      done < <(jq -c '.transitions[] | select(.state=="closed")' <<<"$REPORT")
+      fi
+      out=$("$TRACKER_CLIENT" sync-health-cards "$TRACKER_PROJECT" --url "$TRACKER_URL" --text \
+              --command-id "mh-$sent-$digest" --input - <<<"$open" 2>&1) || status=$?
+      out=$(printf '%s' "$out" | tr '\n' ' ')
+      case "$status" in
+        0) echo "cards: $(jq -r 'length' <<<"$open") open on $TRACKER_PROJECT (''${out%% *})" ;;
+        3) echo "mail-health: tracker hub $TRACKER_URL unreachable; cards not synced this run, the next run sends the full set" >&2 ;;
+        6) echo "mail-health: tracker hub $TRACKER_URL gave no clear answer; cards may or may not be synced, the next run sends the full set" >&2 ;;
+        *) echo "mail-health: card sync refused (hwc-tracker exit $status): $out" >&2; return 1 ;;
+      esac
+    }
+    CARDS_BROKEN=""
+    if [[ -n "$TRACKER_PROJECT" ]]; then
+      sync_health_cards || CARDS_BROKEN=1
     fi
 
     # ─── Publish ────────────────────────────────────────────────
@@ -281,6 +311,9 @@ let
       now_epoch > "$STATE_DIR/last-healthy"
       echo "OK — $(${pkgs.coreutils}/bin/date -Iseconds)"
     fi
+    # Everything above ran and summary.json is current. A refused card sync is a
+    # broken part of the checker, so it fails the unit; an unreachable hub does not.
+    if [[ -n "$CARDS_BROKEN" ]]; then exit 1; fi
   '';
 
 in
@@ -321,8 +354,18 @@ in
         description = ''
           Tracker project that receives a decision card (id MH-*) when a case
           stays open past staleHours. The card closes when the case clears.
-          Needs hwc.home.apps.agent-harness.tracker.root on the same host.
-          Enable on ONE host only: the tracker root is synced between hosts.
+          Each run sends the hub the full set of cards that should be open.
+          Enable on ONE host only: a second sender's set would close the first's cards.
+        '';
+      };
+      client = lib.mkOption {
+        type = lib.types.nullOr lib.types.package;
+        default = lib.attrByPath [ "hwc" "home" "apps" "agent-harness" "tracker" "package" ] null config;
+        defaultText = lib.literalExpression "config.hwc.home.apps.agent-harness.tracker.package (null without the app)";
+        description = ''
+          The `hwc-tracker` client that carries the cards to the hub
+          (`sync-health-cards`). The hub address is the agent-harness
+          `tracker.url`. Used only when tracker.project is set.
         '';
       };
     };
@@ -374,8 +417,8 @@ in
   # ════════════════════════════════════════════════════════════════
   config = lib.mkIf cfg.enable {
     assertions = [{
-      assertion = cfg.tracker.project == null || trackerRoot != null;
-      message = "hwc.mail.health.tracker.project needs hwc.home.apps.agent-harness.tracker.root on this host";
+      assertion = cfg.tracker.project == null || trackerOn;
+      message = "hwc.mail.health.tracker.project needs the hwc-tracker client and hub URL (hwc.home.apps.agent-harness.tracker.{package,url}) on this host";
     } {
       # check_gpg calls hwc-gpg-stale-lock, which the gpg app owns.
       assertion = config.hwc.home.apps.gpg.enable;

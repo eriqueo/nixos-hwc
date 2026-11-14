@@ -17,7 +17,8 @@ HM-as-module (nixos-rebuild) and HM-as-flake (`hms`).
   `profiles/base/sys.nix` (Law 7) — they never reach the HM lane.
 
 ## Structure
-`verification/checks.nix` packages the pinned Rust tracker foundation and runs its state, snapshot, HTTP and Python projection contracts, including project clocks through the real route at local midnight and the isolated candidate-only brief command (idempotent replay, revision checks, crash and replay durability). `tracker-rust-contracts` is required when this owner is selected; it does not switch the live Python tracker.
+`apps/agent-harness/parts/tracker-package.nix` is the one Rust tracker build recipe. Hosts take it as `tracker.package` (their own packages, no tests); `tracker-rust-contracts` builds the same recipe with the check packages and the tests on.
+`verification/checks.nix` builds the pinned Rust tracker foundation and runs its state, snapshot, HTTP and Python projection contracts, including project clocks through the real route at local midnight and the isolated candidate-only brief command (idempotent replay, revision checks, crash and replay durability). `tracker-rust-contracts` is required when this owner is selected; it does not switch the live Python tracker.
 The music menu uses Waybar’s native GTK popup anchored below its module and includes Quit Feishin.
 Waybar centers Feishin's MPRIS track display; one click opens Play, Pause, Next and Open, with the same choices in hover help. Super+M opens Feishin; Super+Ctrl+M opens btop. The tray keeps the hidden player accessible.
 `apps/mtg/` packages the owned Modern Terminal Games fork with Frogger; the laptop enables it alongside Tetro.
@@ -184,6 +185,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-13: Move the Rust tracker build recipe from the verification file to `apps/agent-harness/parts/tracker-package.nix`. The check and the new read-only `tracker.package` (mail-health's client) call that one recipe. The check's derivation is unchanged. A stable host builds it without tests: two Python-parity tests need Python 3.14 and stable has 3.13.
 - 2026-11-13: Add `apps/herdr-core`: the Herdr core pinned from its upstream release, and a `serve` user unit that keeps one core running on hwc-home and hwc-work across reboots. Separate from `apps/herdr`, which ships a different project.
 - 2026-11-13: `agent-harness-control` runs `apps/agent-harness/control.test.sh` in the sandbox, so the gate fails a `publish` that activates outside the release runner.
 - 2026-11-13: Build the Rust tracker contracts from `lifecycle/tracker` with the crate as a subdirectory, so the parity tests find the hub page at `../index.html` as Python does; the crate-only source made six index-fallback routes 404 and failed the full suite.

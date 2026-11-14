@@ -2,20 +2,13 @@
 { inputs, lib, mailHost, mailOwner, pkgs, repoRoot, self, system }:
 {
 
-tracker-rust-contracts = pkgs.rustPlatform.buildRustPackage {
-  pname = "hwc-tracker";
-  version = "0.1.0";
-  # The parity tests read the hub page at ../index.html beside the crate, as the
-  # Python server does; a crate-only source made the Rust index fallback 404.
-  src = inputs.agent-harness + "/lifecycle/tracker";
-  cargoRoot = "rust";
-  buildAndTestSubdir = "rust";
-  cargoLock.lockFile = inputs.agent-harness + "/lifecycle/tracker/rust/Cargo.lock";
-  nativeCheckInputs = [ pkgs.python3 ];
+# The agent-harness app owns the one build recipe; consumers take it as
+# `tracker.package`. Here it is built with the check packages and its contract
+# tests on, with the pinned Python hub as the oracle.
+tracker-rust-contracts = import (repoRoot + "/domains/home/apps/agent-harness/parts/tracker-package.nix") {
+  inherit pkgs;
+  harness = inputs.agent-harness;
   doCheck = true;
-  preCheck = ''
-    export PYTHONPATH="${inputs.agent-harness}/lifecycle/tracker"
-  '';
 };
 
 onlyoffice-runtime = let
