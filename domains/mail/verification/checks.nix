@@ -1375,6 +1375,26 @@ pkgs.runCommand "mail-workflow-v2" {} ''
       assert observation[observation.index('--bridge-port') + 1] == '1143'
       password_command = observation[observation.index('--password-command') + 1]
       assert shlex.split(password_command)[:2] == ['sh', '-c']
+      # Residency now applies observed Proton actions to cases: outside sync-mail it
+      # must take the mail owner lock like every writer (2026-11-13).
+      def check_residency_lock(source):
+          import fcntl
+          with (root / 'sync.lock').open('a') as owner:
+              fcntl.flock(owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
+              for verb in ('observe-residency', 'reconcile-residency'):
+                  try: dispatch(source, verb)
+                  except subprocess.CalledProcessError as error: assert error.returncode == 75
+                  else: raise AssertionError(verb + ' wrote beside the active mail owner')
+      check_residency_lock(control)
+      unguarded = control.replace('outside sync-mail.\n', 'outside sync-mail.\nSYNC_MAIL_LOCKED=1\n')
+      assert unguarded != control
+      try: check_residency_lock(unguarded)
+      except AssertionError: pass
+      else: raise AssertionError('removed residency lock passed its wiring check')
+      reconciled = dispatch(control, 'reconcile-residency', '--apply')
+      assert reconciled[:3] == ['reconcile-residency', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
+      assert reconciled[reconciled.index('--output') + 1].endswith('/residency-reconcile.json')
+      assert '--notmuch' in reconciled and reconciled[-1] == '--apply'
       probe = dispatch(control, 'label-probe')
       assert probe[:3] == ['label-probe', '--db', '/var/lib/hwc/mail-classifier/ledger.sqlite']
       assert '--notmuch' not in probe
