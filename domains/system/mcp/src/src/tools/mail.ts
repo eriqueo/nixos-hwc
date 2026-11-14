@@ -72,6 +72,10 @@ interface MailContract {
   fallbackState: string;
   stateDisplayNames: Record<string, string>;
   viewQueries: Record<string, string>;
+  /** States whose threads belong in Proton's Inbox (schema 3). */
+  inboxStates: string[];
+  /** Local mirror folders of the Proton mailboxes (schema 3). */
+  mailboxTransport?: { localMailboxes?: { inbox?: string } };
 }
 
 function loadContract(): MailContract {
@@ -100,6 +104,8 @@ function loadContract(): MailContract {
       parsed.actionState = parsed.fallbackState;
       parsed.stateDisplayNames = Object.fromEntries(parsed.states.map((state: string) => [state, state.toUpperCase()]));
       parsed.viewQueries = {};
+      // v2 predates the mailbox transport: no residency rule can be stated.
+      parsed.inboxStates = [];
     }
     if (!parsed.states.includes(parsed.actionState) || !parsed.states.includes(parsed.fallbackState)
         || !parsed.stateDisplayNames || typeof parsed.stateDisplayNames !== "object"
@@ -109,6 +115,12 @@ function loadContract(): MailContract {
         || !Object.values(parsed.viewQueries).every(query => typeof query === "string" && query.length > 0)
         || (parsed.schemaVersion === 3 && typeof parsed.viewQueries.bulk !== "string")) {
       throw new Error("missing or invalid mail State/view contract fields");
+    }
+    if (parsed.schemaVersion === 3 && (!strings(parsed.inboxStates)
+        || !parsed.inboxStates.every((state: string) => parsed.states.includes(state))
+        || typeof parsed.mailboxTransport?.localMailboxes?.inbox !== "string"
+        || !parsed.mailboxTransport.localMailboxes.inbox)) {
+      throw new Error("missing or invalid mail Inbox residency contract fields");
     }
     log.info(`mail: classifier contract loaded from ${file}`);
     return parsed as MailContract;
@@ -122,6 +134,26 @@ export const MAIL_STATES: readonly string[] = MAIL_CONTRACT.states;
 export const MAIL_ACTION_STATE = MAIL_CONTRACT.actionState;
 export const MAIL_STATE_DISPLAY_NAMES = MAIL_CONTRACT.stateDisplayNames;
 export const MAIL_DOMAINS: readonly string[] = MAIL_CONTRACT.domains;
+export const MAIL_INBOX_STATES: readonly string[] = MAIL_CONTRACT.inboxStates;
+const MAIL_INBOX_FOLDER = MAIL_CONTRACT.mailboxTransport?.localMailboxes?.inbox ?? "";
+
+/** Thread query that places a thread in Proton's Inbox: any message in its local mirror. */
+export function mailInboxResidencyQuery(): string {
+  return `thread:{folder:"${MAIL_INBOX_FOLDER}"}`;
+}
+
+/**
+ * One board lane, the same rule System One's `lane_query` applies to the
+ * snapshot: thread-level, an earlier State wins, and an Inbox State also needs
+ * Proton Inbox residency. Proton-side archive/trash leaves the lane; State is
+ * not changed by reading.
+ */
+export function mailLaneQuery(state: string): string {
+  const terms = [`thread:{tag:${mailStateTag(state)}}`,
+    ...MAIL_STATES.slice(0, MAIL_STATES.indexOf(state)).map(earlier => `NOT thread:{tag:${mailStateTag(earlier)}}`)];
+  if (MAIL_INBOX_STATES.includes(state)) terms.push(mailInboxResidencyQuery());
+  return terms.join(" AND ");
+}
 const DOMAIN_TAGS = MAIL_DOMAINS;
 export const MAIL_FACTS: readonly string[] = MAIL_CONTRACT.factTags;
 const TRAIT_TAGS = MAIL_FACTS;

@@ -997,6 +997,7 @@ in
         # HWC_PIPELINE marker: the workspace-guard only reports on the headless
         # classifier agent this unit launches (producer: agent-harness sys.nix).
         environment = (config.hwc.system.apps.agent-harness.pipelineEnvironment or { }) // peerEnvironment // {
+          LEAD_SCOUT_DASHBOARD_URL = "https://lead-scout.${config.hwc.networking.shared.vhostDomain}";
           DATABASE_URL = cfg.databaseUrl;
           LOG_LEVEL = "info";
           NODE_ENV = "production";

@@ -29,7 +29,7 @@ let
           exec "''${guard[@]}" "$runtime" "$verb" --db /var/lib/hwc/mail-classifier/ledger.sqlite "$@"
           ;;
         ${lib.optionalString cfg.residency.enable ''
-        observe-residency|observe-phone-labels|label-probe|project-labels|review-label-write|transport)
+        observe-residency|reconcile-residency|observe-phone-labels|label-probe|project-labels|review-label-write|transport)
           verb="$1"
           shift
           guard=()
@@ -43,6 +43,9 @@ let
           if [ "$verb" = review-label-write ]; then
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/label-review.json"}
           fi
+          if [ "$verb" = reconcile-residency ]; then
+            output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/residency-reconcile.json"}
+          fi
           if [ "$verb" = observe-phone-labels ]; then
             output=${lib.escapeShellArg "${builtins.dirOf syncStatus}/phone-label-shadow.json"}
           fi
@@ -52,7 +55,9 @@ let
           if [ "$verb" != transport ]; then
             output_args=(--output "$output")
           fi
-          if [ "$verb" != observe-residency ] && [ "''${SYNC_MAIL_LOCKED:-0}" != 1 ]; then
+          # Residency applies observed Proton actions to cases (2026-11-13), so it
+          # takes the mail owner lock like every other writer outside sync-mail.
+          if [ "''${SYNC_MAIL_LOCKED:-0}" != 1 ]; then
             guard=(${pkgs.util-linux}/bin/flock -n -E 75 ${lib.escapeShellArg "${builtins.dirOf syncStatus}/sync.lock"})
           fi
           exec "''${guard[@]}" "$runtime" "$verb" \
@@ -115,7 +120,7 @@ in
     description = "The shared System One mail vocabulary used by every transport consumer";
   };
   options.hwc.mail.classifier.residency = {
-    enable = lib.mkEnableOption "read-only Proton residency shadow after successful core sync" // {
+    enable = lib.mkEnableOption "Proton residency observer after successful core sync: observed archive/trash/move-back changes the local case" // {
       default = lib.attrByPath [ "hwc" "mail" "classifier" "system" "enable" ] false osConfig
         && config.hwc.mail.bridge.enable && cfg.enable;
     };

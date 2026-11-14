@@ -17,7 +17,8 @@
 let
   cfg = config.hwc.business.firefly;
   fireflyBase = "http://127.0.0.1:${toString cfg.reverseProxy.coreInternalPort}";
-  notifyUrl = "${config.hwc.notifications.notify.url}/notify";
+  notifyUrl = config.hwc.notifications.notify.url;
+  notifyPost = import ../../../notifications/send/post.nix { inherit pkgs; };
   cronTokenFile = config.age.secrets.firefly-cron-token.path;
 
   curl = "${pkgs.curl}/bin/curl";
@@ -59,19 +60,20 @@ let
        "\(length) transaction(s)" +
        if length > 0 then ": " + (map(.description) | join(", ")) else "" end')
 
-    BODY="Balances:
+    BODY="Recorded balances in Firefly (not live bank balances):
 ''${BALANCES:-none}
 
-Bills next 7 days:
+Recorded bills due in the next 7 days:
 ''${BILLS:-none due}
 
-Yesterday: ''${TXN:-0 transaction(s)}"
+Recorded yesterday: ''${TXN:-0 transaction(s)}
+
+This summary only includes records in Firefly. No recorded activity does not confirm that your bank accounts had no activity."
 
     ${jq} -n --arg body "$BODY" \
       '{title: "Finance digest", body: $body, topic: "finance",
         source: "firefly-digest", priority: 4}' \
-      | ${curl} -sf --max-time 10 -X POST -H "Content-Type: application/json" \
-          -d @- "${notifyUrl}" > /dev/null
+      | ${notifyPost}/bin/hwc-notify-post "${notifyUrl}" 10 > /dev/null
     echo "firefly-digest: sent."
   '';
 in

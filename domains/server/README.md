@@ -9,6 +9,8 @@
 
 ## Structure
 
+Home Scout and personal Lead Scout declare their existing dashboard URLs so notification exploration targets are clickable links instead of database expressions.
+
 Wall-display phone and voice adapters share Streamable HTTP sessions in
 `services/wall-display/parts/mcp_client.py`. Each adapter keeps its own allowlist,
 confirmation and result handling. The client checks reply IDs, ends allocated
@@ -128,6 +130,8 @@ phone Syncthing hub. T3 is a Home Manager application retained on all three host
 Caddy routes and route ownership live in `domains/networking/routes.nix`.
 
 ## Changelog
+
+- 2026-11-13: Home Scout and personal Lead Scout declare their existing dashboard URLs so notification exploration targets are clickable links instead of database expressions.
 
 - 2026-11-09: Share wall-display MCP session transport while preserving phone/voice policy; test reply correlation, cleanup, refusal details and no replay.
 

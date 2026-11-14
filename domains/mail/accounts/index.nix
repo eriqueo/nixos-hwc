@@ -74,13 +74,14 @@ in
         primary = true;
       };
 
-    ## Gmail accounts - IMAP sync ENABLED for backlog cleanup (2026-06-22).
-    ##  Both still forward to Proton; msmtp send-only accounts remain active.
-    ##  Wildcards bounded to INBOX only: pulling [Gmail]/All Mail would drag in
-    ##  the full archive superset (tens of thousands, duplicated). Archive in
-    ##  Gmail = removing the INBOX label, which mbsync expresses by expunging the
-    ##  message from the INBOX channel (it survives in All Mail). Widen the
-    ##  wildcard set later if other labels need indexing.
+    ## Gmail accounts - forward-only, send through msmtp (2026-11-13).
+    ##  Both addresses reach Proton (forwarding and Proton's connected
+    ##  addresses), so Gmail mail arrives once, through Proton, and Proton is
+    ##  the one mailbox Eric reads. The direct INBOX sync enabled on 2026-06-22
+    ##  for the backlog cleanup duplicated that copy and kept Gmail-only unread
+    ##  mail in Workbench. The local gmail-* maildirs stay on disk, indexed and
+    ##  untouched. mail-janitor still cleans Gmail web over its own IMAP login.
+    ##  Re-enabling resumes from each folder's .mbsyncstate.
 
     gmail-personal = {
         name = "gmail-personal";
@@ -93,8 +94,7 @@ in
           agenix = gmailPersonalSecretPath;
         };
         maildirName = "gmail-personal";
-        sync.enable = true;   # Backlog cleanup: pull INBOX into notmuch
-        sync.wildcards = [ "INBOX" "Family-Friends" ];
+        sync.enable = false;  # forward-only through Proton
         send.msmtpAccount = "gmail-personal";
       };
 
@@ -109,8 +109,7 @@ in
           agenix = gmailBusinessSecretPath;
         };
         maildirName = "gmail-business";
-        sync.enable = true;   # Backlog cleanup: pull INBOX into notmuch
-        sync.wildcards = [ "INBOX" "Family-Friends" ];
+        sync.enable = false;  # forward-only through Proton
         send.msmtpAccount = "gmail-business";
       };
     

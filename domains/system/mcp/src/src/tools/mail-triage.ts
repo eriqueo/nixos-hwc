@@ -19,12 +19,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import type { ToolDef, ToolResult } from "../types.js";
 import { contract } from "../result.js";
 import { mcpError } from "../errors.js";
-import { mailThreadsByState, MAIL_DOMAINS, MAIL_FACTS, mailFactTag, mailDomainTag, MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError, acceptedMailCommand } from "./mail.js";
+import { mailLaneQuery, mailInboxResidencyQuery, MAIL_INBOX_STATES, mailThreadsByState, MAIL_DOMAINS, MAIL_FACTS, mailFactTag, mailDomainTag, MAIL_STATES, MAIL_ACTION_STATE, MAIL_STATE_DISPLAY_NAMES, mailStateTag, mailTagActions, classifierMutation, classifierMutationError, acceptedMailCommand } from "./mail.js";
 
 // Fixed patterns are shared; stateful uses reset their cursor below.
 const reflectLiveStatesTestRegex = /^[0-9a-f]{1,64}$/;
 const mailTriageToolsPatternRegex = /^thread:/;
 const mailTriageToolsTestRegex = /^[0-9a-f]+$/i;
+const laneCountRegex = /^\d+$/;
 
 /** Default briefing output path (run.sh writes here, then injects .mail_triage). */
 const DEFAULT_BRIEFING_JSON =
@@ -82,10 +83,49 @@ function stateThreads(triage: MailTriage | null, state: State): TriageThread[] {
 
 const NOTMUCH_CANDIDATES = ["notmuch", "/etc/profiles/per-user/eric/bin/notmuch"];
 
-type Inbox = Map<string, Set<string>>;
+/** Live facts for cached threads: union State/Domain/fact tags, and which sit in Proton's Inbox. */
+export interface Inbox { tags: Map<string, Set<string>>; resident: Set<string> }
+
+type Totals = Record<string, number>;
+
+/** Run notmuch (PATH first, then the profile binary), optionally feeding stdin. */
+function notmuch(args: string[], input?: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const tryBin = (i: number): void => {
+      if (i >= NOTMUCH_CANDIDATES.length) { reject(new Error("notmuch binary not found")); return; }
+      const child = execFile(NOTMUCH_CANDIDATES[i], args, { timeout: 3500, maxBuffer: 2 * 1024 * 1024 },
+        (err, stdout) => {
+          if (err && (err as NodeJS.ErrnoException).code === "ENOENT") { tryBin(i + 1); return; }
+          if (err) { reject(err); return; }
+          resolve(String(stdout));
+        });
+      if (input !== undefined) child?.stdin?.end(input);
+    };
+    tryBin(0);
+  });
+}
+
+/** Two bounded reads: the State scan, then thread-level Inbox residency. Never per state. */
+async function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
+  const scope = `(${ids.map(id => `thread:${id}`).join(" OR ")})`;
+  const tags = await notmuchStates(ids);
+  const resident = new Set((await notmuch(["search", "--output=threads", `${mailInboxResidencyQuery()} AND ${scope}`]))
+    .split("\n").filter(Boolean).map(line => line.replace(mailTriageToolsPatternRegex, "")));
+  return {tags, resident};
+}
+
+/** Live lane totals: one `count --batch` process, one line per State, thread counts. */
+async function notmuchTotals(): Promise<Totals> {
+  const lines = (await notmuch(["count", "--batch", "--output=threads"],
+    MAIL_STATES.map(state => `${mailLaneQuery(state)}\n`).join(""))).split("\n").filter(Boolean);
+  if (lines.length !== MAIL_STATES.length || !lines.every(line => laneCountRegex.test(line))) {
+    throw Error("Invalid notmuch lane counts");
+  }
+  return Object.fromEntries(MAIL_STATES.map((state, i) => [state, Number(lines[i])]));
+}
 
 /** One scan, bounded at 3.5s/2MiB; never fan out per state under the gateway CPU quota. */
-function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
+function notmuchStates(ids: readonly string[]): Promise<Map<string, Set<string>>> {
   return new Promise((resolve, reject) => {
     const tryBin = (i: number): void => {
       if (i >= NOTMUCH_CANDIDATES.length) {
@@ -109,7 +149,7 @@ function notmuchInbox(ids: readonly string[]): Promise<Inbox> {
           try {
             const rows: unknown = JSON.parse(stdout);
             if (!Array.isArray(rows)) throw Error("Invalid notmuch summary");
-            const inbox: Inbox = new Map();
+            const inbox = new Map<string, Set<string>>();
             for (const row of rows) {
               if (!row || typeof row.thread !== "string" || !Array.isArray(row.tags)
                   || !row.tags.every((tag: unknown) => typeof tag === "string")) {
@@ -138,6 +178,8 @@ export async function reflectLiveStates(
   readInbox: (ids: readonly string[]) => Promise<Inbox> = notmuchInbox,
   _unreadOnly = false,
 ): Promise<Record<State, TriageThread[]>> {
+  // Residency is a read rule, not State authority: a thread Eric archived or
+  // trashed in Proton leaves its Inbox lane, and its local State is unchanged.
   // Only cached threads can appear on this surface. Scanning the entire inbox
   // starves khal under the gateway CPU quota. Bound argv/query work at 512 IDs;
   // overflow or invalid cache identity fails visibly, never falls back to all mail.
@@ -152,7 +194,7 @@ export async function reflectLiveStates(
   const out = emptyStates();
   for (const state of MAIL_STATES) {
     for (const thread of cached[state] ?? []) {
-      const tags = inbox.get(thread.thread_id);
+      const tags = inbox.tags.get(thread.thread_id);
       if (!tags || seen.has(thread.thread_id)) continue;
       seen.add(thread.thread_id);
       // During new-reply ingestion an old DID plus the new message's DO can
@@ -161,6 +203,7 @@ export async function reflectLiveStates(
       // This precedence remains defined by the contract until the classifier
       // normalizes the whole thread.
       const live = MAIL_STATES.find(state => tags.has(mailStateTag(state))) as State | undefined;
+      if (live && MAIL_INBOX_STATES.includes(live) && !inbox.resident.has(thread.thread_id)) continue;
       if (live) out[live].push({...thread,
         domain: MAIL_DOMAINS.find(domain => tags.has(mailDomainTag(domain))) ?? thread.domain,
         tags: MAIL_FACTS.filter(fact => tags.has(mailFactTag(fact))),
@@ -236,6 +279,7 @@ function clockFromIso(iso: string | undefined): string {
 export function mailTriageTools(
   briefingPath = process.env.HWC_BRIEFING_JSON || DEFAULT_BRIEFING_JSON,
   readInbox: (ids: readonly string[]) => Promise<Inbox> = notmuchInbox,
+  readTotals: () => Promise<Totals> = notmuchTotals,
 ): ToolDef[] {
 
   return [
@@ -366,17 +410,22 @@ export function mailTriageTools(
         if (!triage) return mcpError({ type: "UNAVAILABLE", message: "Mail digest is unavailable. Open aerc or run mail triage." });
         // Reflect persisted decisions from their live active-state tag.
         let reflected: Record<State, TriageThread[]>;
-        try { reflected = await reflectLiveStates(Object.fromEntries(MAIL_STATES.map(state =>
-          [state, stateThreads(triage, state)])), readInbox, action === "digest"); } catch {
+        let totals: Totals;
+        try {
+          [reflected, totals] = await Promise.all([reflectLiveStates(Object.fromEntries(MAIL_STATES.map(state =>
+            [state, stateThreads(triage, state)])), readInbox, action === "digest"), readTotals()]);
+        } catch {
           return mcpError({ type: "COMMAND_FAILED", message: "Cannot verify inbox membership. Open aerc or refresh." });
         }
+        // Cards come from the bounded cache; counts are live. A lane never shows
+        // fewer as a count than the cards it lists.
+        const total = (state: State): number => Math.max(totals[state] ?? 0, reflected[state].length);
         const doMail = reflected[MAIL_ACTION_STATE];
 
         // Counts derive from the REFLECTED arrays (post-move), not the stale
         // cached stats — a move shifts a thread between stages at read time.
-        const doCount = doMail.length;
-        const stateCounts = Object.fromEntries(MAIL_STATES.map(state => [`${state}_count`, reflected[state].length]));
-        const countsText = MAIL_STATES.map(state => `${reflected[state].length} ${MAIL_STATE_DISPLAY_NAMES[state]}`).join(" · ");
+        const stateCounts = Object.fromEntries(MAIL_STATES.map(state => [`${state}_count`, total(state)]));
+        const countsText = MAIL_STATES.map(state => `${total(state)} ${MAIL_STATE_DISPLAY_NAMES[state]}`).join(" · ");
         const totalUnread = triage?.total_unread ?? 0;
         const generatedAt = triage?.generated_at ?? null;
         const routingRuleCount = Array.isArray(triage?.routing_rules)
@@ -395,8 +444,8 @@ export function mailTriageTools(
           const items = doMail.map(t => toCard(t, "do"));
           return { status: "ok", message: "Mail to do", data: compact,
             view: contract("list", "Mail to do", {
-              items: items.slice(0, 8), total: items.length,
-              remaining: Math.max(0, items.length - 8),
+              items: items.slice(0, 8), total: total(MAIL_ACTION_STATE),
+              remaining: Math.max(0, total(MAIL_ACTION_STATE) - Math.min(8, items.length)),
               summary: `${countsText} · ${routingRuleCount} routing rule${routingRuleCount === 1 ? "" : "s"} · classified ${generatedAt ?? "unknown"}`,
             }, { generated_at: generatedAt, source: "hwc_mail_triage" }) };
         }
@@ -427,7 +476,7 @@ export function mailTriageTools(
 
         // action === "board" (default)
         const stages = MAIL_STATES.map(state => ({id: state, title: MAIL_STATE_DISPLAY_NAMES[state],
-          cards: reflected[state].map(thread => toCard(thread, state))}));
+          cards: reflected[state].map(thread => toCard(thread, state)), total: total(state)}));
 
         return {
           status: "ok",

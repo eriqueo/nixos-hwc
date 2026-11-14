@@ -811,11 +811,11 @@
     "system-one": {
       "flake": false,
       "locked": {
-        "lastModified": 1792685691,
-        "narHash": "sha256-li/5WAlbGDv4BzlMvdSakQ08axJ+SIa3GRQU+KKM16U=",
+        "lastModified": 1794634692,
+        "narHash": "sha256-2+a+gdCkmRFN7FEOBNhyIlL1IJZsHMt8vf+m6WCycU8=",
         "owner": "eriqueo",
         "repo": "system-one",
-        "rev": "7ef36a38283bcae57813cadeb8dc2ae451459c5f",
+        "rev": "fa0afedc046411d97dbcfc066b9e3037db3f2df3",
         "type": "github"
       },
       "original": {

@@ -13,6 +13,8 @@ finance, business databases, website/CMS, and the daily morning briefing.
   server-only).
 
 ## Structure
+
+Firefly summaries identify balances and activity as recorded ledger data and validate complete notification delivery.
 Catalog export verification runs from the complete committed source tree so both operator entry points retain their relative imports.
 
 Estimator pure calculator contracts live in `engine/calculator-contract.js`; browser transport stays in `api/crm.js`. Geometry has one implementation. Both manual catalog export entries delegate to the PostgreSQL exporter. `verification/` checks production engine outputs and captured export behavior. Superseded DataX market-research code and unused website/estimator bundles are removed; source owners, recovery data and the permanent website compatibility link remain.
@@ -127,8 +129,10 @@ business/
 
 ## Changelog
 
-- 2026-11-14: Workbench pin 1326db5: `herdr-target` (Herdr handoff targets) plus the stage-total counts (612e6e4, 9a7fd37).
+- 2026-11-14: Workbench pin 1326db5: `herdr-target` (Herdr handoff targets) on top of 9a7fd37.
 - 2026-11-13: Workbench Herdr targets: `t3-targets.json` gains the `workbench-web-herdr` destination (hwc-work, project workbench-web, `claude`), the service gets `WORKBENCH_HANDOFF_HERDR_SOCKET` (no hardening change: the socket is connectable under `ProtectSystem=strict`), and `workbench-web-service` accepts Herdr targets bound to hwc-work. Needs the Workbench pin with `herdr-target`.
+- 2026-11-13: Workbench app 9a7fd37: mail counts use the producer's stage totals (Today chip, lanes, "Showing N of M"); Today's Mail group counts DO only. The morning briefing reads the System One ba53e53 snapshot, whose Inbox lanes now exclude mail archived or trashed in Proton.
+- 2026-11-13: Firefly summaries identify balances and activity as recorded ledger data and validate complete notification delivery.
 - 2026-11-13: Workbench web phone layout (app bca3e14): bottom tab bar (Today, Mail, Server, More sheet) from the shared shell's opt-in `data-phone-nav="tabs"` (Scout 94d8948), one-row topbar, inline briefing shortcuts and Mail swipe motion. Desktop unchanged.
 - 2026-11-13: Workbench web: Today becomes the cross-app action briefing and every app sits in the rail; bullets stay low-noise (app f9c37c7). Add `web.hiddenHubs`; work hides the CRM and Refinery copy hubs and drops their write tiles.
 - 2026-11-09: Preserve repository context when packaging the catalog-export regression check.
