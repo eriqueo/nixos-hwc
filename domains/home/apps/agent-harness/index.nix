@@ -171,6 +171,13 @@ let
     T3CODE_NODE = "${pkgs.nodejs}/bin/node";
     T3CODE_BIN = "${lib.attrByPath [ "hwc" "home" "apps" "t3code" "repo" ] "${home}/600_apps/t3code" config}/apps/server/dist/bin.mjs";
   };
+  # The Herdr App (an unmanaged trial install in ~/.local/bin) for tracker
+  # links in Herdr terminals (tracker/herdr.py). Harmless where it is absent:
+  # herdr.py probes the core's socket first and reports "not running".
+  herdrEnv = {
+    TRACKER_HC_BIN = "${home}/.local/bin/hc";
+    TRACKER_HERDR_APP_BIN = "${home}/.local/bin/herdr-app";
+  };
 
   # The agent-workspace allocator. Its code is static policy (the harness
   # bin/ws); the dependencies are declared here so it also runs from the
@@ -555,11 +562,23 @@ in
       # Blocks until Eric presses "Done deciding" on the tracker hub, then prints
       # the next prompt; the fallback for agents outside T3 Code.
       (pkgs.writeShellScriptBin "tracker-wait" ''exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/wait.py "$@"'')
-      # Binds the calling T3 thread to a tracker project, so "Done deciding"
-      # posts the next prompt into that thread.
+      # Binds the calling T3 thread (or, outside T3, the Herdr terminal it runs
+      # in) to a tracker project, so "Done deciding" posts the next prompt there.
       (pkgs.writeShellScriptBin "tracker-link" ''
-        export ${lib.concatStringsSep " " (lib.mapAttrsToList (k: v: "${k}=${lib.escapeShellArg v}") t3Env)}
+        export ${lib.concatStringsSep " " (lib.mapAttrsToList (k: v: "${k}=${lib.escapeShellArg v}") (t3Env // herdrEnv))}
+        : "''${TRACKER_URL:=${cfg.tracker.url}}"; export TRACKER_URL
         exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/t3.py "$@"
+      '')
+      # Shows a project's Herdr terminal, or starts its agent there with the
+      # hub's next prompt (tracker/herdr.py). Variables already set win.
+      (pkgs.writeShellScriptBin "tracker-open" ''
+        ${lib.concatStrings (lib.mapAttrsToList (k: v: '': "''${${k}:=${v}}"; export ${k}
+        '') (herdrEnv // {
+          TRACKER_URL = cfg.tracker.url;
+          TRACKER_ROOT = cfg.tracker.root;
+          WS_ROOT = cfg.workspaceRoot;
+        }))}
+        exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/herdr.py "$@"
       '')
       # Stamps a project's live handoff (agent/<project>/handoff.md) with the
       # writer and each checkout's HEAD, which the hub checks against the ledgers.
@@ -770,7 +789,7 @@ in
         Description = "Deliver tracker pings into this host's T3 threads";
         After = [ "network-online.target" ];
         # relay.py imports handoff_doc; a change there must restart the relay too.
-        X-Restart-Triggers = map (f: "${harness}/lifecycle/tracker/${f}") [ "relay.py" "t3.py" "handoff_doc.py" "lifecycle.py" "closeout.py" "close-contract.json" ];
+        X-Restart-Triggers = map (f: "${harness}/lifecycle/tracker/${f}") [ "relay.py" "t3.py" "herdr.py" "handoff_doc.py" "lifecycle.py" "closeout.py" "close-contract.json" ];
       };
       Service = {
         ExecStart = "${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/relay.py";
@@ -780,7 +799,7 @@ in
           "TRACKER_LOCAL_LEDGER=${cfg.stateDir}/ledger/%H.json"
           "TRACKER_CLOSE_RUNTIME=${if cfg.tracker.lifecycle.close.enable then toString closeRuntime else ""}"
           "PATH=${lib.makeBinPath [ pkgs.systemd pkgs.git pkgs.coreutils ]}:/run/current-system/sw/bin"
-        ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") t3Env;
+        ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") (t3Env // herdrEnv);
         Restart = "always";
         RestartSec = 10;
       };
