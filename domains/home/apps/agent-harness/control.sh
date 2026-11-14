@@ -451,7 +451,7 @@ print_plan() {
   if [ "$locked" = "$revision" ]; then
     printf '  nixos-hwc: pin unchanged; no commit\n'
   else
-    printf '  nixos-hwc: commit the pin on a branch from origin/main, release.py verify it, push it to origin main (fast-forward only)\n'
+    printf '  nixos-hwc: commit the pin on origin/main in a detached worktree, release.py verify it, push it to origin main (fast-forward only)\n'
   fi
   for host in "${FLEET_HOSTS[@]}"; do
     current=$(host_revision "$host")
