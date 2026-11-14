@@ -42,12 +42,25 @@ in
   # while unrelated CUDA rebuilds block a full switch. Remove those two
   # attached entries once /etc/static/systemd/system contains this mount;
   # the declarative unit has higher lookup priority than the bridge.
+  # CRITICAL agent source/state and REPLACEABLE build captures share one
+  # physical mount: ws close renames scratch from projects/ into closed/.
+  # Keep the public home paths physical (no symlink canonicalization changes).
+  # Existing workspace retention/backup ownership is unchanged by relocation.
   systemd.mounts = [{
+    what = "${paths.hot.root}/agent-workspaces";
+    where = paths.user.agents;
+    type = "none";
+    options = "bind";
+    unitConfig.RequiresMountsFor = paths.hot.root;
+    mountConfig.DirectoryMode = "0000";
+    wantedBy = [ "local-fs.target" ];
+  } {
+
     what = "${paths.hot.root}/agent-projects/${switchProject}";
     where = "${paths.user.agents}/projects/${switchProject}";
     type = "none";
     options = "bind";
-    unitConfig.RequiresMountsFor = paths.hot.root;
+    unitConfig.RequiresMountsFor = "${paths.hot.root} ${paths.user.agents}";
     # If SATA is unavailable, the uncovered mountpoint must reject user
     # writes instead of quietly filling the root disk again.
     mountConfig.DirectoryMode = "0000";
