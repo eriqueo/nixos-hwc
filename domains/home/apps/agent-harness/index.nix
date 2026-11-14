@@ -177,7 +177,8 @@ let
   # core's socket first and reports "not running".
   herdrCore = config.hwc.home.apps.herdr-core;
   herdrEnv = {
-    TRACKER_HC_BIN = if herdrCore.enable then "${herdrCore.package}/bin/hc" else "${home}/.local/bin/hc";
+    # serve.binary (the laptop): the app's own copy, which it keeps updated.
+    TRACKER_HC_BIN = if herdrCore.enable && herdrCore.serve.binary == null then "${herdrCore.package}/bin/hc" else "${home}/.local/bin/hc";
     TRACKER_HERDR_APP_BIN = "${home}/.local/bin/herdr-app";
   };
   # tracker-open's variables; `:=` lets a caller's own values win.

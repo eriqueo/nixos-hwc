@@ -87,6 +87,14 @@ in
     # Workbench and Herdr alerts link herdr://; this desktop opens them.
     agent-harness.tracker.herdrLinks.enable = true;
     agent-harness.tracker.herdrAlerts.enable = true;
+    # The core starts with the session, so a reboot's terminals come back (and
+    # resume their agents) before the Herdr App opens; the app attaches to it.
+    # It runs the app's own self-updating copy, not a Nix package.
+    herdr-core = {
+      enable = true;
+      serve.enable = true;
+      serve.binary = "${config.home.homeDirectory}/.local/bin/herdr-core";
+    };
     workbench.desktop = {
       enable = true;
       summary.enable = true;
