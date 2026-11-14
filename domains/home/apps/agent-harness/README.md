@@ -128,6 +128,7 @@ authoring checkout is a warning; a runtime reference to it is a failure.
 
 ## Changelog
 
+- 2026-11-14 (b): Pins agent-harness dd2ba71: the `herdr-session` hook, `herdr_restore.py`, the delegate Herdr transport and templates, `herdr_link.py` and `herdr_alerts.py` that the 2026-11-13 (e)–(g) entries need; `tracker-open` resumes a project's recorded agent in place.
 - 2026-11-14: `herdrEnv` keeps `TRACKER_HC_BIN` on `~/.local/bin/hc` where `apps/herdr-core` runs the app's own binary (`serve.binary`, the laptop), not the Nix package.
 - 2026-11-13 (g): Herdr links and alerts. `tracker.herdrLinks` installs `herdr-link` and its `x-scheme-handler/herdr` desktop entry; `tracker.herdrAlerts` runs the `herdr-alerts` user service (laptop, work, home). `tracker-open` and `herdr-link` share `trackerOpenEnv`. Needs the agent-harness pin that adds `tracker/herdr_link.py` and `tracker/herdr_alerts.py`.
 - 2026-11-13 (f): Herdr templates for the delegate skill. `xdg.configFile."herdr-core/templates"` links the pinned harness `skills/delegate/templates` with one link per file. The links go on all three hosts, because a child terminal reads templates on the machine that runs it. They live here rather than in `apps/herdr-core`, which manages only the servers' core package; the laptop's core is the unmanaged app install. The harness owns the files, beside the helper that depends on their names.

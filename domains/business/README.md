@@ -127,6 +127,7 @@ business/
 
 ## Changelog
 
+- 2026-11-14: Workbench pin 1326db5: `herdr-target` (Herdr handoff targets) plus the stage-total counts (612e6e4, 9a7fd37).
 - 2026-11-13: Workbench Herdr targets: `t3-targets.json` gains the `workbench-web-herdr` destination (hwc-work, project workbench-web, `claude`), the service gets `WORKBENCH_HANDOFF_HERDR_SOCKET` (no hardening change: the socket is connectable under `ProtectSystem=strict`), and `workbench-web-service` accepts Herdr targets bound to hwc-work. Needs the Workbench pin with `herdr-target`.
 - 2026-11-13: Workbench web phone layout (app bca3e14): bottom tab bar (Today, Mail, Server, More sheet) from the shared shell's opt-in `data-phone-nav="tabs"` (Scout 94d8948), one-row topbar, inline briefing shortcuts and Mail swipe motion. Desktop unchanged.
 - 2026-11-13: Workbench web: Today becomes the cross-app action briefing and every app sits in the rail; bullets stay low-noise (app f9c37c7). Add `web.hiddenHubs`; work hides the CRM and Refinery copy hubs and drops their write tiles.

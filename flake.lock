@@ -71,11 +71,11 @@
     "agent-harness": {
       "flake": false,
       "locked": {
-        "lastModified": 1794629917,
-        "narHash": "sha256-j6fpWxYkJ0mTFLeEcDJ+hFWSGcEBhWEK5WlQ49KLU2k=",
+        "lastModified": 1794635130,
+        "narHash": "sha256-A8leYnAZmYiIR1GN3KWHfIBwVmks3W+pWqacI02vSyI=",
         "owner": "eriqueo",
         "repo": "agent-harness",
-        "rev": "924344a5b470d8d27d98d6adbef5b094cc9e9580",
+        "rev": "dd2ba71405926f17da3743de5669751ba87138c9",
         "type": "github"
       },
       "original": {
@@ -1082,11 +1082,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794615374,
-        "narHash": "sha256-D9to9h7WBD1hRgVcsXisqsb/blLPFj/eRO/m6XOCeFo=",
+        "lastModified": 1794635448,
+        "narHash": "sha256-rac6PhBmOUSR/8eYtRV8OWm/68q8NJ8vH3nnw0IN0Mw=",
         "owner": "eriqueo",
         "repo": "workbench",
-        "rev": "bca3e14c4ec453fd2e60b9d771840982608afc4b",
+        "rev": "1326db583f762bda1bd9ba54760a7ff9eaad9f0d",
         "type": "github"
       },
       "original": {
