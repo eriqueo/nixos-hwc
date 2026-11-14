@@ -389,32 +389,149 @@ publish_preflight() {
     }
   done
 
-  # Other sessions push to nixos-hwc while the suites above run (eight minutes);
-  # behind-only is safe to fast-forward. Local commits not on origin still stop.
-  git -C "$NIXOS" fetch origin refs/heads/main:refs/remotes/origin/main
-  if git -C "$NIXOS" merge-base --is-ancestor HEAD origin/main; then
-    git -C "$NIXOS" merge --ff-only --quiet origin/main
-  else
-    printf 'agent-harness: nixos-hwc main has commits not on origin/main; push or drop them first\n' >&2
-    return 1
-  fi
-
+  # nixos-hwc main moves only through the release runner. Being behind origin
+  # is fine (the runner fast-forwards to the candidate); local commits not on
+  # origin are another session's unpushed work, and the runner would refuse.
+  nixos_main_in_origin || return 1
   static_revision=$(git -C "$SOURCE" rev-parse HEAD)
-  locked=$(jq -r '.nodes."agent-harness".locked.rev' "$NIXOS/flake.lock")
+  locked=$(origin_pin)
   if [ "$locked" = "$static_revision" ]; then
-    ok "nixos-hwc already pins static revision $static_revision"
+    ok "nixos-hwc origin/main already pins static revision $static_revision"
   else
     ok "nixos-hwc will update static revision $locked -> $static_revision"
   fi
 }
 
+release_runner() {
+  python3 "$NIXOS/workspace/nixos-dev/verification/release.py" --repo "$NIXOS" "$@"
+}
+
+nixos_main_in_origin() {
+  git -C "$NIXOS" fetch --quiet origin refs/heads/main:refs/remotes/origin/main
+  git -C "$NIXOS" merge-base --is-ancestor main origin/main || {
+    printf 'agent-harness: nixos-hwc main has commits not on origin/main; push them (or let their session push), then publish again\n' >&2
+    return 1
+  }
+}
+
+origin_pin() { git -C "$NIXOS" show origin/main:flake.lock | jq -r '.nodes."agent-harness".locked.rev'; }
+
+# The harness revision a host runs, or "unreachable".
+host_revision() {
+  if [ "$1" = "$(hostname)" ]; then expected_revision; return; fi
+  ssh -o BatchMode=yes -o ConnectTimeout=8 "$1" 'agent-harness revision' 2>/dev/null || printf 'unreachable\n'
+}
+
+# Hosts publish activates: this host always (the pin is integrated here), and
+# the named ones. Before 2026-11-13 every publish switched the whole fleet.
+publish_targets() {
+  local host requested=() all=0
+  validate_fleet
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --fleet) all=1 ;;
+      --host) [ -n "${2:-}" ] || usage; requested+=("$2"); shift ;;
+      *) usage ;;
+    esac
+    shift
+  done
+  TARGETS=("$(hostname)")
+  [ "$all" = 0 ] || requested=("${FLEET_HOSTS[@]}")
+  for host in "${requested[@]}"; do
+    case " ${FLEET_HOSTS[*]} " in *" $host "*) ;; *) printf 'agent-harness: %s is not in the fleet (%s)\n' "$host" "${FLEET_HOSTS[*]}" >&2; return 1 ;; esac
+    case " ${TARGETS[*]} " in *" $host "*) ;; *) TARGETS+=("$host") ;; esac
+  done
+}
+
+# What publish does to each fleet host. Every activation goes through
+# workspace/nixos-dev/verification/release.py on the host it activates.
+print_plan() {
+  local revision=$1 host current
+  printf 'publish plan: harness %s (origin/main pins %s)\n' "$revision" "$locked"
+  if [ "$locked" = "$revision" ]; then
+    printf '  nixos-hwc: pin unchanged; no commit\n'
+  else
+    printf '  nixos-hwc: commit the pin on origin/main in a detached worktree, release.py verify it, push it to origin main (fast-forward only)\n'
+  fi
+  for host in "${FLEET_HOSTS[@]}"; do
+    current=$(host_revision "$host")
+    if [ "$current" = "$revision" ]; then
+      printf '  %s: already runs %s; no activation\n' "$host" "$revision"
+    elif [ "$host" = "$(hostname)" ]; then
+      printf '  %s (this host, runs %s): release.py deploy --candidate <pin commit>: verify, fast-forward main, switch\n' "$host" "$current"
+    elif case " ${TARGETS[*]} " in *" $host "*) true ;; *) false ;; esac; then
+      printf '  %s (runs %s): over ssh, pull its harness checkout --ff-only, then release.py deploy --candidate origin/main there\n' "$host" "$current"
+    else
+      printf '  %s (runs %s): not activated; add --host %s or --fleet\n' "$host" "$current" "$host"
+    fi
+  done
+}
+
+# Read-only: fetches remote refs, reports what a publish would do.
+publish_plan() {
+  local head
+  git -C "$SOURCE" fetch --quiet github refs/heads/main:refs/remotes/github/main || warn 'could not fetch the harness github remote'
+  git -C "$NIXOS" fetch --quiet origin refs/heads/main:refs/remotes/origin/main || warn 'could not fetch nixos-hwc origin'
+  head=$(git -C "$SOURCE" rev-parse HEAD)
+  locked=$(origin_pin)
+  [ -z "$(git -C "$SOURCE" status --porcelain --untracked-files=no)" ] || warn "harness checkout has tracked changes; publish would refuse"
+  [ -z "$(git -C "$NIXOS" status --porcelain)" ] || warn 'nixos-hwc checkout is not clean; publish would refuse'
+  git -C "$NIXOS" merge-base --is-ancestor main origin/main || warn 'nixos-hwc main has commits not on origin/main; publish would refuse'
+  git -C "$SOURCE" merge-base --is-ancestor github/main HEAD || warn "harness HEAD is not on top of github/main; publish first syncs onto it, so the revision will differ"
+  print_plan "$head"
+}
+
+# Commit the pin on origin/main in a detached worktree, verify it with the
+# runner, and push it to origin main. Detached, because nixos-hwc's post-commit
+# hook pushes the current branch: a pin committed on main reached origin
+# before any check. A push that loses a race to another session starts again
+# from the new origin/main; nothing reaches main unverified.
+integrate_pin() {
+  local attempt worktree
+  for attempt in 1 2 3; do
+    nixos_main_in_origin || return 1
+    if [ "$(origin_pin)" = "$static_revision" ]; then
+      candidate=$(git -C "$NIXOS" rev-parse origin/main)
+      ok "origin/main $candidate already pins $static_revision"
+      return 0
+    fi
+    mkdir -p "$NIXOS-worktrees"
+    worktree=$(mktemp -d "$NIXOS-worktrees/harness-publish.XXXXXX")
+    git -C "$NIXOS" worktree add --quiet --detach "$worktree" origin/main
+    (cd "$worktree" && nix flake update agent-harness)
+    [ "$(jq -r '.nodes."agent-harness".locked.rev' "$worktree/flake.lock")" = "$static_revision" ] || {
+      printf 'agent-harness: flake lock did not resolve static revision %s (left at %s)\n' "$static_revision" "$worktree" >&2
+      return 1
+    }
+    git -C "$worktree" add flake.lock
+    git -C "$worktree" commit --quiet -m "chore: publish agent harness $static_revision"
+    candidate=$(git -C "$worktree" rev-parse HEAD)
+    release_runner verify --candidate "$candidate" || {
+      printf 'agent-harness: release verification refused pin commit %s; left at %s\n' "$candidate" "$worktree" >&2
+      return 1
+    }
+    if git -C "$NIXOS" push origin "$candidate:refs/heads/main"; then
+      git -C "$NIXOS" fetch --quiet origin refs/heads/main:refs/remotes/origin/main
+      git -C "$NIXOS" worktree remove "$worktree"
+      return 0
+    fi
+    git -C "$NIXOS" worktree remove --force "$worktree"
+    warn "origin/main moved before the pin push (attempt $attempt); rebuilding the candidate"
+  done
+  printf 'agent-harness: origin/main moved during each of 3 attempts; publish again when it is quiet\n' >&2
+  return 1
+}
+
 publish() {
+  local mode=run
   case "${1:-}" in
-    ''|--check) ;;
-    *) usage ;;
+    --plan|--check) mode=${1#--}; shift ;;
   esac
+  publish_targets "$@"
+  if [ "$mode" = plan ]; then publish_plan; return; fi
   publish_preflight
-  [ "${1:-}" != --check ] || return 0
+  print_plan "$static_revision"
+  [ "$mode" != check ] || return 0
 
   # Remote authoring checkouts track the server mirror, while Nix pins GitHub.
   # Publish both before switching, so the checkout and active policy agree.
@@ -427,59 +544,46 @@ publish() {
   done
   static_revision=$(git -C "$SOURCE" rev-parse HEAD)
 
-  if [ "$locked" != "$static_revision" ]; then
-    (cd "$NIXOS" && nix flake update agent-harness)
-    [ "$(jq -r '.nodes."agent-harness".locked.rev' "$NIXOS/flake.lock")" = "$static_revision" ] || {
-      printf 'agent-harness: flake lock did not resolve static revision %s\n' "$static_revision" >&2
-      return 1
-    }
-    git -C "$NIXOS" add flake.lock
-    git -C "$NIXOS" commit -m "chore: publish agent harness $static_revision"
+  local candidate host skipped=() untargeted=()
+  integrate_pin || return 1
+
+  # Every activation is the release runner on the host it activates: it
+  # verifies the exact candidate, fast-forwards that host's main and switches.
+  if [ "$(expected_revision)" = "$static_revision" ]; then
+    ok "$(hostname) already runs $static_revision"
+  elif ! release_runner deploy --candidate "$candidate"; then
+    printf 'agent-harness: %s is on origin/main, but this host refused or failed activation; fix that, then: python3 workspace/nixos-dev/verification/release.py deploy --candidate origin/main\n' "$candidate" >&2
+    return 1
   fi
 
-  # Build each host in its own store: evaluate here, realise there. A remote
-  # host already holds its heavy closure, so nothing is fetched twice. Measured
-  # 2026-09-30: building hwc-home on hwc-work refetched its CUDA archives from
-  # NVIDIA, and a dropped download failed the whole publication twice.
-  # An unreachable host (a laptop asleep) is skipped for build and switch; a
-  # build that fails on a reachable host still stops publication.
-  local host skipped=() offline=()
-  for host in "${FLEET_HOSTS[@]}"; do
-    if [ "$host" = "$(hostname)" ]; then
-      nix build --no-link "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
-    elif ! ssh -o BatchMode=yes -o ConnectTimeout=8 "$host" true 2>/dev/null; then
-      offline+=("$host"); skipped+=("$host")
-    else
-      nix build --no-link --eval-store auto --store "ssh-ng://$host" \
-        "$NIXOS#nixosConfigurations.$host.config.system.build.toplevel"
-    fi
+  # A remote host runs its own runner against origin/main, which now holds the
+  # pin. Its gate refuses a checkout with another session's unpushed commits;
+  # that host is reported and the rest continue (before 2026-11-12 the first
+  # such host stopped the loop).
+  for host in "${TARGETS[@]}"; do
+    [ "$host" != "$(hostname)" ] || continue
+    case "$(host_revision "$host")" in
+      unreachable) skipped+=("$host (unreachable)") ;;
+      "$static_revision") ok "$host already runs $static_revision" ;;
+      *) ssh -t "$host" "git -C ~/800_agents/harness pull --ff-only && cd ~/.nixos && git fetch --quiet origin && python3 workspace/nixos-dev/verification/release.py deploy --candidate origin/main" \
+           || skipped+=("$host (refused or failed; see above)") ;;
+    esac
   done
-  # A push that lost a race to another session: the pin commit touches only
-  # flake.lock, so replay it on the new origin and push once more.
-  if ! git -C "$NIXOS" push origin main; then
-    git -C "$NIXOS" pull --rebase --quiet origin main
-    git -C "$NIXOS" push origin main
-  fi
-
-  # A host whose checkout holds another session's unpushed commits cannot
-  # fast-forward. Skip it and switch the rest: before 2026-11-12 the first such
-  # host stopped the loop, and every host after it stayed on the old revision.
   for host in "${FLEET_HOSTS[@]}"; do
-    case " ${offline[*]} " in *" $host "*) continue ;; esac
-    if [ "$host" = "$(hostname)" ]; then
-      sudo nixos-rebuild switch --flake "$NIXOS#$host" || skipped+=("$host")
-    else
-      ssh -t "$host" "git -C ~/800_agents/harness pull --ff-only && cd ~/.nixos && git pull --ff-only && sudo nixos-rebuild switch --flake .#$host" \
-        || skipped+=("$host")
-    fi
+    case " ${TARGETS[*]} " in *" $host "*) ;; *) untargeted+=("$host") ;; esac
   done
   if [ "${#skipped[@]}" -gt 0 ]; then
-    printf 'agent-harness: not switched: %s. Push or rebase that host'"'"'s checkout, then publish again.\n' "${skipped[*]}" >&2
+    printf 'agent-harness: not switched: %s. Fix that host, then publish again with --host.\n' "${skipped[*]}" >&2
   fi
   # The CLI now on PATH, not "$0": this process is the pre-switch store copy,
   # whose expected manifest still names the old revision, so re-running it
   # reported every freshly switched host as a mismatch (2026-09-30).
-  agent-harness doctor --fleet
+  if [ "${#untargeted[@]}" -eq 0 ]; then
+    agent-harness doctor --fleet
+  else
+    agent-harness doctor
+    printf 'not activated (not requested): %s. They keep their current harness; activate with: agent-harness publish --host <name>\n' "${untargeted[*]}"
+  fi
   [ "${#skipped[@]}" -eq 0 ]
 }
 
@@ -511,17 +615,18 @@ drift() {
 }
 
 usage() {
-  printf 'usage: agent-harness [status|doctor [--fleet]|matrix [--fleet]|drift|revision|sync|validate-state|diff|publish [--check]]\n' >&2
+  printf 'usage: agent-harness [status|doctor [--fleet]|matrix [--fleet]|drift|revision|sync|validate-state|diff|publish [--plan|--check] [--host <name>]... [--fleet]]\n' >&2
   exit 2
 }
 
 command=${1:-}
 if [ -z "$command" ] && [ -t 0 ]; then
-  printf '1 status\n2 doctor\n3 fleet doctor\n4 sync\n5 validate state\n6 static diff\n7 publish\n> '
+  printf '1 status\n2 doctor\n3 fleet doctor\n4 sync\n5 validate state\n6 static diff\n7 publish plan\n8 publish (this host)\n> '
   read -r choice
   case "$choice" in
     1) command=status ;; 2) command=doctor ;; 3) command=doctor; set -- doctor --fleet ;;
-    4) command=sync ;; 5) command=validate-state ;; 6) command="diff" ;; 7) command=publish ;; *) exit 2 ;;
+    4) command=sync ;; 5) command=validate-state ;; 6) command="diff" ;; 7) command=publish; set -- publish --plan ;;
+    8) command=publish ;; *) exit 2 ;;
   esac
 fi
 
@@ -538,6 +643,6 @@ case "$command" in
   sync) exec agent-state-sync sync ;;
   validate-state) exec agent-state-validate ;;
   diff) git --no-pager diff --no-index /etc/agent-harness "$SOURCE" || [ "$?" = 1 ] ;;
-  publish) publish "${2:-}" ;;
+  publish) publish "${@:2}" ;;
   *) usage ;;
 esac

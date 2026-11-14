@@ -33,7 +33,7 @@ consume the same runtime package catalog in both Home Manager lanes.
 
 Shared home consumers use one checkout-path helper, one browser Intel VAAPI environment and one workspace-slot plan. Neomutt receives its selected primary account explicitly. The palette files share stable cursor and alpha facts; keymap chords remain in the grammar. `home-untangle` exercises rendered consumers with isolated command fixtures.
 
-`verification/` contains pure flake checks for this capability; production modules do not import it.
+`verification/` contains pure flake checks for this capability; production modules do not import it. `agent-harness-control` runs the agent-harness CLI test (doctor drift cases; `publish` only through the release runner).
 REA's package wrapper supplies the Nix firmware resource limiter and checks Binwalk against a generated gzip fixture.
 Waybar patches its built-in workspace clicks for Hyprland Lua IPC; calendar text escapes Pango markup.
 Claude CLI installation belongs to `apps/claude-code/`, enabled by the base role. The laptop selects its native updater; other hosts retain Nix packages. Shell bundles no longer install a second CLI.
@@ -185,6 +185,7 @@ tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
 - 2026-11-13: Add `apps/herdr-core`: the Herdr core pinned from its upstream release, and a `serve` user unit that keeps one core running on hwc-home and hwc-work across reboots. Separate from `apps/herdr`, which ships a different project.
+- 2026-11-13: `agent-harness-control` runs `apps/agent-harness/control.test.sh` in the sandbox, so the gate fails a `publish` that activates outside the release runner.
 - 2026-11-13: Build the Rust tracker contracts from `lifecycle/tracker` with the crate as a subdirectory, so the parity tests find the hub page at `../index.html` as Python does; the crate-only source made six index-fallback routes 404 and failed the full suite.
 - 2026-11-13: Pin the Rust tracker's candidate-only brief command; its checks cover replay, stale revisions, concurrent writers, shutdown drain and replay durability after an uncertain write. The live Python tracker is unchanged.
 - 2026-11-12: Pin the Rust project-clock projection, with custom-policy and midnight parity checks against Python and bounded failures for invalid dates.
