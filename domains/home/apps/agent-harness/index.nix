@@ -181,6 +181,16 @@ let
     TRACKER_HERDR_APP_BIN = "${home}/.local/bin/herdr-app";
   };
 
+  # Agents that survive a reboot in Herdr terminals (tracker/herdr_restore.py):
+  # the harness hook herdr-session records each agent's session as `agent.*`
+  # labels on its terminal; this command lists them and resumes waiting ones,
+  # and the zsh init below resumes one at a recovered shell's first prompt.
+  # Not in tracker-open: herdr.py is the tracker's project transport, and this
+  # serves every Herdr terminal, tracked or not.
+  herdrRestore = pkgs.writeShellScriptBin "herdr-restore" ''
+    exec ${pkgs.python3}/bin/python3 -I ${harness}/lifecycle/tracker/herdr_restore.py "$@"
+  '';
+
   # The agent-workspace allocator. Its code is static policy (the harness
   # bin/ws); the dependencies are declared here so it also runs from the
   # state-sync unit, whose PATH is systemd's alone.
@@ -582,6 +592,7 @@ in
         }))}
         exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/herdr.py "$@"
       '')
+      herdrRestore
       # Stamps a project's live handoff (agent/<project>/handoff.md) with the
       # writer and each checkout's HEAD, which the hub checks against the ledgers.
       (pkgs.writeShellScriptBin "tracker-handoff" ''
@@ -590,6 +601,38 @@ in
       '')
     ]
     ++ lib.optional cfg.cliUpdates.enable cliUpdater;
+
+    # A Herdr terminal's own interactive shell asks herdr-restore at its first
+    # prompt, and again after a command that started an agent: it resumes the
+    # session a reboot took (one attempt; a failure is labelled and waits), and
+    # forgets one the person ended. `hwc_herdr_resume` is also what
+    # `herdr-restore resume` types into a waiting terminal. Elsewhere (no
+    # HC_TERMINAL_ID) this defines nothing and costs nothing.
+    programs.zsh.initContent = lib.mkAfter ''
+      if [[ -o interactive && -n $HC_TERMINAL_ID ]]; then
+        autoload -Uz add-zsh-hook
+        _hwc_herdr_due=1
+        function hwc_herdr_resume {
+          local code rc
+          code=$(${herdrRestore}/bin/herdr-restore shell $$) || return 0
+          [[ -n $code ]] || return 0
+          eval "$code"
+          rc=$?
+          ${herdrRestore}/bin/herdr-restore settle $$ $rc
+          return 0
+        }
+        function hwc_herdr_precmd {
+          (( _hwc_herdr_due )) || return 0
+          _hwc_herdr_due=0
+          hwc_herdr_resume
+        }
+        function hwc_herdr_preexec {
+          case ''${''${(z)1}[1]:t} in claude|codex|pi) _hwc_herdr_due=1 ;; esac
+        }
+        add-zsh-hook precmd hwc_herdr_precmd
+        add-zsh-hook preexec hwc_herdr_preexec
+      fi
+    '';
 
     home.file = lib.mkMerge (
       [ (lib.genAttrs skillRoots (_: { source = agentSkills; })) ]
