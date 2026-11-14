@@ -209,11 +209,18 @@ in
         description = "Optional canonical stylesheet override; null uses the verified styles bundled in the Workbench package. Explicit overrides are validated at startup.";
       };
       handoff = {
-        enable = lib.mkEnableOption "configured T3 conversation handoffs";
+        enable = lib.mkEnableOption "configured T3 conversation and Herdr agent handoffs";
         targets = lib.mkOption {
           type = lib.types.attrs;
           default = targetProfile;
-          description = "Versioned T3 destination policy or legacy fixed-target map. Workbench parses the typed records, restricts discovery to configured projects and requires conversation selection for every Send.";
+          description = ''
+            Versioned destination policy or legacy fixed-target map. T3 records:
+            Workbench restricts discovery to configured projects and requires
+            conversation selection for every Send. `kind = "herdr"` records send to
+            the agent labelled `tracker.project=<project>` on `machine`, starting
+            `agent` in `cwd` when none runs. The service speaks this host's Herdr
+            core socket (WORKBENCH_HANDOFF_HERDR_SOCKET below) and never starts a
+            core, so `machine` must be this host.'';
         };
         credentialsSecret = lib.mkOption {
           type = lib.types.str;
@@ -316,6 +323,10 @@ in
         WORKBENCH_HIDDEN_HUBS = builtins.toJSON cfg.web.hiddenHubs;
       } // lib.optionalAttrs cfg.web.handoff.enable {
         WORKBENCH_HANDOFF_CREDENTIALS_FILE = config.hwc.secrets.api.${cfg.web.handoff.credentialsSecret};
+        # Herdr targets: this host's core, which runs in eric's user manager.
+        # Connecting needs no hardening change: ProtectSystem=strict leaves the
+        # socket connectable (verified 2026-11-13 under the same properties).
+        WORKBENCH_HANDOFF_HERDR_SOCKET = "/run/user/${toString config.hwc.system.core.identity.puid}/herdr-core/default.sock";
         WORKBENCH_HANDOFF_CREDENTIAL_MOUNT = builtins.toJSON {
           linkDirectory = config.age.secretsDir;
           generationDirectory = config.age.secretsMountPoint;

@@ -10,6 +10,14 @@
       "credentialReference": "workbench-laptop",
       "runtimeCeiling": "full-access",
       "interactionCeiling": "default"
+    },
+    "workbench-web-herdr": {
+      "kind": "herdr",
+      "label": "Workbench web · Herdr agent on hwc-work",
+      "machine": "hwc-work",
+      "project": "workbench-web",
+      "cwd": "/home/eric/800_agents/projects/workbench-web",
+      "agent": ["claude"]
     }
   }
 }

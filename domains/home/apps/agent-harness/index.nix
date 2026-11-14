@@ -180,6 +180,21 @@ let
     TRACKER_HC_BIN = if herdrCore.enable then "${herdrCore.package}/bin/hc" else "${home}/.local/bin/hc";
     TRACKER_HERDR_APP_BIN = "${home}/.local/bin/herdr-app";
   };
+  # tracker-open's variables; `:=` lets a caller's own values win.
+  trackerOpenEnv = lib.concatStrings (lib.mapAttrsToList (k: v: '': "''${${k}:=${v}}"; export ${k}
+  '') (herdrEnv // {
+    TRACKER_URL = cfg.tracker.url;
+    TRACKER_ROOT = cfg.tracker.root;
+    WS_ROOT = cfg.workspaceRoot;
+  }));
+  # The herdr:// handler (tracker/herdr_link.py): a terminal link focuses it in
+  # the Herdr app; a project link runs tracker-open. Failures reach notify-send.
+  herdrLink = pkgs.writeShellScriptBin "herdr-link" ''
+    ${trackerOpenEnv}
+    : "''${TRACKER_OPEN_BIN:=${config.home.profileDirectory}/bin/tracker-open}"; export TRACKER_OPEN_BIN
+    export PATH=${lib.makeBinPath [ pkgs.libnotify ]}:$PATH
+    exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/herdr_link.py "$@"
+  '';
 
   # Agents that survive a reboot in Herdr terminals (tracker/herdr_restore.py):
   # the harness hook herdr-session records each agent's session as `agent.*`
@@ -418,6 +433,29 @@ in
         default = "http://hwc-work:8765";
         description = "The hub as every host's tracker-relay reaches it (tailnet).";
       };
+      herdrLinks.enable = lib.mkEnableOption ''
+        the herdr:// link handler (harness lifecycle/tracker/herdr_link.py):
+        herdr://terminal/<machine>/<tN> focuses that terminal in the Herdr app and
+        herdr://project/[<machine>/]<id> runs tracker-open. Workbench and Herdr
+        alerts emit these links. Desktop hosts only'';
+      herdrAlerts = {
+        enable = lib.mkEnableOption ''
+          one hwc-notify alert (topic `projects`) when a Herdr agent on this host
+          becomes blocked on input (harness lifecycle/tracker/herdr_alerts.py). It
+          follows this host's core over its socket, never starts one, and repeats
+          no alert for one blocked episode'';
+        done = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Also alert, at priority 4, when an agent finishes a turn while nobody watched.";
+        };
+        notifyUrl = lib.mkOption {
+          type = lib.types.str;
+          default = lib.attrByPath [ "hwc" "notifications" "notify" "url" ] "" osConfig;
+          defaultText = lib.literalExpression ''osConfig.hwc.notifications.notify.url or ""'';
+          description = "The hwc-notify base URL; the one producer is the system option, handed to the standalone lane by flake.nix.";
+        };
+      };
       refineryUrl = lib.mkOption {
         type = lib.types.str;
         default = "http://127.0.0.1:${toString (lib.attrByPath [ "hwc" "automation" "refinery" "port" ] 8060 osConfig)}";
@@ -544,6 +582,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [ {
+      assertion = !cfg.tracker.herdrAlerts.enable || cfg.tracker.herdrAlerts.notifyUrl != "";
+      message = "agent-harness: tracker.herdrAlerts needs notifyUrl (hwc.notifications.notify.url); without it every alert would be dropped.";
+    } ];
+
     hwc.home.core.repoHooks.repos = lib.mkIf (cfg.stateHub != null) [ {
       path = cfg.stateHub;
       dispatched = [ ];
@@ -584,12 +627,7 @@ in
       # Shows a project's Herdr terminal, or starts its agent there with the
       # hub's next prompt (tracker/herdr.py). Variables already set win.
       (pkgs.writeShellScriptBin "tracker-open" ''
-        ${lib.concatStrings (lib.mapAttrsToList (k: v: '': "''${${k}:=${v}}"; export ${k}
-        '') (herdrEnv // {
-          TRACKER_URL = cfg.tracker.url;
-          TRACKER_ROOT = cfg.tracker.root;
-          WS_ROOT = cfg.workspaceRoot;
-        }))}
+        ${trackerOpenEnv}
         exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/herdr.py "$@"
       '')
       herdrRestore
@@ -600,6 +638,7 @@ in
         exec ${pkgs.python3}/bin/python3 ${harness}/lifecycle/tracker/handoff_doc.py "$@"
       '')
     ]
+    ++ lib.optional cfg.tracker.herdrLinks.enable herdrLink
     ++ lib.optional cfg.cliUpdates.enable cliUpdater;
 
     # A Herdr terminal's own interactive shell asks herdr-restore at its first
@@ -633,6 +672,21 @@ in
         add-zsh-hook preexec hwc_herdr_preexec
       fi
     '';
+
+    # herdr:// links open the exact agent. Herdr registers no scheme itself.
+    xdg.dataFile."applications/herdr-link.desktop" = lib.mkIf cfg.tracker.herdrLinks.enable {
+      source = "${pkgs.makeDesktopItem {
+        name = "herdr-link";
+        desktopName = "Herdr link";
+        comment = "Focus the Herdr agent a herdr:// link names";
+        exec = "${herdrLink}/bin/herdr-link %u";
+        terminal = false;
+        noDisplay = true;
+        mimeTypes = [ "x-scheme-handler/herdr" ];
+      }}/share/applications/herdr-link.desktop";
+    };
+    xdg.mimeApps.defaultApplications."x-scheme-handler/herdr" =
+      lib.mkIf cfg.tracker.herdrLinks.enable [ "herdr-link.desktop" ];
 
     home.file = lib.mkMerge (
       [ (lib.genAttrs skillRoots (_: { source = agentSkills; })) ]
@@ -853,6 +907,27 @@ in
           "TRACKER_CLOSE_RUNTIME=${if cfg.tracker.lifecycle.close.enable then toString closeRuntime else ""}"
           "PATH=${lib.makeBinPath [ pkgs.systemd pkgs.git pkgs.coreutils ]}:/run/current-system/sw/bin"
         ] ++ lib.mapAttrsToList (k: v: "${k}=${v}") (t3Env // herdrEnv);
+        Restart = "always";
+        RestartSec = 10;
+      };
+      Install.WantedBy = [ "default.target" ];
+    };
+
+    # Every Herdr host: one notification when an agent here needs Eric. The
+    # Herdr mobile app shows its banner only while open, so this is the alert
+    # path. Remote machines' terminals are left to their own host's watcher.
+    systemd.user.services.herdr-alerts = lib.mkIf cfg.tracker.herdrAlerts.enable {
+      Unit = {
+        Description = "Alert when a Herdr agent on this host needs input";
+        After = [ "network-online.target" ];
+        X-Restart-Triggers = [ "${harness}/lifecycle/tracker/herdr_alerts.py" ];
+      };
+      Service = {
+        ExecStart = "${pkgs.python3}/bin/python3 -I ${harness}/lifecycle/tracker/herdr_alerts.py";
+        Environment = [
+          "HERDR_ALERT_NOTIFY_URL=${cfg.tracker.herdrAlerts.notifyUrl}"
+          "HERDR_ALERT_DONE=${if cfg.tracker.herdrAlerts.done then "1" else "0"}"
+        ];
         Restart = "always";
         RestartSec = 10;
       };

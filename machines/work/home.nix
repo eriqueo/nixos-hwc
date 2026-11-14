@@ -65,5 +65,7 @@
       instanceId = "claudeAgent";
       model = "claude-sonnet-5-5";
     };
+    # Workbench starts and feeds Herdr agents here; say when one needs Eric.
+    herdrAlerts.enable = true;
   };
 }

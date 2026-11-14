@@ -613,6 +613,9 @@
               # is the system control bot: `hms` must not switch them off.
               hwc.home.apps.agent-harness.tracker.discordCards = lib.mkDefault
                 self.nixosConfigurations."hwc-${name}".config.home-manager.users.eric.hwc.home.apps.agent-harness.tracker.discordCards;
+              # And Herdr alerts' dispatcher URL, whose producer is hwc.notifications.
+              hwc.home.apps.agent-harness.tracker.herdrAlerts.notifyUrl = lib.mkDefault
+                self.nixosConfigurations."hwc-${name}".config.home-manager.users.eric.hwc.home.apps.agent-harness.tracker.herdrAlerts.notifyUrl;
             }
             ({ lib, ... }: {
               _module.args = lib.optionalAttrs (m.scopedNodeRuntime or false) {

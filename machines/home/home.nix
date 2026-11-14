@@ -56,6 +56,9 @@
   # fail agent-state-validate (agent-harness README, 2026-10-14).
   hwc.home.apps.agent-harness.stateHub = "${config.home.homeDirectory}/git/agent-state.git";
 
+  # A Herdr machine: alert when one of its agents needs input.
+  hwc.home.apps.agent-harness.tracker.herdrAlerts.enable = true;
+
   # Headless: no font deployment (overrides nothing today — the desktop
   # role is what turns fonts on — but states the intent explicitly).
   hwc.home.theme.fonts.enable = false;

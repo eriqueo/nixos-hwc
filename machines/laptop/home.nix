@@ -84,6 +84,9 @@ in
     workbench.gatewayUrl = "http://hwc-work:6200";
     # Qualified native consumer; no autostart or source/agent effects at activation.
     workbench.handoff.enable = true;
+    # Workbench and Herdr alerts link herdr://; this desktop opens them.
+    agent-harness.tracker.herdrLinks.enable = true;
+    agent-harness.tracker.herdrAlerts.enable = true;
     workbench.desktop = {
       enable = true;
       summary.enable = true;

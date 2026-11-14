@@ -471,7 +471,8 @@ assert lib.assertMsg (disabledHandoff.systemd.services.workbench-web.environment
 assert lib.assertMsg (builtins.fromJSON handoffEnvironment.WORKBENCH_HANDOFF_TARGETS == publicTargets
   && handoffMount.linkDirectory == handoffOnly.age.secretsDir
   && handoffMount.generationDirectory == handoffOnly.age.secretsMountPoint
-  && handoffEnvironment.WORKBENCH_HANDOFF_CREDENTIALS_FILE == handoffOnly.hwc.secrets.api."workbench-t3-credentials")
+  && handoffEnvironment.WORKBENCH_HANDOFF_CREDENTIALS_FILE == handoffOnly.hwc.secrets.api."workbench-t3-credentials"
+  && handoffEnvironment.WORKBENCH_HANDOFF_HERDR_SOCKET == "/run/user/${toString handoffOnly.hwc.system.core.identity.puid}/herdr-core/default.sock")
   "workbench-web: handoff configuration must use the public registry and generated secret facade";
 assert lib.assertMsg (handoffSecret.owner == "root" && handoffSecret.group == "secrets"
   && handoffSecret.mode == "0440" && lib.elem handoffSecret.file handoffService.restartTriggers)
@@ -485,11 +486,14 @@ pkgs.runCommand "workbench-web-service" {
 } ''
   PYTHONPATH=${inputs.workbench}/src python3 - ${pkgs.writeText "workbench-destinations.json" handoffEnvironment.WORKBENCH_HANDOFF_TARGETS} <<'PY'
   import json, pathlib, sys
-  from workbench.core.agent import HandoffProject, parse_handoff_targets
+  from workbench.core.agent import HandoffProject, HerdrTarget, parse_handoff_targets
   from workbench.core.errors import ConfigError
   policy = json.loads(pathlib.Path(sys.argv[1]).read_text())
   targets = parse_handoff_targets(policy)
-  assert targets and all(isinstance(target, HandoffProject) for target in targets.values())
+  assert targets and all(isinstance(target, (HandoffProject, HerdrTarget)) for target in targets.values())
+  # Herdr targets reach only this service's own core.
+  herdr = [target for target in targets.values() if isinstance(target, HerdrTarget)]
+  assert herdr and all(target.machine == "${work.config.networking.hostName}" for target in herdr), herdr
   # The real parser must reject an authority field outside its vocabulary.
   for row in policy['destinations'].values(): row['browserOrigin'] = 'https://unconfigured.invalid'
   try: parse_handoff_targets(policy)
