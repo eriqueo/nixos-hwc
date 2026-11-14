@@ -1038,7 +1038,12 @@ pkgs.runCommand "mail-residency-shadow" {} ''
   try: wiring(broken)
   except AssertionError: pass
   else: raise AssertionError('competing mover escaped wiring test')
-  for failed in ["", 'fetch/proton','fetch/gmail-personal','index','commands/apply','labels','residency']:
+  # Gmail is forward-only through Proton (2026-11-13): no direct Gmail fetch.
+  accounts = sorted(config['accounts'])
+  assert accounts == ['proton'], accounts
+  # A second fixture account proves one provider's failure never stops another.
+  config['accounts']['other'] = {'fetch': ['other-fetch'], 'trash': [], 'upload': []}
+  for failed in ["", 'fetch/proton','fetch/other','index','commands/apply','labels','residency']:
       status={};calls=[]
       def execute(argv, timeout):
           calls.append(argv)
@@ -1050,7 +1055,9 @@ pkgs.runCommand "mail-residency-shadow" {} ''
           lambda:{'commands':[],'unknownEffects':[]})
       assert rc == (23 if failed.startswith('fetch/') or failed=='index' else 0)
       assert config['index'] in calls
-      assert status['lanes']['fetch/gmail-business']['state']=='healthy'
+      for account in config['accounts']:
+          if failed != 'fetch/' + account:
+              assert status['lanes']['fetch/' + account]['state']=='healthy'
       if failed=='commands/apply':
           assert status['lanes']['core']['state']=='healthy'
           assert status['lanes']['commands']['state']=='degraded'

@@ -5,7 +5,7 @@ vi.mock("node:child_process", () => ({execFile: run, spawn: spawnRun}));
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mailTools, mailTagActions, MAIL_DOMAINS, MAIL_FACTS, mailFactTag, mailDomainTag, MAIL_STATES } from "../src/tools/mail.js";
+import { mailTools, mailTagActions, MAIL_DOMAINS, MAIL_FACTS, mailFactTag, mailDomainTag, mailLaneQuery, MAIL_STATES } from "../src/tools/mail.js";
 import { mailTriageTools, reflectLiveStates } from "../src/tools/mail-triage.js";
 import { morningBriefTool } from "../src/tools/morning-brief.js";
 
@@ -61,6 +61,10 @@ describe("morning briefing mail routing rules", () => {
   });
 });
 const empty = () => Object.fromEntries(MAIL_STATES.map(state => [state, []]));
+/** Live reader fixture: union tags per thread; every listed thread is in Proton's Inbox unless `resident` says otherwise. */
+const live = (tags: Map<string, Set<string>>, resident: string[] = [...tags.keys()]) =>
+  async () => ({tags, resident: new Set(resident)});
+const noTotals = async () => Object.fromEntries(MAIL_STATES.map(state => [state, 0]));
 
 describe("authoritative mail placement", () => {
   it("one production scan supplies membership and live workflow states", async () => {
@@ -69,12 +73,23 @@ describe("authoritative mail placement", () => {
       const path = join(dir, "brief.json");
       await writeFile(path, JSON.stringify({mail_triage:{threads_by_state:{...empty(),do:[thread("a")]}}}));
       run.mockReset();
-      run.mockImplementation((_bin, args, _options, callback) => callback(null,
-        args.includes("--format=json") ? JSON.stringify([{thread:"a", tags:["archive","state/look"]}]) : "thread:a\n", ""));
+      const stdin = {end: vi.fn()};
+      run.mockImplementation((_bin, args, _options, callback) => {
+        callback(null, args.includes("--format=json") ? JSON.stringify([{thread:"a", tags:["archive","state/look"]}])
+          : args[0] === "count" ? "0\n7\n0\n1\n0\n" : "thread:a\n", "");
+        return {stdin};
+      });
       const result = await mailTriageTools(path)[0].handler({action:"digest"});
       expect(result.status).toBe("ok");
-      expect(run).toHaveBeenCalledTimes(1);
-      expect(run.mock.calls[0][1][3]).toBe("(tag:state/do OR tag:state/dont-know OR tag:state/did OR tag:state/look OR tag:state/junk) AND (thread:a)");
+      // Three bounded processes, never one per state: the State scan, Inbox residency, lane totals.
+      expect(run).toHaveBeenCalledTimes(3);
+      const calls = run.mock.calls.map(call => call[1]);
+      const scan = calls.find(args => args.includes("--format=json"))!;
+      expect(scan[3]).toBe("(tag:state/do OR tag:state/dont-know OR tag:state/did OR tag:state/look OR tag:state/junk) AND (thread:a)");
+      expect(calls).toContainEqual(["search", "--output=threads", 'thread:{folder:"proton/inbox"} AND (thread:a)']);
+      expect(calls).toContainEqual(["count", "--batch", "--output=threads"]);
+      expect(stdin.end).toHaveBeenCalledWith(MAIL_STATES.map(state => `${mailLaneQuery(state)}\n`).join(""));
+      expect(result.view!.data).toMatchObject({summary:expect.stringContaining("7 DONT KNOW")});
       expect(result.view!.data).toMatchObject({summary:expect.stringContaining("0 DO")});
       expect(run.mock.calls[0][2]).toMatchObject({timeout:3500,maxBuffer:2*1024*1024});
     } finally { await rm(dir,{recursive:true,force:true}); }
@@ -87,7 +102,7 @@ describe("authoritative mail placement", () => {
       await writeFile(path,JSON.stringify({mail_triage:{threads_by_state:{...empty(),do:[thread("a")]}}}));
       run.mockReset();
       run.mockImplementation((_bin,_args,_options,callback)=>callback(null,"",""));
-      const tool=mailTriageTools(path,async()=>new Map([["a",new Set(["inbox","state/do"])]]))[0];
+      const tool=mailTriageTools(path,live(new Map([["a",new Set(["inbox","state/do"])]])), noTotals)[0];
       expect((await tool.handler({action:"mark-read",id:"a"})).status).toBe("ok");
       expect(run.mock.calls[0][1]).toEqual(["tag","-unread","--","thread:a"]);
       expect((await tool.handler({action:"digest"})).view!.data).toMatchObject({items:[expect.objectContaining({id:"a"})]});
@@ -121,7 +136,7 @@ describe("authoritative mail placement", () => {
 
   it("uses conservative DO precedence for conflicting live tags", async () => {
     expect(await reflectLiveStates({...empty(),do:[thread("a")]},
-      async () => new Map([["a",new Set(["state/do","state/did","state/look","state/junk"])]])))
+      live(new Map([["a",new Set(["state/do","state/did","state/look","state/junk"])]]))))
       .toEqual({...empty(),do:[thread("a")]});
   });
 
@@ -140,7 +155,7 @@ describe("authoritative mail placement", () => {
   });
 
   it("does not resurrect mail from a successful empty snapshot", async () => {
-    expect(await reflectLiveStates({...empty(),do:[thread("a")]}, async () => new Map())).toEqual(empty());
+    expect(await reflectLiveStates({...empty(),do:[thread("a")]}, live(new Map()))).toEqual(empty());
   });
 
   it("fails when live placement cannot be read", async () => {
@@ -155,8 +170,8 @@ describe("authoritative mail placement", () => {
       await writeFile(path, JSON.stringify({mail_triage:{generated_at:"2026-09-07T12:00:00Z",routing_rules:[{},{}],threads_by_state:{
         ...empty(),do:[thread("a"),...Array.from({length:10},(_,i)=>thread(String(i)))],look:[thread("e")],junk:[thread("f")]
       }}}));
-      const tool = mailTriageTools(path, async () => new Map(
-        ["a","e","f",...Array.from({length:10},(_,i)=>String(i))].map(id=>[id,new Set([id === "f" ? "state/junk" : id === "e" ? "state/look" : "state/do"])])))[0];
+      const tool = mailTriageTools(path, live(new Map(
+        ["a","e","f",...Array.from({length:10},(_,i)=>String(i))].map(id=>[id,new Set([id === "f" ? "state/junk" : id === "e" ? "state/look" : "state/do"])]))), noTotals)[0];
       const result = await tool.handler({action:"digest"});
       expect(result.status).toBe("ok");
       const data = result.view!.data as any;
@@ -203,9 +218,9 @@ describe("current mail views and metadata preservation", () => {
 describe("DONT KNOW consumer contract", () => {
   it("regroups a four-State cache into DONT KNOW without losing its thread", async () => {
     const legacy = {do: [thread("a")], did: [], look: [], junk: []};
-    expect(await reflectLiveStates(legacy, async () => new Map([["a", new Set(["state/dont-know", "state/did"])]])))
+    expect(await reflectLiveStates(legacy, live(new Map([["a", new Set(["state/dont-know", "state/did"])]]))))
       .toEqual({...empty(), "dont-know": [thread("a")]});
-    expect(await reflectLiveStates(legacy, async () => new Map([["a", new Set(["state/do", "state/dont-know"])]])))
+    expect(await reflectLiveStates(legacy, live(new Map([["a", new Set(["state/do", "state/dont-know"])]]))))
       .toEqual({...empty(), do: [thread("a")]});
   });
 
@@ -217,8 +232,8 @@ describe("DONT KNOW consumer contract", () => {
         do: [{...thread("a"), domain: "hwc", urgency_reason: "Client waiting on quote"},
              {...thread("b"), suggested_action: "Reply today"},
              thread("c")]}}}));
-      const live = new Map(["a", "b", "c"].map(id => [id, new Set(["state/do"])]));
-      const board = await mailTriageTools(path, async () => live)[0].handler({action: "board"});
+      const tags = new Map(["a", "b", "c"].map(id => [id, new Set(["state/do"])]));
+      const board = await mailTriageTools(path, live(tags), noTotals)[0].handler({action: "board"});
       expect(board.view!.data).not.toHaveProperty("columns");
       const cards = (board.view!.data as {stages: {id: string; cards: Record<string, unknown>[]}[]})
         .stages.find(column => column.id === "do")!.cards;
@@ -234,12 +249,12 @@ describe("DONT KNOW consumer contract", () => {
     try {
       const path = join(dir, "brief.json");
       await writeFile(path, JSON.stringify({mail_triage: {threads_by_state: {do: [thread("a")], did: [], look: [], junk: []}}}));
-      const tool = mailTriageTools(path, async () => new Map([["a", new Set(["state/dont-know"])]]))[0];
+      const tool = mailTriageTools(path, live(new Map([["a", new Set(["state/dont-know"])]])), noTotals)[0];
       const board = await tool.handler({action: "board"});
       expect(board.status).toBe("ok");
       expect(board.data).toMatchObject({stats: {"dont-know_count": 1, do_count: 0}});
       expect(board.view!.data).toMatchObject({stages: expect.arrayContaining([
-        {id: "dont-know", title: "DONT KNOW", cards: [expect.objectContaining({id: "a", priority: "normal"})]},
+        {id: "dont-know", title: "DONT KNOW", cards: [expect.objectContaining({id: "a", priority: "normal"})], total: 1},
       ])});
       const digest = await tool.handler({action: "digest"});
       expect(digest.view!.data).toMatchObject({items: [], summary: expect.stringContaining("1 DONT KNOW")});
@@ -280,6 +295,13 @@ describe("DONT KNOW consumer contract", () => {
       await writeFile(file, JSON.stringify({...contract, stateDisplayNames: {}}));
       vi.resetModules();
       await expect(import("../src/tools/mail.js")).rejects.toThrow("invalid mail State/view");
+      // Schema 3 must name its Inbox States and the local Inbox mirror; nothing is guessed.
+      for (const broken of [{...contract, inboxStates: undefined}, {...contract, inboxStates: ["nope"]},
+                            {...contract, mailboxTransport: {...contract.mailboxTransport, localMailboxes: {}}}]) {
+        await writeFile(file, JSON.stringify(broken));
+        vi.resetModules();
+        await expect(import("../src/tools/mail.js")).rejects.toThrow("Inbox residency");
+      }
     } finally {vi.unstubAllEnvs(); vi.resetModules(); await rm(dir, {recursive: true, force: true});}
   });
 });
@@ -494,7 +516,7 @@ it("reads threads_by_state mail reports in the status tool", async () => {
     const {morningStatusTool} = await import("../src/tools/morning-status.js");
     const result = await morningStatusTool(path).handler({});
     expect((result.data as any).briefing).toContain("1 DO / 1 DONT KNOW / 0 DID / 1 LOOK / 0 JUNK");
-    const board = await mailTriageTools(path, async () => new Map([["a", new Set(["state/do"])], ["b", new Set(["state/look"])], ["c", new Set(["state/dont-know"])]]))[0].handler({});
+    const board = await mailTriageTools(path, live(new Map([["a", new Set(["state/do"])], ["b", new Set(["state/look"])], ["c", new Set(["state/dont-know"])]])), noTotals)[0].handler({});
     expect(board.view!.data).not.toHaveProperty("columns");
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
@@ -537,7 +559,7 @@ describe("mail hub metadata verbs", () => {
     try {
       const file = join(dir, "brief.json");
       await writeFile(file, JSON.stringify({mail_triage: {threads_by_state: {...empty(), do: [thread("a")]}}}));
-      const tool = mailTriageTools(file, async () => new Map([["a", new Set(["state/do", mailDomainTag(MAIL_DOMAINS[0]), mailFactTag(MAIL_FACTS[0])])]]))[0];
+      const tool = mailTriageTools(file, live(new Map([["a", new Set(["state/do", mailDomainTag(MAIL_DOMAINS[0]), mailFactTag(MAIL_FACTS[0])])]])), noTotals)[0];
       const verbs = ["mark-unread", "fact-add", "fact-clear", ...MAIL_DOMAINS.map(domain => `domain-${domain}`)];
       expect((tool.inputSchema.properties as any).action.enum).toEqual(expect.arrayContaining(verbs));
       for (const action of ["board", "digest"]) {
@@ -571,4 +593,69 @@ it("preserves literal mail queries, per-action limits and numeric command failur
   expect(failure.status).toBe("error");
   expect(failure.context).toMatchObject({exitCode:7,query});
   expect(run).toHaveBeenCalledTimes(1);
+});
+
+
+describe("board lanes follow Proton Inbox residency", () => {
+  const brief = async (states: Record<string, unknown[]>) => {
+    const dir = await mkdtemp(join(tmpdir(), "mail-residency-"));
+    const path = join(dir, "brief.json");
+    await writeFile(path, JSON.stringify({mail_triage: {threads_by_state: {...empty(), ...states}}}));
+    return {dir, path};
+  };
+
+  it("uses the same lane query text as System One's lane_query", () => {
+    // Literal parity with scripts/mail_classifier.py lane_query for the bound contract.
+    expect(mailLaneQuery("do")).toBe('thread:{tag:state/do} AND thread:{folder:"proton/inbox"}');
+    expect(mailLaneQuery("dont-know")).toBe('thread:{tag:state/dont-know} AND NOT thread:{tag:state/do} AND thread:{folder:"proton/inbox"}');
+    expect(mailLaneQuery("look")).toBe("thread:{tag:state/look} AND NOT thread:{tag:state/do} AND NOT thread:{tag:state/dont-know} AND NOT thread:{tag:state/did}");
+  });
+
+  it("drops Inbox-State threads that Proton has archived or trashed, and keeps Archive States", async () => {
+    const tags = new Map([
+      ["a1", new Set(["state/do"])],
+      ["b2", new Set(["state/do"])],
+      // Mixed during reply ingestion: DO wins, and DO needs the Inbox.
+      ["c3", new Set(["state/do", "state/look"])],
+      ["d4", new Set(["state/dont-know"])],
+      ["e5", new Set(["state/look"])],
+    ]);
+    const cached = {...empty(), do: ["a1", "b2", "c3"].map(thread), "dont-know": [thread("d4")],
+                    look: [thread("e5")]};
+    expect(await reflectLiveStates(cached, live(tags, ["a1", "d4"])))
+      .toEqual({...empty(), do: [thread("a1")], "dont-know": [thread("d4")], look: [thread("e5")]});
+  });
+
+  it("reports live lane totals beside the bounded cards on every read", async () => {
+    const {dir, path} = await brief({do: [thread("a"), thread("b")]});
+    try {
+      const totals = async () => ({...(await noTotals()), do: 119, "dont-know": 1788});
+      const tool = mailTriageTools(path, live(new Map([["a", new Set(["state/do"])], ["b", new Set(["state/do"])]])), totals)[0];
+      const board = await tool.handler({action: "board"});
+      const stages = (board.view!.data as {stages: {id: string; cards: unknown[]; total: number}[]}).stages;
+      expect(stages.find(stage => stage.id === "do")).toMatchObject({total: 119, cards: [expect.anything(), expect.anything()]});
+      expect(stages.find(stage => stage.id === "dont-know")).toMatchObject({total: 1788, cards: []});
+      expect(board.data).toMatchObject({stats: {do_count: 119, "dont-know_count": 1788}});
+      expect(board.message).toContain("119 DO · 1788 DONT KNOW");
+      const digest = (await tool.handler({action: "digest"})).view!.data as {items: unknown[]; total: number; remaining: number};
+      expect(digest).toMatchObject({total: 119, remaining: 117});
+      expect(digest.items).toHaveLength(2);
+      // A total below the cards it lists never shows (counts are live, cards are cached).
+      const stale = mailTriageTools(path, live(new Map([["a", new Set(["state/do"])]])), noTotals)[0];
+      expect(((await stale.handler({action: "board"})).view!.data as any).stages[0].total).toBe(1);
+    } finally { await rm(dir, {recursive: true, force: true}); }
+  });
+
+  it("fails the read when totals cannot be counted, never guessing a number", async () => {
+    const {dir, path} = await brief({do: [thread("a")]});
+    try {
+      const tool = mailTriageTools(path, live(new Map([["a", new Set(["state/do"])]])), async () => { throw Error("count"); })[0];
+      const board = await tool.handler({action: "board"});
+      expect(board.status).toBe("error");
+      run.mockReset();
+      run.mockImplementation((_bin, args, _options, callback) => { callback(null, args[0] === "count" ? "1\n2\n" : "", ""); return {stdin: {end: vi.fn()}}; });
+      const short = await mailTriageTools(path, live(new Map([["a", new Set(["state/do"])]])))[0].handler({action: "board"});
+      expect(short.status).toBe("error");
+    } finally { await rm(dir, {recursive: true, force: true}); }
+  });
 });

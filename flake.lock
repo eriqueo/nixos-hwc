@@ -811,11 +811,11 @@
     "system-one": {
       "flake": false,
       "locked": {
-        "lastModified": 1792685691,
-        "narHash": "sha256-li/5WAlbGDv4BzlMvdSakQ08axJ+SIa3GRQU+KKM16U=",
+        "lastModified": 1794632259,
+        "narHash": "sha256-uEuh4xcyjjUfTJEuOaenlK8EEz7qmdOcfBp6FmwXClc=",
         "owner": "eriqueo",
         "repo": "system-one",
-        "rev": "7ef36a38283bcae57813cadeb8dc2ae451459c5f",
+        "rev": "ba53e53b3260059f3e4deaea66b3bcdbf86ddf63",
         "type": "github"
       },
       "original": {
@@ -1082,11 +1082,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794615374,
-        "narHash": "sha256-D9to9h7WBD1hRgVcsXisqsb/blLPFj/eRO/m6XOCeFo=",
+        "lastModified": 1794633183,
+        "narHash": "sha256-aMxDr4K9JYhmhu4lf2QBaxT+JFTYqnHr8lQtkuUSXV8=",
         "owner": "eriqueo",
         "repo": "workbench",
-        "rev": "bca3e14c4ec453fd2e60b9d771840982608afc4b",
+        "rev": "9a7fd372bdbf9b2d9d64052e052c4b3b6537978f",
         "type": "github"
       },
       "original": {

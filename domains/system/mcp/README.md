@@ -486,6 +486,7 @@ In-memory `TtlCache` with `getOrCompute(key, ttl, fn)`.
 
 ## Changelog
 
+- 2026-11-13: `hwc_mail_triage` lanes follow Proton Inbox residency: a DO or DONT KNOW thread with no message in the contract's local Inbox mirror leaves the board (State unchanged), using `mailLaneQuery`, the same thread-level rule as System One's `lane_query`. Every stage carries a live `total` from one `notmuch count --batch` read; stats, summary and digest counts use it, and a failed count fails the read. The contract loader requires `inboxStates` and `mailboxTransport.localMailboxes.inbox` at schema 3.
 - 2026-11-09: Untangle MCP mail/calendar command handling: share literal argv
   execution and one in-flight binary lookup, bind khal config per tool instance,
   and reuse calendar creation arguments. Preserve mutation ordering and command
