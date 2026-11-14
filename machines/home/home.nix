@@ -39,6 +39,13 @@
     serve.host = "0.0.0.0";
   };
 
+  # Herdr core, headless shape: one core that survives reboots, reached from
+  # the laptop's Herdr App as machine hwc-home (domains/home/apps/herdr-core).
+  hwc.home.apps.herdr-core = {
+    enable = true;
+    serve.enable = true;
+  };
+
   # Nothing else updates the npm-global claude and codex here: T3 serve and
   # nightly-builds drive them headless, and ~/.claude.json has autoUpdates=false.
   # Without this, T3 hides every model whose manifest minVersion is newer than

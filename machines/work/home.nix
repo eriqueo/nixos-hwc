@@ -41,6 +41,13 @@
     serve.host = "0.0.0.0";
   };
 
+  # Herdr core, headless shape — same as hwc-home: reached from the laptop's
+  # Herdr App as machine hwc-work (domains/home/apps/herdr-core).
+  hwc.home.apps.herdr-core = {
+    enable = true;
+    serve.enable = true;
+  };
+
   # T3 serve and nightly-builds drive the npm-global claude/codex headless;
   # nothing else updates them here.
   hwc.home.apps.agent-harness.cliUpdates.enable = true;

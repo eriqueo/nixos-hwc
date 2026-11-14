@@ -184,6 +184,7 @@ uiFont = ((config.hwc.home.theme or {}).fonts or {}).ui or "Hack Nerd Font";
 tokens consumed by `theme/templates/gtk.nix` and hyprland session parts.
 
 ## Changelog
+- 2026-11-13: Add `apps/herdr-core`: the Herdr core pinned from its upstream release, and a `serve` user unit that keeps one core running on hwc-home and hwc-work across reboots. Separate from `apps/herdr`, which ships a different project.
 - 2026-11-13: Build the Rust tracker contracts from `lifecycle/tracker` with the crate as a subdirectory, so the parity tests find the hub page at `../index.html` as Python does; the crate-only source made six index-fallback routes 404 and failed the full suite.
 - 2026-11-13: Pin the Rust tracker's candidate-only brief command; its checks cover replay, stale revisions, concurrent writers, shutdown drain and replay durability after an uncertain write. The live Python tracker is unchanged.
 - 2026-11-12: Pin the Rust project-clock projection, with custom-policy and midnight parity checks against Python and bounded failures for invalid dates.
@@ -508,7 +509,7 @@ per-machine adjustments go in `machines/<host>/home.nix`. Current set
 ```
 analysis, betterbird, blender, bottles-unwrapped, calcure,
 calcurse, chromium, claude-code, claude-desktop, codex, dt, dxlog,
-freecad, gemini-cli, google-cloud-sdk, gpg, herdr, hyprland, imv,
+freecad, gemini-cli, google-cloud-sdk, gpg, herdr, herdr-core, hyprland, imv,
 ipcalc, jellyfin-media-player, kitty, librewolf, localsend, markitdown,
 mpv, n8n, neomutt, nvim, obsidian, onlyoffice-desktopeditors, opencode,
 proton-authenticator, proton-mail, proton-pass, qbittorrent, qutebrowser,

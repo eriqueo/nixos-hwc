@@ -171,11 +171,13 @@ let
     T3CODE_NODE = "${pkgs.nodejs}/bin/node";
     T3CODE_BIN = "${lib.attrByPath [ "hwc" "home" "apps" "t3code" "repo" ] "${home}/600_apps/t3code" config}/apps/server/dist/bin.mjs";
   };
-  # The Herdr App (an unmanaged trial install in ~/.local/bin) for tracker
-  # links in Herdr terminals (tracker/herdr.py). Harmless where it is absent:
-  # herdr.py probes the core's socket first and reports "not running".
+  # Herdr for tracker links in Herdr terminals (tracker/herdr.py): the managed
+  # core where apps/herdr-core is on (the servers), else the laptop's unmanaged
+  # trial in ~/.local/bin. Harmless where it is absent: herdr.py probes the
+  # core's socket first and reports "not running".
+  herdrCore = config.hwc.home.apps.herdr-core;
   herdrEnv = {
-    TRACKER_HC_BIN = "${home}/.local/bin/hc";
+    TRACKER_HC_BIN = if herdrCore.enable then "${herdrCore.package}/bin/hc" else "${home}/.local/bin/hc";
     TRACKER_HERDR_APP_BIN = "${home}/.local/bin/herdr-app";
   };
 
