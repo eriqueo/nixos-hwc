@@ -182,9 +182,9 @@ SOURCE_REMOTE="$ROOT/publish-source.git"
 SOURCE_MIRROR="$ROOT/publish-mirror.git"
 NIXOS_REPO="$ROOT/publish-nixos"
 NIXOS_REMOTE="$ROOT/publish-nixos.git"
-git init -q --bare "$SOURCE_REMOTE"
-git init -q --bare "$SOURCE_MIRROR"
-git init -q --bare "$NIXOS_REMOTE"
+git init -q --bare -b main "$SOURCE_REMOTE"
+git init -q --bare -b main "$SOURCE_MIRROR"
+git init -q --bare -b main "$NIXOS_REMOTE"
 git init -q -b main "$SOURCE_REPO"
 git init -q -b main "$NIXOS_REPO"
 git -C "$SOURCE_REPO" config user.name test
@@ -221,16 +221,6 @@ git -C "$NIXOS_REPO" commit -q -m nixos
 git -C "$NIXOS_REPO" remote add origin "$NIXOS_REMOTE"
 git -C "$NIXOS_REPO" push -q -u origin main
 
-run_publish_check() {
-  AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
-  AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
-  AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
-  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
-  bash "$(dirname "$0")/control.sh" publish --check
-}
-
-run_publish_check >/dev/null
-
 cat > "$BIN/nix" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/nix.log"
@@ -238,47 +228,109 @@ printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/nix.log"
 [ "$*" != 'flake update agent-harness' ] || printf '{"nodes":{"agent-harness":{"locked":{"rev":"%s"}}}}\n' \
   "$(git -C "$AGENT_HARNESS_SOURCE" rev-parse HEAD)" > flake.lock
 EOF
+# Remote hosts report rev1; a host named in HARNESS_OFFLINE is unreachable.
 cat > "$BIN/ssh" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/ssh.log"
-case "$*" in *'agent-harness revision'*) printf 'rev1\nok\n' ;; esac
+for arg in "$@"; do case " ${HARNESS_OFFLINE:-} " in *" $arg "*) exit 255 ;; esac; done
+case "$*" in *'agent-harness revision'*) printf 'rev1\n' ;; esac
 EOF
 cat > "$BIN/hostname" <<'EOF'
 #!/usr/bin/env bash
-printf 'harness-test-host\n'
+printf 'hwc-test\n'
 EOF
 # The installed CLI after the switch; publish must hand the final doctor to it.
 cat > "$BIN/agent-harness" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/installed-cli.log"
 EOF
-chmod +x "$BIN/nix" "$BIN/ssh" "$BIN/hostname" "$BIN/agent-harness"
-HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" \
+# The release runner, as publish calls it: verify records the candidate and
+# origin main at that moment (HARNESS_REFUSE makes it refuse); deploy
+# fast-forwards main, as only the runner may.
+cat > "$BIN/python3" <<'EOF'
+#!/usr/bin/env bash
+case "$1" in */workspace/nixos-dev/verification/release.py) ;; *) exit 99 ;; esac
+shift
+printf '%s\n' "$*" >> "$HARNESS_TEST_ROOT/release.log"
+[ "$1" = --repo ] && repo=$2 && shift 2
+case "$1" in
+  verify) [ -z "${HARNESS_REFUSE:-}" ] || exit 1
+          printf '%s %s\n' "$3" "$(git -C "$repo" ls-remote origin refs/heads/main | cut -f1)" >> "$HARNESS_TEST_ROOT/verified.log" ;;
+  deploy) git -C "$repo" merge --ff-only --quiet "$3" ;;
+esac
+EOF
+# Any activation outside the runner is a bypass.
+for command in sudo nixos-rebuild home-manager; do
+  printf '#!/usr/bin/env bash\nprintf "%%s %%s\\n" %s "$*" >> "$HARNESS_TEST_ROOT/bypass.log"\n' "$command" > "$BIN/$command"
+done
+chmod +x "$BIN"/{nix,ssh,hostname,agent-harness,python3,sudo,nixos-rebuild,home-manager}
+
+FLEET=hwc-test:hwc-server:hwc-work
+run_publish() {
+  HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" \
   AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
   AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
   AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
-  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
-  bash "$(dirname "$0")/control.sh" publish >/dev/null
-[ "$(cat "$ROOT/installed-cli.log" 2>/dev/null)" = 'doctor --fleet' ] || {
-  echo 'control.test: publish did not run the fleet doctor from the installed CLI' >&2
-  exit 1
+  AGENT_HARNESS_FLEET_HOSTS="$FLEET" \
+  bash "$(dirname "$0")/control.sh" publish "$@"
+}
+run_publish_check() { run_publish --check; }
+no_bypass() {
+  [ ! -e "$ROOT/bypass.log" ] && [ -z "$(rg -v '^flake update agent-harness$' "$ROOT/nix.log" 2>/dev/null)" ] || {
+    echo "control.test: publish activated or built outside the release runner ($1)" >&2; exit 1;
+  }
+}
+
+run_publish_check >/dev/null
+
+# A new harness commit: --plan changes nothing; a refused verification keeps
+# the pin off main; publish pins it verify -> push -> runner deploy, here only.
+printf 'new\n' > "$SOURCE_REPO/policy"; git -C "$SOURCE_REPO" commit -q -am new
+STATIC_REVISION=$(git -C "$SOURCE_REPO" rev-parse HEAD)
+heads() { git -C "$SOURCE_REMOTE" rev-parse main; git -C "$NIXOS_REMOTE" rev-parse main; git -C "$NIXOS_REPO" rev-parse main; }
+BEFORE=$(heads)
+PLAN=$(run_publish --plan 2>&1) || { echo 'control.test: publish --plan failed' >&2; exit 1; }
+[ "$(heads)" = "$BEFORE" ] && [ ! -e "$ROOT/release.log" ] && [ ! -e "$ROOT/nix.log" ] \
+  && printf '%s\n' "$PLAN" | rg -q 'hwc-work \(runs rev1\): not activated' \
+  && printf '%s\n' "$PLAN" | rg -q 'hwc-test \(this host.*release.py deploy' || {
+  echo 'control.test: publish --plan changed something or did not show each host' >&2; exit 1;
+}
+if HARNESS_REFUSE=1 run_publish >/dev/null 2>&1 || [ "$(git -C "$NIXOS_REMOTE" rev-parse main)" != "$(awk 'NR==2' <<< "$BEFORE")" ] \
+    || [ "$(git -C "$NIXOS_REPO" rev-parse main)" != "$(awk 'NR==3' <<< "$BEFORE")" ]; then
+  echo 'control.test: a pin the runner refused reached main' >&2; exit 1
+fi
+rm -rf "$NIXOS_REPO-worktrees"; git -C "$NIXOS_REPO" worktree prune
+git -C "$NIXOS_REPO" for-each-ref --format='%(refname:short)' 'refs/heads/harness-publish/*' | xargs -r git -C "$NIXOS_REPO" branch -q -D
+: > "$ROOT/release.log"
+run_publish >/dev/null
+PIN=$(git -C "$NIXOS_REMOTE" rev-parse main)
+[ "$(git -C "$NIXOS_REMOTE" show "$PIN:flake.lock" | jq -r '.nodes."agent-harness".locked.rev')" = "$STATIC_REVISION" ] \
+  && [ "$(git -C "$NIXOS_REPO" rev-parse main)" = "$PIN" ] \
+  && [ "$(cat "$ROOT/release.log")" = "$(printf -- '--repo %s verify --candidate %s\n--repo %s deploy --candidate %s' "$NIXOS_REPO" "$PIN" "$NIXOS_REPO" "$PIN")" ] \
+  && [ "$(awk 'END {print $2}' "$ROOT/verified.log")" != "$PIN" ] || {
+  echo 'control.test: the pin did not go verify -> push -> runner deploy' >&2; exit 1;
+}
+no_bypass default
+! rg -q 'release.py' "$ROOT/ssh.log" || { echo 'control.test: default publish activated a remote host' >&2; exit 1; }
+[ "$(cat "$ROOT/installed-cli.log")" = doctor ] || {
+  echo 'control.test: default publish did not run the local doctor from the installed CLI' >&2; exit 1;
 }
 [ "$(git -C "$SOURCE_MIRROR" rev-parse refs/heads/main)" = "$STATIC_REVISION" ] || {
   echo 'control.test: static mirror did not receive the published revision' >&2
   exit 1
 }
-for host in hwc-server hwc-laptop hwc-work; do
-  rg -q "nixosConfigurations\\.$host\\.config\\.system\\.build\\.toplevel" "$ROOT/nix.log" || {
-    echo "control.test: $host was not built" >&2; exit 1;
-  }
-  # A remote host builds in its own store.
-  rg -q -- "--store ssh-ng://$host .*nixosConfigurations\\.$host\\." "$ROOT/nix.log" || {
-    echo "control.test: $host was not built in its own store" >&2; exit 1;
-  }
-  rg -U -q "$host [\s\S]*?git -C ~/800_agents/harness pull --ff-only" "$ROOT/ssh.log" || {
-    echo "control.test: $host did not refresh its static authoring source" >&2; exit 1;
-  }
-done
+# --fleet: each reachable remote runs its own runner; an unreachable one is reported.
+: > "$ROOT/ssh.log"; : > "$ROOT/installed-cli.log"
+if HARNESS_OFFLINE=hwc-server run_publish --fleet >/dev/null 2>"$ROOT/fleet.err"; then
+  echo 'control.test: publish passed with an unreachable host' >&2; exit 1
+fi
+rg -q 'not switched: hwc-server \(unreachable\)' "$ROOT/fleet.err" \
+  && rg -q '^-t hwc-work git -C ~/800_agents/harness pull --ff-only && .*release.py deploy --candidate origin/main$' "$ROOT/ssh.log" \
+  && ! rg -q 'hwc-server .*release.py' "$ROOT/ssh.log" \
+  && [ "$(cat "$ROOT/installed-cli.log")" = 'doctor --fleet' ] || {
+  echo 'control.test: --fleet did not gate each host or report the unreachable one' >&2; exit 1;
+}
+no_bypass fleet
 
 # Another session's pushes: one before publish starts, one during the suites.
 OTHER="$ROOT/publish-other"
@@ -294,12 +346,7 @@ cat > "$ROOT/race.sh" <<EOF
 printf 'two\n' >> "$OTHER/other"
 git -C "$OTHER" commit -q -am two && git -C "$OTHER" push -q origin main
 EOF
-HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" HARNESS_RACE="$ROOT/race.sh" \
-  AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
-  AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
-  AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
-  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
-  bash "$(dirname "$0")/control.sh" publish >/dev/null 2>&1 || {
+HARNESS_RACE="$ROOT/race.sh" run_publish >/dev/null 2>&1 || {
   echo 'control.test: publish failed when other sessions pushed the harness' >&2; exit 1;
 }
 [ "$(git -C "$SOURCE_REPO" rev-parse HEAD)" = "$BEHIND_REVISION" ] || {
@@ -320,12 +367,7 @@ cat > "$ROOT/race.sh" <<EOF
 printf 'three\n' >> "$OTHER/other"
 git -C "$OTHER" commit -q -am three && git -C "$OTHER" push -q origin main
 EOF
-HARNESS_TEST_ROOT="$ROOT" PATH="$BIN:$PATH" HARNESS_RACE="$ROOT/race.sh" \
-  AGENT_HARNESS_EXPECTED_MANIFEST="$ROOT/expected.json" \
-  AGENT_HARNESS_SOURCE="$SOURCE_REPO" \
-  AGENT_HARNESS_NIXOS="$NIXOS_REPO" \
-  AGENT_HARNESS_FLEET_HOSTS=hwc-server:hwc-laptop:hwc-work \
-  bash "$(dirname "$0")/control.sh" publish >/dev/null 2>&1 || {
+HARNESS_RACE="$ROOT/race.sh" run_publish >/dev/null 2>&1 || {
   echo 'control.test: publish failed with an unpushed local commit beside other pushes' >&2; exit 1;
 }
 PUBLISHED=$(git -C "$SOURCE_REMOTE" rev-parse refs/heads/main)
@@ -335,6 +377,7 @@ PUBLISHED=$(git -C "$SOURCE_REMOTE" rev-parse refs/heads/main)
   && [ "$(jq -r '.nodes."agent-harness".locked.rev' "$NIXOS_REPO/flake.lock")" = "$PUBLISHED" ] || {
   echo 'control.test: diverged publish did not ship local work on top of every push' >&2; exit 1;
 }
+no_bypass races
 # A real conflict stops and leaves the copy as it was.
 printf 'mine\n' > "$SOURCE_REPO/other"; git -C "$SOURCE_REPO" commit -q -am mine
 git -C "$OTHER" pull -q --rebase origin main

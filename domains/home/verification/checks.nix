@@ -716,4 +716,21 @@ pkgs.runCommand "gpg-stale-lock" { nativeBuildInputs = [ pkgs.gnupg pkgs.coreuti
   touch "$out"
 '';
 
+# agent-harness control.sh against fixture repos: doctor drift cases, and
+# publish going through the release runner only. A publish that runs
+# nixos-rebuild, sudo or home-manager itself, builds a toplevel, moves main
+# without the runner, or activates a remote host unasked fails here.
+agent-harness-control = pkgs.runCommand "agent-harness-control" {
+  nativeBuildInputs = with pkgs; [ bash git jq ripgrep coreutils findutils gawk diffutils hostname ];
+} ''
+  set -euo pipefail
+  export HOME="$TMPDIR" LOCALE_ARCHIVE=${pkgs.glibcLocales}/lib/locale/locale-archive
+  cp ${repoRoot + "/domains/home/apps/agent-harness/control.sh"} control.sh
+  cp ${repoRoot + "/domains/home/apps/agent-harness/control.test.sh"} control.test.sh
+  # The sandbox has no /usr/bin/env for the test's stub commands.
+  substituteInPlace control.test.sh --replace-fail '#!/usr/bin/env bash' '#!${pkgs.bash}/bin/bash'
+  bash control.test.sh
+  touch "$out"
+'';
+
 }
