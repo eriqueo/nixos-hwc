@@ -653,6 +653,14 @@ in
       }) ([ ".claude" ] ++ cfg.claudeConfigDirs)
     );
 
+    # The delegate skill's Herdr templates (reviewer, worker, codex-reviewer,
+    # codex-worker). hc reads them on whichever host runs the child terminal.
+    # One link per file, so a hand-made template beside them stays.
+    xdg.configFile."herdr-core/templates" = {
+      source = harness + "/skills/delegate/templates";
+      recursive = true;
+    };
+
     # The S2 one-time move of the state clone into the workspace root ran on all
     # three hosts and was deleted in S8 (2026-10-01).
     # Home Manager will not replace a directory it does not own with the
